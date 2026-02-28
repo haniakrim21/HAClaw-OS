@@ -24,6 +24,12 @@ import {
   updateDeliveryEvents,
   type DeliveryStatus,
 } from '@/lib/db/repositories/delivery.repository'
+import {
+  createProcess as createProcessRepo,
+  findProcessesByWorkspace as findProcessesRepo,
+  toggleProcess as toggleProcessRepo,
+  deleteProcess as deleteProcessRepo,
+} from '@/lib/db/repositories/process.repository'
 import { detectCarrier, createTracking } from '@/lib/trackingmore/client'
 import type { TrackingMoreTracking } from '@/lib/trackingmore/types'
 import { mapTmStatus, extractEvents } from '@/lib/delivery-utils'
@@ -379,6 +385,83 @@ export async function executeActions(
         results.push({ action: 'delivery.status', error: String(err) })
       }
     }
+
+    // Process actions
+    if (k === 'process.create') {
+      const title = String(action?.title || '').trim()
+      const schedule = String(action?.schedule || '').trim()
+      const actionType = String(action?.actionType || 'send_reminder').trim()
+      if (!title || !schedule || !workspaceId) {
+        results.push({ action: 'process.create', error: !workspaceId ? 'No workspace' : 'Title and schedule required' })
+        continue
+      }
+
+      try {
+        const process = await withUser(userId, (client) =>
+          createProcessRepo(client, {
+            workspaceId,
+            title,
+            description: action?.description ? String(action.description) : undefined,
+            schedule,
+            actionType,
+            actionConfig: typeof action?.actionConfig === 'object' ? action.actionConfig as Record<string, unknown> : undefined,
+          })
+        )
+        results.push({ action: 'process.create', process })
+      } catch (err) {
+        results.push({ action: 'process.create', error: String(err) })
+      }
+    }
+
+    if (k === 'process.list') {
+      if (!workspaceId) {
+        results.push({ action: 'process.list', error: 'No workspace' })
+        continue
+      }
+      try {
+        const processes = await withUser(userId, (client) =>
+          findProcessesRepo(client, workspaceId)
+        )
+        const summary = processes.map((p) => ({
+          id: p.id,
+          title: p.title,
+          schedule: p.schedule,
+          actionType: p.actionType,
+          enabled: p.enabled,
+        }))
+        results.push({ action: 'process.list', count: processes.length, processes: summary })
+      } catch (err) {
+        results.push({ action: 'process.list', error: String(err) })
+      }
+    }
+
+    if (k === 'process.toggle') {
+      const processId = String(action?.processId || '').trim()
+      if (!processId) continue
+
+      try {
+        const process = await withUser(userId, (client) =>
+          toggleProcessRepo(client, processId)
+        )
+        results.push({ action: 'process.toggle', processId, enabled: process?.enabled })
+      } catch (err) {
+        results.push({ action: 'process.toggle', error: String(err) })
+      }
+    }
+
+    if (k === 'process.delete') {
+      const processId = String(action?.processId || '').trim()
+      if (!processId) continue
+
+      try {
+        const ok = await withUser(userId, (client) =>
+          deleteProcessRepo(client, processId)
+        )
+        results.push({ action: 'process.delete', processId, success: Boolean(ok) })
+      } catch (err) {
+        results.push({ action: 'process.delete', error: String(err) })
+      }
+    }
   }
 
   // Bump revision counters for any domains that were mutated
@@ -391,6 +474,9 @@ export async function executeActions(
   }
   if (['delivery.track', 'delivery.remove'].some((a) => mutated.has(a))) {
     bumpRevision('deliveries')
+  }
+  if (['process.create', 'process.toggle', 'process.delete'].some((a) => mutated.has(a))) {
+    bumpRevision('settings')
   }
 
   return { navigation: navigationTarget, results }

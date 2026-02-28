@@ -73,6 +73,22 @@ export async function getMessagesByConversation(
   return result.rows as Message[]
 }
 
+/** Count messages created today (UTC) for the current RLS user */
+export async function countMessagesToday(
+  client: PoolClient
+): Promise<{ total: number; lastAt: Date | null }> {
+  const result = await client.query(
+    `select count(*)::int as total,
+            max(m.created_at) as "lastAt"
+     from core.message m
+     join core.conversation c on c.id = m.conversation_id
+     where c.user_id = core.current_user_id()
+       and m.created_at >= current_date`
+  )
+  const row = result.rows[0]
+  return { total: row?.total ?? 0, lastAt: row?.lastAt ?? null }
+}
+
 export async function updateMessageContent(
   client: PoolClient,
   messageId: string,

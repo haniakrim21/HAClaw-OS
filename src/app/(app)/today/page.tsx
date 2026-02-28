@@ -4,6 +4,7 @@ import { getActiveWorkspace } from '@/lib/workspace'
 import { getTasksByWorkspace } from '@/lib/db/repositories/task.repository'
 import { findProcessesByWorkspace } from '@/lib/db/repositories/process.repository'
 import { getUserSettings } from '@/lib/db/repositories/user-setting.repository'
+import { countMessagesToday } from '@/lib/ai/message.repository'
 import {
   GreetingWidget,
   CurrencyWidget,
@@ -17,6 +18,33 @@ import { WidgetErrorBoundary } from '@/components/ui/WidgetErrorBoundary'
 export const dynamic = 'force-dynamic'
 
 const PREF_KEYS = ['dashboard:currencies', 'dashboard:weather_city', 'dashboard:timezone'] as const
+
+/** Check if Clawdbot gateway is reachable (fast ping, no auth needed for health) */
+async function checkGatewayHealth(): Promise<boolean> {
+  const url = process.env.CLAWDBOT_URL || 'http://127.0.0.1:18789'
+  try {
+    const res = await fetch(`${url.replace(/\/$/, '')}/health`, {
+      signal: AbortSignal.timeout(2000),
+      cache: 'no-store',
+    })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
+/** Format "last activity" relative time */
+function formatLastActivity(date: Date | null): string | null {
+  if (!date) return null
+  const now = Date.now()
+  const diffMs = now - new Date(date).getTime()
+  const mins = Math.floor(diffMs / 60_000)
+  if (mins < 1) return 'Just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.floor(hours / 24)}d ago`
+}
 
 export default async function DashboardPage() {
   const [session, workspace] = await Promise.all([getSession(), getActiveWorkspace()])
@@ -32,8 +60,8 @@ export default async function DashboardPage() {
     )
   }
 
-  // Fetch tasks, processes, and user preferences in parallel
-  const [tasks, processes, settings] = await Promise.all([
+  // Fetch all data in parallel
+  const [tasks, processes, settings, messageStats, isOnline] = await Promise.all([
     withUser(session.userId, (client) =>
       getTasksByWorkspace(client, workspace.id, { limit: 10 })
     ),
@@ -43,6 +71,10 @@ export default async function DashboardPage() {
     withUser(session.userId, (client) =>
       getUserSettings(client, [...PREF_KEYS])
     ).catch(() => []),
+    withUser(session.userId, (client) =>
+      countMessagesToday(client)
+    ).catch(() => ({ total: 0, lastAt: null })),
+    checkGatewayHealth(),
   ])
 
   // Extract preferences from settings
@@ -72,7 +104,11 @@ export default async function DashboardPage() {
       {/* Row 2: Agent Metrics | Processes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
         <WidgetErrorBoundary name="AgentMetrics">
-          <AgentMetricsWidget />
+          <AgentMetricsWidget
+            messagesCount={messageStats.total}
+            lastActivity={formatLastActivity(messageStats.lastAt)}
+            isOnline={isOnline}
+          />
         </WidgetErrorBoundary>
         <WidgetErrorBoundary name="Processes">
           <ProcessesWidget initialProcesses={processes} workspaceId={workspace.id} />

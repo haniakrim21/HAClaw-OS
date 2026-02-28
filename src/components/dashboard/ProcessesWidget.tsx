@@ -13,6 +13,18 @@ const ProcessModal = dynamic(
 
 const log = createClientLogger('processes-widget')
 
+/** Convert cron to human-readable label */
+function describeCron(cron: string): string {
+  const cronMap: Record<string, string> = {
+    '0 9 * * *': 'Daily at 9:00',
+    '0 20 * * *': 'Daily at 20:00',
+    '0 9 * * 1-5': 'Weekdays at 9:00',
+    '0 10 * * 1': 'Mondays at 10:00',
+    '0 * * * *': 'Every hour',
+  }
+  return cronMap[cron] || cron
+}
+
 interface ProcessesWidgetProps {
   initialProcesses: Process[]
   workspaceId: string
@@ -83,9 +95,24 @@ export function ProcessesWidget({ initialProcesses, workspaceId }: ProcessesWidg
 
         <div className="space-y-3">
           {enabledProcesses.length === 0 ? (
-            <p className="text-sm text-center py-8 text-[var(--muted)]" >
-              No active processes
-            </p>
+            <div className="text-center py-6">
+              <p className="text-sm text-[var(--muted)]">
+                No active processes
+              </p>
+              <p className="text-xs text-[var(--muted)] mt-1 mb-3">
+                Describe what you need in chat and Clawd will set it up
+              </p>
+              <button
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('clawdos:ai-prefill', {
+                    detail: { text: 'Set up a process: ' },
+                  }))
+                }}
+                className="px-3 py-1.5 rounded-lg border border-[var(--neon-dim)] text-xs font-medium text-[var(--neon)] hover:bg-[var(--neon-dim)] transition-colors"
+              >
+                Ask Clawd
+              </button>
+            </div>
           ) : (
             enabledProcesses.slice(0, 5).map((process) => (
               <div
@@ -101,8 +128,8 @@ export function ProcessesWidget({ initialProcesses, workspaceId }: ProcessesWidg
                     <h3 className="text-[15px] font-medium text-[var(--fg)]" >
                       {process.title}
                     </h3>
-                    <p className="text-sm mt-0.5 text-[var(--muted)]" >
-                      {process.schedule}
+                    <p className="text-sm mt-0.5 text-[var(--muted)]">
+                      {describeCron(process.schedule)}
                     </p>
                   </div>
                   <button
