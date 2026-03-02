@@ -2,7 +2,7 @@
   <a href="https://github.com/hasanator3000/ClawdOS/stargazers"><img src="https://img.shields.io/github/stars/hasanator3000/ClawdOS?style=flat-square&color=a78bfa" alt="Stars" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT" /></a>
   <a href="https://github.com/hasanator3000/ClawdOS/commits"><img src="https://img.shields.io/github/last-commit/hasanator3000/ClawdOS?style=flat-square&color=6ee7b7" alt="Last Commit" /></a>
-  <img src="https://img.shields.io/badge/version-0.2.0-blueviolet?style=flat-square" alt="v0.2.0" />
+  <img src="https://img.shields.io/badge/version-0.2.1-blueviolet?style=flat-square" alt="v0.2.1" />
 </p>
 
 <h1 align="center">
@@ -35,14 +35,14 @@
 
 **ClawdOS is the web interface for [OpenClaw](https://github.com/openclaw/openclaw)** (formerly Moltbot / Clawdbot) — the open-source personal AI agent with 237K+ stars.
 
-OpenClaw is the brain. **ClawdOS is the eyes and hands.** It gives your OpenClaw agent a full productivity workspace — task management, news feeds, package tracking, dashboards, a skill marketplace — all controlled by AI through natural language.
+OpenClaw is the brain. **ClawdOS is the eyes and hands.** It gives your OpenClaw agent a full productivity workspace — task management, notes, news feeds, package tracking, dashboards, a skill marketplace — all controlled by AI through natural language.
 
 Think of it as **KDE for your AI agent**: OpenClaw runs in the terminal; ClawdOS gives it a visual operating system.
 
 | Without ClawdOS | With ClawdOS |
 |-----------------|--------------|
 | Terminal-only interaction | Full web UI + terminal |
-| No persistent workspace | Tasks, news, deliveries, dashboard |
+| No persistent workspace | Tasks, notes, news, deliveries, dashboard |
 | Text responses only | AI executes actions in your workspace |
 | Manual skill management | Visual skill marketplace |
 
@@ -79,6 +79,10 @@ Workspace-scoped tasks with priorities (0–4), due dates, tags, projects, and f
   <img src="docs/screenshots/canban.png" width="400" alt="Task Management — Kanban Board" />
   <img src="docs/screenshots/task-edit.png" width="400" alt="Task Detail View" />
 </p>
+
+### Notes
+
+Rich-text editor powered by [Plate](https://platejs.org) (v52). Headings, lists, blockquotes, code blocks, tables, toggles, callouts, and checkboxes — all from a `/` slash menu. Drag & drop blocks, paste or upload images with resize, insert multi-column layouts. Each note gets an emoji icon and cover image. Pinned notes appear in the sidebar for quick access. Full-text search across all content (PostgreSQL `tsvector` + GIN index). Mobile-optimized with a touch-friendly bottom toolbar and swipe actions.
 
 ### News & RSS
 
@@ -129,6 +133,7 @@ Browser  ──▶  ClawdOS (Next.js)  ──▶  OpenClaw agent
 |--------|---------|
 | Create, complete, delete tasks | *"create a task to review the PR"* |
 | Set task priority | *"mark it as urgent"* |
+| Create and edit notes | *"create a note about the meeting"* |
 | Add/remove RSS feeds | *"add TechCrunch to my news"* |
 | Create news tabs | *"make a Crypto tab"* |
 | Track/remove packages | *"track RR123456789CN"* |
@@ -203,6 +208,7 @@ Built for self-hosting on a private network.
 | Auth | iron-session + Argon2id |
 | Validation | Zod 4 |
 | AI Runtime | OpenClaw gateway (OpenAI-compatible, SSE streaming) |
+| Rich Editor | Plate v52 (headings, images, DnD, columns, tables) |
 | RSS | fast-xml-parser |
 | ML | @xenova/transformers (offline embeddings for intent routing) |
 | Testing | Vitest + Testing Library |
@@ -211,7 +217,7 @@ Built for self-hosting on a private network.
 
 ## Updates
 
-Built-in update system. Run `npm run update` — fetches latest via git merge, runs migrations, rebuilds, and restarts. Your data and config are never touched. Automatic rollback on failure.
+Built-in update system. Run `npm run update` — fetches latest via git merge, runs migrations, rebuilds, and restarts. Your data and config are never touched. Automatic rollback on failure. Database migrations also run automatically on every server startup, so schema changes apply even after a manual restart.
 
 UI banner appears when updates are available. Auto-checks every 6 hours with `auto-host.sh`.
 
@@ -224,15 +230,18 @@ src/
   app/(app)/              # Auth-protected pages
     today/                #   Dashboard
     tasks/                #   Task management
+    notes/                #   Notes with rich editor
     news/                 #   RSS aggregator
     deliveries/           #   Package tracking
     settings/             #   User settings & skills
   app/api/
     ai/chat/              #   OpenClaw proxy + action executor
+    uploads/              #   Image upload for notes
     currencies/           #   Crypto & fiat rates
     webhooks/             #   External service callbacks
   components/
     shell/                #   App shell, AI panel, command palette
+    editor/               #   Plate v52 rich text editor + plugins
     dashboard/            #   Dashboard widgets
   lib/
     db/repositories/      #   Raw pg queries with RLS
@@ -240,7 +249,7 @@ src/
     auth/                 #   Sessions, passwords, 2FA
 db/
   schema.sql              # Baseline schema
-  migrations/             # Incremental SQL migrations
+  migrations/             # Incremental SQL migrations (001-015)
 ```
 
 ---
