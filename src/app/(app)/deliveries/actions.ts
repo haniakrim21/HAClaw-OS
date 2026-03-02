@@ -30,6 +30,27 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 /** Statuses from TrackingMore that mean "no real data yet" */
 const TM_EMPTY_STATUSES = ['pending', 'notfound']
 
+/**
+ * Well-known carriers that should be tried first.
+ * TrackingMore's detect API often ranks obscure carriers (DPEX, Sagawa)
+ * above FedEx/UPS for ambiguous tracking numbers.
+ */
+const PREFERRED_CARRIERS = new Set([
+  'fedex', 'ups', 'usps', 'dhl', 'dhl-express', 'dhl-germany',
+  'royal-mail', 'canada-post', 'australia-post',
+  'ems', 'china-ems', 'china-post', 'yanwen',
+  'dpd', 'gls', 'tnt', 'aramex', 'cdek',
+])
+
+/** Rerank detected carriers: preferred carriers first, then the rest in original order */
+function rerankCarriers(
+  candidates: Array<{ courier_code: string; courier_name: string }>
+): Array<{ courier_code: string; courier_name: string }> {
+  const preferred = candidates.filter(c => PREFERRED_CARRIERS.has(c.courier_code))
+  const rest = candidates.filter(c => !PREFERRED_CARRIERS.has(c.courier_code))
+  return [...preferred, ...rest]
+}
+
 /** Check if a TrackingMore response has real tracking data */
 function hasRealData(result: TrackingMoreTracking): boolean {
   const eventCount =
@@ -66,7 +87,8 @@ export async function addDelivery(params: {
 
     if (!courierCode) {
       try {
-        detectedCandidates = await detectCarrier(params.trackingNumber)
+        const raw = await detectCarrier(params.trackingNumber)
+        detectedCandidates = rerankCarriers(raw)
         if (detectedCandidates.length > 0) {
           courierCode = detectedCandidates[0].courier_code
           courierName = detectedCandidates[0].courier_name
@@ -80,12 +102,12 @@ export async function addDelivery(params: {
 
     // Fetch realtime status — try each detected carrier candidate until one
     // returns actual tracking data. The detect API often ranks the wrong
-    // carrier first (e.g. SF International before FedEx for 888* numbers).
+    // carrier first (e.g. DPEX before FedEx for 515* numbers).
     let trackingmoreId: string | undefined
     let tmData: TrackingMoreTracking | undefined
 
     const candidatesToTry = courierCode && !params.courierCode && detectedCandidates.length > 1
-      ? detectedCandidates.slice(0, 4) // try top 4 candidates from detect
+      ? detectedCandidates.slice(0, 5) // try top 5 reranked candidates
       : courierCode ? [{ courier_code: courierCode, courier_name: courierName || '' }] : []
 
     for (let i = 0; i < candidatesToTry.length; i++) {
@@ -228,8 +250,9 @@ export async function refreshDelivery(id: string): Promise<{ delivery?: Delivery
     if (!tmData && delivery.status === 'pending') {
       try {
         await sleep(TM_DELAY_MS)
-        const candidates = await detectCarrier(delivery.trackingNumber)
-        const toTry = candidates.slice(0, 3).filter(c => c.courier_code !== delivery.courierCode)
+        const raw = await detectCarrier(delivery.trackingNumber)
+        const candidates = rerankCarriers(raw)
+        const toTry = candidates.slice(0, 5).filter(c => c.courier_code !== delivery.courierCode)
         for (let i = 0; i < toTry.length; i++) {
           if (i > 0) await sleep(TM_DELAY_MS)
           try {

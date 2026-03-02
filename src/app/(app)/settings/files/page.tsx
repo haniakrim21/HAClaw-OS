@@ -8,7 +8,6 @@ export const dynamic = 'force-dynamic'
 
 const AGENT_WORKSPACE = '/root/clawd'
 const CLAWDOS_ROOT = '/root/clawd/apps/clawdos'
-const CLAUDE_RULES = '/root/.claude/rules'
 
 export type FileCategory =
   | 'agent-core'
@@ -17,7 +16,6 @@ export type FileCategory =
   | 'skills'
   | 'memory'
   | 'config'
-  | 'claude-rules'
 
 export type AgentFile = {
   name: string
@@ -111,14 +109,22 @@ async function collectFiles(): Promise<AgentFile[]> {
       return files
     })(),
 
-    // Memory: /root/clawd/memory/ (recursive)
-    collectDir(join(AGENT_WORKSPACE, 'memory'), 'memory', 'memory', { recurse: true }),
+    // Memory: /root/clawd/memory/ — top-level files only (users/ contains private TG data)
+    (async () => {
+      const memDir = join(AGENT_WORKSPACE, 'memory')
+      const entries = await safeReaddir(memDir)
+      const files: AgentFile[] = []
+      for (const e of entries) {
+        const s = await safeStat(join(memDir, e))
+        if (s?.isFile()) {
+          files.push({ name: e, path: join('memory', e), category: 'memory', size: formatSize(s.size), modified: s.mtime.toISOString() })
+        }
+      }
+      return files
+    })(),
 
     // Config: /root/clawd/config/
     collectDir(join(AGENT_WORKSPACE, 'config'), 'config', 'config'),
-
-    // Claude Rules: ~/.claude/rules/
-    collectDir(CLAUDE_RULES, 'claude-rules', 'claude-rules'),
   ])
 
   return groups.flat().sort((a, b) => a.name.localeCompare(b.name))

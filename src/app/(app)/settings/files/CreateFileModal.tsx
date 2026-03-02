@@ -10,11 +10,10 @@ const CATEGORY_META: Record<string, { label: string; color: string; description:
   'clawdos-rules': { label: 'ClawdOS Rules', color: 'var(--cyan)',  description: 'Developer guide for this codebase (RULES/)' },
   'memory':        { label: 'Memory',        color: 'var(--fg)',    description: 'Persistent agent memory and context' },
   'config':        { label: 'Config',        color: 'var(--muted)', description: 'Agent configuration files' },
-  'claude-rules':  { label: 'Claude Rules',  color: 'var(--red)',   description: 'Claude Code rules (~/.claude/rules/)' },
 }
 
 const CREATABLE_CATEGORIES: FileCategory[] = [
-  'agent-core', 'agent-rules', 'clawdos-rules', 'memory', 'config', 'claude-rules',
+  'agent-core', 'agent-rules', 'clawdos-rules', 'memory', 'config',
 ]
 
 interface CreateFileModalProps {

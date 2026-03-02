@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import type { WeatherData } from '@/app/api/weather/route'
 import type { SystemStatus } from '@/app/api/system/status/route'
+import { DashboardCard } from './DashboardCard'
 
 interface GreetingWidgetProps {
   username?: string
@@ -185,13 +186,7 @@ export function GreetingWidget({ username, timezone, weatherCity }: GreetingWidg
   }, [])
 
   return (
-    <div
-      className="p-6 rounded-2xl"
-      style={{
-        background: 'var(--card)',
-        border: '1px solid var(--border)',
-      }}
-    >
+    <DashboardCard>
       {/* Top row: time+date | weather */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -279,6 +274,6 @@ export function GreetingWidget({ username, timezone, weatherCity }: GreetingWidg
           </div>
         </div>
       )}
-    </div>
+    </DashboardCard>
   )
 }

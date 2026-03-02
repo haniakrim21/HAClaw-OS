@@ -39,6 +39,13 @@ export const SECTIONS: Section[] = [
     sidebar: true,
   },
   {
+    id: 'notes',
+    title: 'Notes',
+    path: '/notes',
+    aliases: ['notes', 'note', 'заметки', 'заметка', 'memo', 'мемо', 'memos', 'записи', 'записка'],
+    sidebar: true,
+  },
+  {
     id: 'settings',
     title: 'Settings',
     path: '/settings',

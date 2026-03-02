@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { DashboardCard } from './DashboardCard'
 
 interface Task {
   id: string
@@ -23,10 +24,7 @@ export function RecentTasksWidget({ tasks }: RecentTasksWidgetProps) {
   const pendingTasks = tasks.filter((t) => t.status === 'todo' || t.status === 'in_progress').slice(0, 5)
 
   return (
-    <div
-      className="p-5 rounded-2xl bg-[var(--card)] border border-[var(--border)]"
-      
-    >
+    <DashboardCard>
       <div className="flex items-center justify-between mb-4">
         <div
           className="text-[11px] uppercase tracking-widest font-mono font-medium text-[var(--muted)]"
@@ -87,6 +85,6 @@ export function RecentTasksWidget({ tasks }: RecentTasksWidgetProps) {
           })}
         </div>
       )}
-    </div>
+    </DashboardCard>
   )
 }

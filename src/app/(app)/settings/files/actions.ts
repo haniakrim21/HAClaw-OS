@@ -9,12 +9,9 @@ import type { FileCategory } from './page'
 
 const AGENT_WORKSPACE = '/root/clawd'
 const CLAWDOS_ROOT = '/root/clawd/apps/clawdos'
-const CLAUDE_RULES = '/root/.claude/rules'
-
 /** Map relative path prefix → root for read/write operations */
 function rootForPath(relativePath: string): string {
   if (relativePath.startsWith('RULES/') || relativePath.startsWith('RULES\\')) return CLAWDOS_ROOT
-  if (relativePath.startsWith('claude-rules/') || relativePath.startsWith('claude-rules\\')) return resolve(CLAUDE_RULES, '..')
   return AGENT_WORKSPACE
 }
 
@@ -87,7 +84,6 @@ const CREATABLE_DIRS: Record<string, { root: string; prefix: string }> = {
   'clawdos-rules': { root: CLAWDOS_ROOT, prefix: 'RULES' },
   'memory': { root: AGENT_WORKSPACE, prefix: 'memory' },
   'config': { root: AGENT_WORKSPACE, prefix: 'config' },
-  'claude-rules': { root: resolve(CLAUDE_RULES, '..'), prefix: 'rules' },
 }
 
 export async function createAgentFile(

@@ -1,5 +1,7 @@
 'use client'
 
+import { DashboardCard } from './DashboardCard'
+
 interface AgentMetricsWidgetProps {
   messagesCount: number
   lastActivity: string | null
@@ -8,13 +10,7 @@ interface AgentMetricsWidgetProps {
 
 export function AgentMetricsWidget({ messagesCount, lastActivity, isOnline }: AgentMetricsWidgetProps) {
   return (
-    <div
-      className="p-6 rounded-2xl"
-      style={{
-        background: 'var(--card)',
-        border: '1px solid var(--border)',
-      }}
-    >
+    <DashboardCard>
       <h3 className="text-lg font-semibold text-[var(--fg)]">
         Agent Status
       </h3>
@@ -69,6 +65,6 @@ export function AgentMetricsWidget({ messagesCount, lastActivity, isOnline }: Ag
           </div>
         </div>
       </div>
-    </div>
+    </DashboardCard>
   )
 }

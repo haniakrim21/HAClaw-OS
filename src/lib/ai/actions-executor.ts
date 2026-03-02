@@ -30,6 +30,14 @@ import {
   toggleProcess as toggleProcessRepo,
   deleteProcess as deleteProcessRepo,
 } from '@/lib/db/repositories/process.repository'
+import {
+  createNote as createNoteRepo,
+  findNotesByWorkspace as findNotesRepo,
+  findNoteById as findNoteByIdRepo,
+  updateNote as updateNoteRepo,
+  deleteNote as deleteNoteRepo,
+} from '@/lib/db/repositories/note.repository'
+import { slateToMarkdown } from '@/lib/slate-to-markdown'
 import { detectCarrier, createTracking } from '@/lib/trackingmore/client'
 import type { TrackingMoreTracking } from '@/lib/trackingmore/types'
 import { mapTmStatus, extractEvents } from '@/lib/delivery-utils'
@@ -49,6 +57,7 @@ const ALLOWED_PATHS = new Set([
   '/news',
   '/tasks',
   '/deliveries',
+  '/notes',
   '/settings',
   '/settings/telegram',
   '/settings/password',
@@ -462,6 +471,155 @@ export async function executeActions(
         results.push({ action: 'process.delete', error: String(err) })
       }
     }
+
+    // Note actions
+    if (k === 'note.create') {
+      const title = String(action?.title || '').trim()
+      if (!title || !workspaceId) {
+        results.push({ action: 'note.create', error: !workspaceId ? 'No workspace' : 'Title required' })
+        continue
+      }
+
+      try {
+        // Support multi-paragraph content: split by newlines into separate paragraphs
+        let content: unknown[] | undefined
+        if (typeof action?.content === 'string' && action.content.trim()) {
+          content = action.content.split('\n').map((line: string) => ({
+            type: 'p',
+            children: [{ text: line }],
+          }))
+        }
+
+        const note = await withUser(userId, (client) =>
+          createNoteRepo(client, {
+            workspaceId,
+            title,
+            content,
+            tags: Array.isArray(action?.tags) ? action.tags.map(String) : undefined,
+            isPinned: action?.isPinned === true,
+          })
+        )
+        results.push({ action: 'note.create', noteId: note.id, note })
+      } catch (err) {
+        results.push({ action: 'note.create', error: String(err) })
+      }
+    }
+
+    if (k === 'note.read') {
+      const noteId = String(action?.noteId || '').trim()
+      if (!noteId) {
+        results.push({ action: 'note.read', error: 'noteId required' })
+        continue
+      }
+      try {
+        const note = await withUser(userId, (client) => findNoteByIdRepo(client, noteId))
+        if (!note) {
+          results.push({ action: 'note.read', error: 'Note not found' })
+          continue
+        }
+        // Return full content as markdown for readability
+        const markdown = slateToMarkdown(note.content as unknown[])
+        results.push({
+          action: 'note.read',
+          id: note.id,
+          title: note.title,
+          tags: note.tags,
+          isPinned: note.isPinned,
+          status: note.status,
+          updatedAt: note.updatedAt,
+          markdown,
+        })
+      } catch (err) {
+        results.push({ action: 'note.read', error: String(err) })
+      }
+    }
+
+    if (k === 'note.update') {
+      const noteId = String(action?.noteId || '').trim()
+      if (!noteId) {
+        results.push({ action: 'note.update', error: 'noteId required' })
+        continue
+      }
+      try {
+        // Build update params from action payload
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const params: Record<string, any> = {}
+        if (typeof action?.title === 'string') params.title = action.title
+        if (typeof action?.content === 'string' && action.content.trim()) {
+          params.content = action.content.split('\n').map((line: string) => ({
+            type: 'p',
+            children: [{ text: line }],
+          }))
+        }
+        if (Array.isArray(action?.tags)) params.tags = action.tags.map(String)
+        if (typeof action?.isPinned === 'boolean') params.isPinned = action.isPinned
+        if (typeof action?.color === 'string') params.color = action.color || null
+        if (action?.status === 'active' || action?.status === 'archived') params.status = action.status
+
+        const note = await withUser(userId, (client) => updateNoteRepo(client, noteId, params))
+        if (!note) {
+          results.push({ action: 'note.update', error: 'Note not found' })
+          continue
+        }
+        results.push({ action: 'note.update', noteId: note.id, note })
+      } catch (err) {
+        results.push({ action: 'note.update', error: String(err) })
+      }
+    }
+
+    if (k === 'note.export') {
+      const noteId = String(action?.noteId || '').trim()
+      if (!noteId) {
+        results.push({ action: 'note.export', error: 'noteId required' })
+        continue
+      }
+      try {
+        const note = await withUser(userId, (client) => findNoteByIdRepo(client, noteId))
+        if (!note) {
+          results.push({ action: 'note.export', error: 'Note not found' })
+          continue
+        }
+        const markdown = `# ${note.title}\n\n${slateToMarkdown(note.content as unknown[])}`
+        results.push({ action: 'note.export', noteId: note.id, title: note.title, markdown })
+      } catch (err) {
+        results.push({ action: 'note.export', error: String(err) })
+      }
+    }
+
+    if (k === 'note.list') {
+      if (!workspaceId) {
+        results.push({ action: 'note.list', error: 'No workspace' })
+        continue
+      }
+      try {
+        const searchQuery = typeof action?.search === 'string' ? action.search : undefined
+        const notes = await withUser(userId, (client) =>
+          findNotesRepo(client, workspaceId, { limit: 20, search: searchQuery })
+        )
+        const summary = notes.map((n) => ({
+          id: n.id,
+          title: n.title,
+          tags: n.tags,
+          isPinned: n.isPinned,
+          updatedAt: n.updatedAt,
+        }))
+        results.push({ action: 'note.list', count: notes.length, notes: summary })
+      } catch (err) {
+        results.push({ action: 'note.list', error: String(err) })
+      }
+    }
+
+    if (k === 'note.delete') {
+      const noteId = String(action?.noteId || '').trim()
+      if (!noteId) continue
+
+      try {
+        const ok = await withUser(userId, (client) => deleteNoteRepo(client, noteId))
+        results.push({ action: 'note.delete', noteId, success: Boolean(ok) })
+      } catch (err) {
+        results.push({ action: 'note.delete', error: String(err) })
+      }
+    }
   }
 
   // Bump revision counters for any domains that were mutated
@@ -477,6 +635,9 @@ export async function executeActions(
   }
   if (['process.create', 'process.toggle', 'process.delete'].some((a) => mutated.has(a))) {
     bumpRevision('settings')
+  }
+  if (['note.create', 'note.update', 'note.delete'].some((a) => mutated.has(a))) {
+    bumpRevision('notes')
   }
 
   return { navigation: navigationTarget, results }

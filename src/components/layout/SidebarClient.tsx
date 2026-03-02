@@ -8,6 +8,7 @@ import { SIDEBAR_SECTIONS } from '@/lib/nav/sections'
 import { NAV_ICONS } from './sidebar/nav-icons'
 import { WorkspaceDropdown } from './sidebar/WorkspaceDropdown'
 import { UserMenu } from './sidebar/UserMenu'
+import { SidebarFavorites } from './sidebar/SidebarFavorites'
 
 const PINS_STORAGE_KEY = 'clawdos.pinned-workspaces'
 const RAIL_STORAGE_KEY = 'clawd-rail-open'
@@ -168,6 +169,9 @@ export default function SidebarClient({ username }: { username?: string }) {
           </Link>
         )
       })}
+
+      {/* Favorites (pinned notes) */}
+      <SidebarFavorites expanded={exp} />
 
       {/* Spacer */}
       <div className="flex-1" />

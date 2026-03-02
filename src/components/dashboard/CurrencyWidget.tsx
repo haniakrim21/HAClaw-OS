@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CurrencyRate } from '@/app/api/currencies/route'
+import { DashboardCard } from './DashboardCard'
 
 interface CurrencyPreferences {
   baseCurrency: string
@@ -121,10 +122,7 @@ export function CurrencyWidget({ preferences }: CurrencyWidgetProps) {
 
   if (loading) {
     return (
-      <div
-        className="p-5 rounded-2xl bg-[var(--card)] border border-[var(--border)]"
-        
-      >
+      <DashboardCard>
         <div
           className="text-[11px] uppercase tracking-widest font-mono mb-3 font-medium text-[var(--muted)]"
           
@@ -140,16 +138,13 @@ export function CurrencyWidget({ preferences }: CurrencyWidgetProps) {
             />
           ))}
         </div>
-      </div>
+      </DashboardCard>
     )
   }
 
   if (error) {
     return (
-      <div
-        className="p-5 rounded-2xl bg-[var(--card)] border border-[var(--border)]"
-        
-      >
+      <DashboardCard>
         <div
           className="text-[11px] uppercase tracking-widest font-mono mb-3 font-medium text-[var(--muted)]"
           
@@ -157,18 +152,14 @@ export function CurrencyWidget({ preferences }: CurrencyWidgetProps) {
           Currencies
         </div>
         <div className="text-sm text-[var(--muted)]" >{error}</div>
-      </div>
+      </DashboardCard>
     )
   }
 
   return (
-    <div
-      className="p-5 rounded-2xl bg-[var(--card)] border border-[var(--border)]"
-      
-    >
+    <DashboardCard>
       <div
         className="text-[11px] uppercase tracking-widest font-mono mb-3 font-medium text-[var(--muted)]"
-        
       >
         Currencies
       </div>
@@ -177,6 +168,6 @@ export function CurrencyWidget({ preferences }: CurrencyWidgetProps) {
           <RateCard key={rate.symbol} rate={rate} baseSymbol={baseSymbol} />
         ))}
       </div>
-    </div>
+    </DashboardCard>
   )
 }

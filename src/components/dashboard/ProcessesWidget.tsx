@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import type { Process } from '@/lib/db/repositories/process.repository'
 import { toggleProcessAction } from '@/app/(app)/today/actions'
 import { createClientLogger } from '@/lib/client-logger'
+import { DashboardCard } from './DashboardCard'
 
 const ProcessModal = dynamic(
   () => import('./ProcessModal').then((m) => m.ProcessModal),
@@ -63,31 +64,14 @@ export function ProcessesWidget({ initialProcesses, workspaceId }: ProcessesWidg
 
   return (
     <>
-      <div
-        className="p-6 rounded-2xl"
-        style={{
-          background: 'var(--card)',
-          border: '1px solid var(--border)',
-        }}
-      >
+      <DashboardCard>
         <div className="flex items-center justify-between gap-2 mb-5">
           <h2 className="text-lg font-semibold text-[var(--fg)] truncate" >
             Active Processes
           </h2>
           <button
             onClick={() => setModalOpen(true)}
-            className="px-3 md:px-4 py-2 rounded-lg border text-sm font-medium transition-colors hover:border-[var(--neon-dim)] shrink-0"
-            style={{
-              borderColor: 'var(--border)',
-              color: 'var(--fg)',
-              background: 'transparent',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--hover)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent'
-            }}
+            className="px-3 md:px-4 py-2 rounded-lg border border-[var(--border)] text-sm font-medium text-[var(--fg)] transition-colors hover:border-[var(--neon-dim)] hover:bg-[var(--hover)] shrink-0"
           >
             Manage
           </button>
@@ -117,11 +101,7 @@ export function ProcessesWidget({ initialProcesses, workspaceId }: ProcessesWidg
             enabledProcesses.slice(0, 5).map((process) => (
               <div
                 key={process.id}
-                className="px-4 py-3.5 rounded-xl border transition-colors"
-                style={{
-                  borderColor: 'var(--border)',
-                  background: 'rgba(255,255,255,0.02)',
-                }}
+                className="px-4 py-3.5 rounded-xl border border-[var(--border)] bg-[rgba(255,255,255,0.02)] transition-colors"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -149,7 +129,7 @@ export function ProcessesWidget({ initialProcesses, workspaceId }: ProcessesWidg
             ))
           )}
         </div>
-      </div>
+      </DashboardCard>
 
       {modalOpen && (
         <ProcessModal

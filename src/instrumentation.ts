@@ -19,7 +19,11 @@ export async function register() {
     process.on('SIGTERM', () => shutdown('SIGTERM'))
     process.on('SIGINT', () => shutdown('SIGINT'))
 
+    // Auto-apply pending DB migrations on startup
+    const { runPendingMigrations } = await import('@/lib/db/auto-migrate')
+    await runPendingMigrations()
+
     const initLog = createLogger('init')
-    initLog.info('Shutdown handlers registered')
+    initLog.info('Server initialized (shutdown handlers + auto-migrate)')
   }
 }

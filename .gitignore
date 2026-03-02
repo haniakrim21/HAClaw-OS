@@ -93,5 +93,8 @@ so_cool_strategy.md
 *.log
 logs/
 
+# User uploads (images in notes)
+/public/uploads/
+
 # Update system working directory
 /.update/

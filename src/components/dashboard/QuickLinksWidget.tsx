@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { DashboardCard } from './DashboardCard'
 
 interface QuickLink {
   href: string
@@ -48,13 +49,9 @@ export function QuickLinksWidget() {
   const pathname = usePathname()
 
   return (
-    <div
-      className="p-5 rounded-2xl bg-[var(--card)] border border-[var(--border)]"
-      
-    >
+    <DashboardCard>
       <div
         className="text-[11px] uppercase tracking-widest font-mono mb-4 font-medium text-[var(--muted)]"
-        
       >
         Quick Access
       </div>
@@ -77,6 +74,6 @@ export function QuickLinksWidget() {
           )
         })}
       </div>
-    </div>
+    </DashboardCard>
   )
 }

@@ -17,6 +17,7 @@ describe('revision-store', () => {
     expect(rev).toHaveProperty('news')
     expect(rev).toHaveProperty('deliveries')
     expect(rev).toHaveProperty('settings')
+    expect(rev).toHaveProperty('notes')
   })
 
   it('bumpRevision increments the correct domain', async () => {

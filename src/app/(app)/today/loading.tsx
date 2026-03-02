@@ -124,7 +124,7 @@ function ProcessesSkeleton() {
 function RecentTasksSkeleton() {
   return (
     <div
-      className="p-5 rounded-2xl bg-[var(--card)] border border-[var(--border)]"
+      className="p-6 rounded-2xl bg-[var(--card)] border border-[var(--border)]"
       
     >
       <div className="flex items-center justify-between mb-4">
@@ -152,7 +152,7 @@ function RecentTasksSkeleton() {
 function QuickLinksSkeleton() {
   return (
     <div
-      className="p-5 rounded-2xl bg-[var(--card)] border border-[var(--border)]"
+      className="p-6 rounded-2xl bg-[var(--card)] border border-[var(--border)]"
       
     >
       <div className="h-3 w-24 rounded bg-[var(--hover)] mb-4" />

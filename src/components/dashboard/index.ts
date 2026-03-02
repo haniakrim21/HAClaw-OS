@@ -1,3 +1,4 @@
+export { DashboardCard } from './DashboardCard'
 export { AgentMetricsWidget } from './AgentMetricsWidget'
 export { CurrencyWidget } from './CurrencyWidget'
 export { GreetingWidget } from './GreetingWidget'

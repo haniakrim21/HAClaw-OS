@@ -10,13 +10,14 @@
  * treats any mismatch as "something changed".
  */
 
-type Domain = 'tasks' | 'news' | 'deliveries' | 'settings'
+type Domain = 'tasks' | 'news' | 'deliveries' | 'settings' | 'notes'
 
 const revisions: Record<Domain, number> = {
   tasks: 0,
   news: 0,
   deliveries: 0,
   settings: 0,
+  notes: 0,
 }
 
 /** Increment revision for a domain. Call after any mutation. */

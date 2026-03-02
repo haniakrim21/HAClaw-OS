@@ -18,6 +18,7 @@
   --input-fg: #e2e0ec;
   --input-placeholder: #5c5a6a;
   --ring: #a78bfa;
+  --fg-bright: #f0eef9;
   --muted: #5c5a6a;
   --muted-2: #2a2935;
 
@@ -100,7 +101,26 @@ body {
   30% { opacity: 1; transform: translateY(-4px); }
 }
 
+/* === HOVER ACTIONS — hidden by default, visible on card hover === */
+/* Inline in SSR output, so no FOUC possible */
+
+[data-hover-actions] {
+  display: none;
+}
+
+.group:hover > [data-hover-actions] {
+  display: flex;
+}
+
 /* === SCROLLBAR === */
+
+/* === EDITOR: INLINE CODE === */
+
+/* Clean decoration when code wraps; no inline-block (breaks empty cursor) */
+[data-slate-editor] code {
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
 
 ::-webkit-scrollbar {
   width: 3px;

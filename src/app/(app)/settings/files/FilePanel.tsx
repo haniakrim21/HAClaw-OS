@@ -1,6 +1,12 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import type { AgentFile, FileCategory } from './page'
+
+const MarkdownFileEditor = dynamic(
+  () => import('@/components/editor/MarkdownFileEditor').then((m) => m.MarkdownFileEditor),
+  { ssr: false, loading: () => <div className="p-4 text-sm text-[var(--muted)]">Loading editor...</div> }
+)
 
 const CATEGORY_META: Record<FileCategory, { label: string; color: string; bg: string }> = {
   'agent-core':    { label: 'Agent Core',    color: 'var(--neon)',  bg: 'rgba(167, 139, 250, 0.12)' },
@@ -9,7 +15,6 @@ const CATEGORY_META: Record<FileCategory, { label: string; color: string; bg: st
   'skills':        { label: 'Skills',        color: 'var(--warm)',  bg: 'rgba(255, 171, 64, 0.12)' },
   'memory':        { label: 'Memory',        color: 'var(--fg)',    bg: 'rgba(255, 255, 255, 0.06)' },
   'config':        { label: 'Config',        color: 'var(--muted)', bg: 'rgba(128, 128, 128, 0.12)' },
-  'claude-rules':  { label: 'Claude Rules',  color: 'var(--red)',   bg: 'rgba(251, 113, 133, 0.12)' },
 }
 
 interface FilePanelProps {
@@ -34,6 +39,7 @@ export function FilePanel({
 }: FilePanelProps) {
   const meta = CATEGORY_META[file.category]
   const canEdit = !file.readOnly && content && !content.startsWith('Error:')
+  const isMarkdown = file.name.endsWith('.md')
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
@@ -70,6 +76,13 @@ export function FilePanel({
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
             <div className="p-4 text-sm text-[var(--muted)]">Loading...</div>
+          ) : isEditing && isMarkdown ? (
+            <div className="p-4">
+              <MarkdownFileEditor
+                initialMarkdown={editContent}
+                onChange={onEditChange}
+              />
+            </div>
           ) : isEditing ? (
             <textarea
               ref={textareaRef}
@@ -79,6 +92,13 @@ export function FilePanel({
               className="w-full h-full min-h-[400px] p-4 text-xs font-mono text-[var(--fg)] bg-transparent leading-relaxed resize-none focus:outline-none"
               style={{ tabSize: 2 }}
             />
+          ) : isMarkdown && content ? (
+            <div className="p-4">
+              <MarkdownFileEditor
+                initialMarkdown={content}
+                readOnly
+              />
+            </div>
           ) : content ? (
             <pre className="p-4 text-xs font-mono text-[var(--fg)] whitespace-pre-wrap break-words leading-relaxed">{content}</pre>
           ) : null}

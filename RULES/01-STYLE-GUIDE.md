@@ -19,6 +19,7 @@ All colours and layout variables are CSS custom properties in `:root`. Always us
 | `--input-fg` | `#e2e0ec` | Form input text |
 | `--input-placeholder` | `#5c5a6a` | Placeholder text |
 | `--ring` | `#a78bfa` | Focus ring colour |
+| `--fg-bright` | `#f0eef9` | Bright text (headings, bold) |
 | `--muted` | `#5c5a6a` | Secondary/muted text |
 | `--muted-2` | `#2a2935` | Very muted text / subtle UI |
 

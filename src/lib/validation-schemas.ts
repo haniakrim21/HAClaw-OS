@@ -192,5 +192,27 @@ export const createDeliverySchema = z.object({
 
 export const deliveryIdSchema = z.string().uuid('Invalid delivery ID')
 
+// --- Note schemas ---
+export const createNoteSchema = z.object({
+  title: z.string().max(200).default(''),
+  content: z.array(z.record(z.string(), z.unknown())).optional(),
+  tags: z.array(z.string().max(32)).max(20).optional(),
+  color: z.string().max(20).optional(),
+  isPinned: z.boolean().optional(),
+})
+
+export const updateNoteSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  content: z.array(z.record(z.string(), z.unknown())).optional(),
+  status: z.enum(['active', 'archived', 'deleted']).optional(),
+  tags: z.array(z.string().max(32)).max(20).optional(),
+  color: z.string().max(20).nullable().optional(),
+  icon: z.string().max(8).nullable().optional(),
+  coverImage: z.string().max(500).nullable().optional(),
+  isPinned: z.boolean().optional(),
+}).refine(obj => Object.keys(obj).length > 0, { message: 'At least one field required' })
+
+export const noteIdSchema = z.string().uuid('Invalid note ID')
+
 // Reusable UUID validator for single-string validations in server actions
 export const uuidSchema = z.string().uuid('Invalid ID')

@@ -9,10 +9,10 @@ schemas:
     functions: [app_current_user_id]
     triggers: []
   content:
-    version: 4
+    version: 6
     status: stable
     depends_on: [core]
-    tables: [digest, news_item, news_source, news_tab, news_source_tab, processes, delivery]
+    tables: [digest, news_item, news_source, news_tab, news_source_tab, processes, delivery, note]
   finance:
     version: 1
     status: development

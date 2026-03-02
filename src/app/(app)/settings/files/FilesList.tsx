@@ -13,15 +13,14 @@ const CATEGORY_META: Record<FileCategory, { label: string; color: string; bg: st
   'skills':        { label: 'Skills',        color: 'var(--warm)',  bg: 'rgba(255, 171, 64, 0.12)',   description: 'Installed workspace skill definitions' },
   'memory':        { label: 'Memory',        color: 'var(--fg)',    bg: 'rgba(255, 255, 255, 0.06)',  description: 'Persistent agent memory and context' },
   'config':        { label: 'Config',        color: 'var(--muted)', bg: 'rgba(128, 128, 128, 0.12)',  description: 'Agent configuration files' },
-  'claude-rules':  { label: 'Claude Rules',  color: 'var(--red)',   bg: 'rgba(251, 113, 133, 0.12)',  description: 'Claude Code rules (~/.claude/rules/)' },
 }
 
 const CATEGORY_ORDER: FileCategory[] = [
-  'agent-core', 'agent-rules', 'clawdos-rules', 'skills', 'memory', 'config', 'claude-rules',
+  'agent-core', 'agent-rules', 'clawdos-rules', 'skills', 'memory', 'config',
 ]
 
 const CREATABLE_CATEGORIES: FileCategory[] = [
-  'agent-core', 'agent-rules', 'clawdos-rules', 'memory', 'config', 'claude-rules',
+  'agent-core', 'agent-rules', 'clawdos-rules', 'memory', 'config',
 ]
 
 export function FilesList({ files }: { files: AgentFile[] }) {

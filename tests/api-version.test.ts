@@ -41,7 +41,7 @@ describe('/api/version logic', () => {
 
   it('getCurrentVersion reads from package.json', () => {
     const pkg = JSON.parse(readFileSync(require.resolve('../package.json'), 'utf8'))
-    expect(pkg.version).toBe('0.1.0')
+    expect(pkg.version).toBe('0.2.0')
   })
 
   it('git fetch is available on this system', () => {
