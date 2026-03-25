@@ -1,0 +1,77 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+
+# Editor / IDE
+.vscode/
+.idea/
+.windsurf/
+.DS_Store
+
+# Node
+node_modules/
+npm-debug.log
+
+# Go
+go.work
+
+# Temp
+tmp/
+
+# Docs
+docs/
+
+# Design assets
+stitch/
+
+# Data (runtime config, db, logs)
+data/
+
+# OpenClaw config (contains secrets)
+openclaw.json
+
+# Build artifacts
+internal/web/dist/
+web/dist/
+*.syso
+
+# Binaries
+/HAClaw
+/HAClaw.exe
+haclaw-linux-amd64
+openclawmanager-*
+
+# Build counter
+build.txt
+
+# Version files (managed via web/package.json)
+VERSION
+OPENCLAW_COMPAT
+
+# Local scripts
+scripts/
+
+# Cloudflare Pages deployment (local only)
+templates/cloudflare-pages/
+
+# Cloudflare Wrangler cache (contains account ID)
+.wrangler/
+
+# Claude
+.claude/
+
+# Local AI/dev reference docs (not for remote)
+AGENTS.md
+COMMIT_CONVENTION.md
+.editorconfig

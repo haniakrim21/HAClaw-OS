@@ -1,0 +1,1306 @@
+package setup
+
+import (
+	"HAClaw/internal/executil"
+	"HAClaw/internal/i18n"
+	"HAClaw/internal/netutil"
+	"HAClaw/internal/openclaw"
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"time"
+)
+
+type InstallConfig struct {
+	Provider          string `json:"provider"` // anthropic | openai | ...
+	APIKey            string `json:"apiKey"`
+	Model             string `json:"model,omitempty"`
+	BaseURL           string `json:"baseUrl,omitempty"`
+	Version           string `json:"version,omitempty"`           // "openclaw"
+	Registry          string `json:"registry,omitempty"`          // npm registry
+	SkipConfig        bool   `json:"skipConfig,omitempty"`        // skip config
+	SkipGateway       bool   `json:"skipGateway,omitempty"`       // skip starting Gateway
+	InstallZeroTier   bool   `json:"installZeroTier,omitempty"`   // install ZeroTier
+	ZerotierNetworkId string `json:"zerotierNetworkId,omitempty"` // ZeroTier Network ID
+	InstallTailscale  bool   `json:"installTailscale,omitempty"`  // install Tailscale
+	SudoPassword      string `json:"sudoPassword,omitempty"`      // sudo password (when non-root and password required)
+}
+
+type InstallSummaryItem struct {
+	Label    string `json:"label"`              // display name
+	Status   string `json:"status"`             // ok | warn | fail | skip
+	Detail   string `json:"detail,omitempty"`   // version, path, etc.
+	Category string `json:"category,omitempty"` // deps | optional | config | gateway
+}
+
+type InstallResult struct {
+	Success      bool   `json:"success"`
+	Version      string `json:"version,omitempty"`
+	ConfigPath   string `json:"configPath,omitempty"`
+	GatewayPort  int    `json:"gatewayPort,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
+	ErrorDetails string `json:"errorDetails,omitempty"`
+}
+
+type Installer struct {
+	emitter      *EventEmitter
+	env          *EnvironmentReport
+	sudoPassword string // sudo password (when non-root and password required)
+}
+
+func NewInstaller(emitter *EventEmitter, env *EnvironmentReport) *Installer {
+	return &Installer{
+		emitter: emitter,
+		env:     env,
+	}
+}
+
+func (i *Installer) newSC(phase, step string) *StreamCommand {
+	if i.sudoPassword != "" {
+		return NewStreamCommandWithSudo(i.emitter, phase, step, i.sudoPassword)
+	}
+	return NewStreamCommand(i.emitter, phase, step)
+}
+
+// isNodeVersionSufficient checks if the detected Node.js version meets the
+// minimum requirement (>= 22.16.0) for OpenClaw.
+func isNodeVersionSufficient(version string) bool {
+	major, minor := extractMajorMinorVersion(version)
+	if major > 22 {
+		return true
+	}
+	if major == 22 && minor >= 16 {
+		return true
+	}
+	return false
+}
+
+func (i *Installer) InstallNode(ctx context.Context) error {
+	if i.env.Tools["node"].Installed && isNodeVersionSufficient(i.env.Tools["node"].Version) {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerNodeAlreadyInstalled))
+		return nil
+	}
+
+	i.emitter.EmitStep("install", "install-node", i18n.T(i18n.MsgInstallerInstallingPackage, map[string]interface{}{"Package": "Node.js"}), 10)
+
+	i.emitter.EmitLog(i18n.T(i18n.MsgInstallerNodeTryingPkgManager))
+	if err := i.installNodeViaPackageManager(ctx); err == nil {
+		if i.verifyNodeInstalled() {
+			i.emitter.EmitLog(i18n.T(i18n.MsgInstallerNodePkgManagerSuccess))
+			return nil
+		}
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerNodePkgManagerRestart))
+	} else {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerNodePkgManagerFailed, map[string]interface{}{"Error": err.Error()}))
+	}
+
+	if runtime.GOOS != "linux" || i.env.HasSudo {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerNodeTryingFnm))
+		if err := i.installNodeViaFnm(ctx); err == nil {
+			if i.verifyNodeInstalled() {
+				i.emitter.EmitLog(i18n.T(i18n.MsgInstallerNodeFnmSuccess))
+				return nil
+			}
+			i.emitter.EmitLog(i18n.T(i18n.MsgInstallerNodeFnmRestart))
+		} else {
+			i.emitter.EmitLog(i18n.T(i18n.MsgInstallerNodeFnmFailed, map[string]interface{}{"Error": err.Error()}))
+		}
+	}
+
+	i.emitter.EmitLog(i18n.T(i18n.MsgInstallerNodeManualRequired))
+	return i.provideNodeInstallGuide()
+}
+
+func (i *Installer) installNodeViaPackageManager(ctx context.Context) error {
+	cmd := getNodeInstallCommand(i.env)
+	if cmd == "" {
+		return fmt.Errorf("%s", i18n.T(i18n.MsgErrNoPackageManager))
+	}
+
+	sc := i.newSC("install", "install-node")
+	return sc.RunShell(ctx, cmd)
+}
+
+func (i *Installer) installNodeViaFnm(ctx context.Context) error {
+	switch runtime.GOOS {
+	case "windows":
+		if !i.env.Tools["powershell"].Installed {
+			return fmt.Errorf("%s", i18n.T(i18n.MsgErrNeedPowershell))
+		}
+		sc := NewStreamCommand(i.emitter, "install", "install-fnm")
+		installCmd := "irm https://fnm.vercel.app/install.ps1 | iex"
+		if err := sc.RunShell(ctx, installCmd); err != nil {
+			return err
+		}
+		fnmCmd := "fnm install 22 && fnm default 22 && fnm use 22"
+		return sc.RunShell(ctx, fnmCmd)
+
+	case "darwin", "linux":
+		if !i.env.Tools["curl"].Installed {
+			return fmt.Errorf("%s", i18n.T(i18n.MsgErrNeedCurl))
+		}
+		sc := NewStreamCommand(i.emitter, "install", "install-fnm")
+		installCmd := "curl -fsSL https://fnm.vercel.app/install | bash"
+		if err := sc.RunShell(ctx, installCmd); err != nil {
+			return err
+		}
+		home, _ := os.UserHomeDir()
+		fnmPath := filepath.Join(home, ".fnm")
+		fnmCmd := fmt.Sprintf("export PATH=%s:$PATH && fnm install 22 && fnm default 22 && fnm use 22", fnmPath)
+		return sc.RunShell(ctx, fnmCmd)
+
+	default:
+		return fmt.Errorf("%s", i18n.T(i18n.MsgErrUnsupportedOS))
+	}
+}
+
+func (i *Installer) verifyNodeInstalled() bool {
+	info := detectNodeWithFallback()
+	return info.Installed
+}
+
+func (i *Installer) provideNodeInstallGuide() error {
+	var guide string
+	switch runtime.GOOS {
+	case "windows":
+		guide = i18n.T(i18n.MsgInstallerNodeGuideWindows)
+	case "darwin":
+		guide = i18n.T(i18n.MsgInstallerNodeGuideMacos)
+	case "linux":
+		guide = i18n.T(i18n.MsgInstallerNodeGuideLinux)
+	default:
+		guide = i18n.T(i18n.MsgInstallerNodeGuideDefault)
+	}
+
+	i.emitter.EmitLog(guide)
+	return fmt.Errorf("%s", i18n.T(i18n.MsgErrNeedManualInstallNode))
+}
+
+func (i *Installer) InstallGit(ctx context.Context) error {
+	if i.env.Tools["git"].Installed {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerGitAlreadyInstalled))
+		return nil
+	}
+
+	i.emitter.EmitStep("install", "install-git", i18n.T(i18n.MsgInstallerInstallingPackage, map[string]interface{}{"Package": "Git"}), 15)
+
+	cmd := getGitInstallCommand(i.env)
+	if cmd == "" {
+		return fmt.Errorf("%s", i18n.T(i18n.MsgErrCannotDetermineGitCmd))
+	}
+
+	sc := i.newSC("install", "install-git")
+	if err := sc.RunShell(ctx, cmd); err != nil {
+		return fmt.Errorf("%s", fmt.Sprintf(i18n.T(i18n.MsgErrGitInstallFailed), err))
+	}
+
+	i.emitter.EmitLog(i18n.T(i18n.MsgInstallerGitSuccess))
+	return nil
+}
+
+func (i *Installer) InstallOpenClaw(ctx context.Context) error {
+	if i.env.OpenClawInstalled {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerOpenclawAlreadyInstalled))
+		return nil
+	}
+
+	i.emitter.EmitStep("install", "install-openclaw", i18n.T(i18n.MsgInstallerInstallingPackage, map[string]interface{}{"Package": "OpenClaw"}), 30)
+
+	npmAvailable := i.env.Tools["npm"].Installed || detectTool("npm", "--version").Installed
+	if npmAvailable {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerOpenclawTryingNpm))
+		if err := i.installViaNpm(ctx); err == nil {
+			if i.verifyOpenClawInstalled() {
+				i.emitter.EmitLog(i18n.T(i18n.MsgInstallerOpenclawNpmSuccess))
+				return nil
+			}
+			i.emitter.EmitLog(i18n.T(i18n.MsgInstallerOpenclawNpmRestart))
+		} else {
+			i.emitter.EmitLog(i18n.T(i18n.MsgInstallerOpenclawNpmFailed, map[string]interface{}{"Error": err.Error()}))
+		}
+	}
+
+	if i.env.RecommendedMethod == "installer-script" || i.env.Tools["curl"].Installed {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerOpenclawTryingScript))
+		if err := i.installViaScript(ctx); err == nil {
+			if i.verifyOpenClawInstalled() {
+				i.emitter.EmitLog(i18n.T(i18n.MsgInstallerOpenclawScriptSuccess))
+				return nil
+			}
+			i.emitter.EmitLog(i18n.T(i18n.MsgInstallerOpenclawScriptRestart))
+		} else {
+			i.emitter.EmitLog(i18n.T(i18n.MsgInstallerOpenclawScriptFailed, map[string]interface{}{"Error": err.Error()}))
+		}
+	}
+
+	i.emitter.EmitLog(i18n.T(i18n.MsgInstallerOpenclawManualRequired))
+	return i.provideOpenClawInstallGuide()
+}
+
+func (i *Installer) InstallClawHub(ctx context.Context, registry string) error {
+	if detectTool("clawhub", "--version").Installed {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerClawhubAlreadyInstalled))
+		return nil
+	}
+
+	i.emitter.EmitStep("install", "install-clawhub", i18n.T(i18n.MsgInstallerInstallingPackage, map[string]interface{}{"Package": "ClawHub CLI"}), 40)
+
+	if !i.env.Tools["npm"].Installed {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerClawhubNpmUnavailable))
+		return nil // non-fatal error
+	}
+
+	i.emitter.EmitLog(i18n.T(i18n.MsgInstallerClawhubInstalling))
+	if err := i.installViaNpmWithOptions(ctx, "clawhub", registry); err != nil {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerClawhubFailed, map[string]interface{}{"Error": err.Error()}))
+		return nil
+	}
+
+	if detectTool("clawhub", "--version").Installed {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerClawhubSuccess))
+	} else {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerClawhubRestart))
+	}
+	return nil
+}
+
+func (i *Installer) verifyOpenClawInstalled() bool {
+	info := detectTool("openclaw", "--version")
+	return info.Installed
+}
+
+func (i *Installer) InstallOpenClawWithConfig(ctx context.Context, config InstallConfig) error {
+	i.emitter.EmitStep("install", "install-openclaw", i18n.T(i18n.MsgInstallerInstallingPackage, map[string]interface{}{"Package": "OpenClaw"}), 30)
+
+	cmdName := "openclaw"
+
+	if i.env.Tools["npm"].Installed || detectTool("npm", "--version").Installed {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerNpmGlobalInstalling))
+		if err := i.installViaNpmWithOptions(ctx, "openclaw", config.Registry); err == nil {
+			if detectTool(cmdName, "--version").Installed {
+				i.emitter.EmitLog(i18n.T(i18n.MsgInstallerOpenclawNpmSuccess))
+				return nil
+			}
+			i.emitter.EmitLog(i18n.T(i18n.MsgInstallerOpenclawNpmRestart))
+			return nil
+		} else {
+			i.emitter.EmitLog(i18n.T(i18n.MsgInstallerOpenclawNpmFailed, map[string]interface{}{"Error": err.Error()}))
+		}
+	}
+
+	i.emitter.EmitLog(i18n.T(i18n.MsgInstallerOpenclawManualRequired))
+	return i.provideOpenClawInstallGuideWithVersion(config.Version)
+}
+
+func (i *Installer) provideOpenClawInstallGuideWithVersion(version string) error {
+	guide := i18n.T(i18n.MsgInstallerOpenclawGuide)
+
+	switch runtime.GOOS {
+	case "windows":
+		guide += i18n.T(i18n.MsgInstallerOpenclawGuideWindows)
+	case "darwin", "linux":
+		guide += i18n.T(i18n.MsgInstallerOpenclawGuideUnix)
+	}
+
+	guide += i18n.T(i18n.MsgInstallerOpenclawPostInstall)
+
+	i.emitter.EmitLog(guide)
+	return fmt.Errorf("%s", i18n.T(i18n.MsgErrNeedManualInstallOpenclaw))
+}
+
+func (i *Installer) provideOpenClawInstallGuide() error {
+	guide := i18n.T(i18n.MsgInstallerOpenclawGuide)
+
+	switch runtime.GOOS {
+	case "windows":
+		guide += i18n.T(i18n.MsgInstallerOpenclawGuideWindows)
+	case "darwin", "linux":
+		guide += i18n.T(i18n.MsgInstallerOpenclawGuideUnix)
+	}
+
+	guide += i18n.T(i18n.MsgInstallerOpenclawPostInstallShort)
+
+	i.emitter.EmitLog(guide)
+	return fmt.Errorf("%s", i18n.T(i18n.MsgErrNeedManualInstallOpenclaw))
+}
+
+func (i *Installer) installViaScript(ctx context.Context) error {
+	return i.installViaScriptWithConfig(ctx, InstallConfig{Version: "openclaw"})
+}
+
+func (i *Installer) installViaScriptWithConfig(ctx context.Context, config InstallConfig) error {
+	sc := i.newSC("install", "install-openclaw")
+
+	scriptURL := "https://openclaw.ai/install"
+
+	// Windows
+	if runtime.GOOS == "windows" {
+		if !i.env.Tools["powershell"].Installed {
+			return fmt.Errorf("%s", i18n.T(i18n.MsgErrPowershellNotDetected))
+		}
+		cmd := fmt.Sprintf("iwr -useb %s.ps1 | iex -Command '& { $input | iex } --no-onboard'", scriptURL)
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerExecutingCommand, map[string]interface{}{"Command": cmd}))
+		return sc.RunShell(ctx, cmd)
+	}
+
+	if !i.env.Tools["curl"].Installed {
+		return fmt.Errorf("%s", i18n.T(i18n.MsgErrCurlNotDetected))
+	}
+
+	cmd := fmt.Sprintf("curl -fsSL %s.sh | bash -s -- --no-onboard", scriptURL)
+	i.emitter.EmitLog(i18n.T(i18n.MsgInstallerExecutingCommand, map[string]interface{}{"Command": cmd}))
+	return sc.RunShell(ctx, cmd)
+}
+
+func (i *Installer) installViaNpm(ctx context.Context) error {
+	return i.installViaNpmWithOptions(ctx, "openclaw", "")
+}
+
+func (i *Installer) installViaNpmWithOptions(ctx context.Context, version string, registry string) error {
+	pkgName := version + "@latest"
+	i.emitter.EmitLog(i18n.T(i18n.MsgInstallerInstallingPackage, map[string]interface{}{"Package": version}))
+
+	// Build ordered list of registries to try: user-selected first, then fallbacks
+	registries := buildRegistryFallbackList(registry)
+
+	var lastErr error
+	for idx, reg := range registries {
+		sc := i.newSC("install", "install-"+version)
+
+		cmd := "npm install -g " + pkgName
+		if reg != "" {
+			cmd += " --registry=" + reg
+			if idx == 0 {
+				i.emitter.EmitLog(i18n.T(i18n.MsgInstallerUsingRegistry, map[string]interface{}{"Registry": reg}))
+			} else {
+				i.emitter.EmitLog(fmt.Sprintf("⟳ Retrying with fallback registry: %s", reg))
+			}
+		}
+
+		// On Unix systems, use sudo for global npm install if not running as root
+		if runtime.GOOS != "windows" && !isRunningAsRoot() {
+			cmd = "sudo " + cmd
+		}
+
+		lastErr = sc.RunShell(ctx, cmd)
+		if lastErr == nil {
+			return nil
+		}
+
+		// Log failure and try next registry
+		if idx < len(registries)-1 {
+			i.emitter.EmitLog(fmt.Sprintf("⚠ Registry %s failed: %v", registryDisplayName(reg), lastErr))
+		}
+	}
+
+	return lastErr
+}
+
+// buildRegistryFallbackList returns an ordered list of registry URLs to try.
+// The user-selected registry is first; remaining mirrors follow in priority order.
+func buildRegistryFallbackList(selected string) []string {
+	var list []string
+	list = append(list, selected)
+
+	for _, m := range netutil.NPMRegistryMirrors {
+		url := m.URL
+		// npm Official uses empty string (npm default)
+		if m.Priority == 1 {
+			url = ""
+		}
+		if url != selected {
+			list = append(list, url)
+		}
+	}
+
+	return list
+}
+
+// registryDisplayName returns a human-friendly name for a registry URL.
+func registryDisplayName(url string) string {
+	if url == "" {
+		return "npm Official"
+	}
+	for _, m := range netutil.NPMRegistryMirrors {
+		if m.URL == url {
+			return m.Name
+		}
+	}
+	return url
+}
+
+func (i *Installer) ConfigureOpenClaw(ctx context.Context, config InstallConfig) error {
+	i.emitter.EmitStep("configure", "configure-openclaw", i18n.T(i18n.MsgInstallerConfiguringOpenclaw), 60)
+
+	cmdName := resolveOpenClawFullPath("openclaw")
+	i.emitter.EmitLog(i18n.T(i18n.MsgInstallerUsingCommand, map[string]interface{}{"Command": cmdName}))
+
+	args := []string{
+		"onboard",
+		"--non-interactive",
+		"--accept-risk",
+		"--mode", "local",
+		"--gateway-port", "18789",
+		"--gateway-bind", "loopback",
+		"--skip-channels",
+		"--skip-skills",
+		"--skip-health",
+	}
+
+	if config.Provider == "custom" || config.BaseURL != "" {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerCustomProviderConfig))
+		return i.writeMinimalConfig(config)
+	}
+
+	if config.APIKey != "" {
+		switch config.Provider {
+		case "anthropic":
+			args = append(args, "--anthropic-api-key", config.APIKey)
+		case "openai":
+			args = append(args, "--openai-api-key", config.APIKey)
+		case "gemini", "google":
+			args = append(args, "--gemini-api-key", config.APIKey)
+		case "openrouter":
+			args = append(args, "--openrouter-api-key", config.APIKey)
+		case "moonshot":
+			args = append(args, "--moonshot-api-key", config.APIKey)
+		case "xai":
+			args = append(args, "--xai-api-key", config.APIKey)
+		case "deepseek", "together", "groq":
+			i.emitter.EmitLog(i18n.T(i18n.MsgInstallerOpenaiCompatConfig, map[string]interface{}{"Provider": config.Provider}))
+			return i.writeMinimalConfig(config)
+		default:
+			args = append(args, "--auth-choice", "skip")
+		}
+	} else {
+		args = append(args, "--auth-choice", "skip")
+	}
+
+	i.emitter.EmitLog(i18n.T(i18n.MsgInstallerExecutingCommand, map[string]interface{}{"Command": cmdName + " " + strings.Join(maskSensitiveArgs(args), " ")}))
+
+	sc := NewStreamCommand(i.emitter, "configure", "onboard")
+	if err := sc.Run(ctx, cmdName, args...); err != nil {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerOnboardFailedFallback))
+		return i.writeMinimalConfig(config)
+	}
+
+	i.emitter.EmitLog(i18n.T(i18n.MsgInstallerOnboardComplete))
+	return nil
+}
+
+func maskSensitiveArgs(args []string) []string {
+	masked := make([]string, len(args))
+	copy(masked, args)
+	for i, arg := range masked {
+		if i > 0 && (strings.HasSuffix(args[i-1], "-api-key") || strings.HasSuffix(args[i-1], "-token") || strings.HasSuffix(args[i-1], "-password")) {
+			if len(arg) > 8 {
+				masked[i] = arg[:4] + "****" + arg[len(arg)-4:]
+			} else {
+				masked[i] = "****"
+			}
+		}
+	}
+	return masked
+}
+
+func (i *Installer) ensureDefaultConfig() error {
+	cfgPath := GetOpenClawConfigPath()
+	if cfgPath == "" {
+		return fmt.Errorf("%s", i18n.T(i18n.MsgErrCannotGetConfigPath))
+	}
+
+	if exists, valid, _ := checkConfigFileValid(cfgPath); exists && valid {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerConfigExists, map[string]interface{}{"Path": cfgPath}))
+		return nil
+	}
+
+	cmdName := resolveOpenClawFullPath("openclaw")
+	i.emitter.EmitLog(i18n.T(i18n.MsgInstallerGeneratingDefaultConfig, map[string]interface{}{"Command": cmdName}))
+
+	args := []string{
+		"onboard",
+		"--non-interactive",
+		"--accept-risk",
+		"--mode", "local",
+		"--gateway-port", "18789",
+		"--gateway-bind", "loopback",
+		"--anthropic-api-key", "sk-ant-placeholder-replace-me",
+		"--skip-channels",
+		"--skip-skills",
+		"--skip-health",
+	}
+
+	i.emitter.EmitLog(i18n.T(i18n.MsgInstallerExecutingCommand, map[string]interface{}{"Command": cmdName + " " + strings.Join(args, " ")}))
+
+	sc := NewStreamCommand(i.emitter, "configure", "onboard-default")
+	if err := sc.Run(context.Background(), cmdName, args...); err != nil {
+		return fmt.Errorf("%s", fmt.Sprintf(i18n.T(i18n.MsgErrOnboardDefaultConfigFailed), err))
+	}
+
+	i.emitter.EmitLog(i18n.T(i18n.MsgInstallerDefaultConfigGenerated))
+	i.emitter.EmitLog(i18n.T(i18n.MsgInstallerAddProviderReminder))
+	return nil
+}
+
+func (i *Installer) writeMinimalConfig(config InstallConfig) error {
+	configDir := ResolveStateDir()
+	if configDir == "" {
+		return fmt.Errorf("%s", i18n.T(i18n.MsgErrGetStateDirFailed))
+	}
+	configPath := filepath.Join(configDir, "openclaw.json")
+
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return fmt.Errorf("%s", fmt.Sprintf(i18n.T(i18n.MsgErrCreateConfigDirFailed), err))
+	}
+
+	providerName := config.Provider
+	if providerName == "custom" {
+		providerName = "custom"
+	}
+
+	model := config.Model
+	if model == "" {
+		switch providerName {
+		case "anthropic":
+			model = "claude-sonnet-4-20250514"
+		case "openai":
+			model = "gpt-4o"
+		case "gemini", "google":
+			model = "gemini-2.0-flash"
+		case "deepseek":
+			model = "deepseek-chat"
+		case "moonshot":
+			model = "moonshot-v1-auto"
+		default:
+			model = "claude-sonnet-4-20250514"
+		}
+	}
+
+	baseUrl := config.BaseURL
+	if baseUrl == "" {
+		switch providerName {
+		case "deepseek":
+			baseUrl = "https://api.deepseek.com/v1"
+		}
+	}
+
+	minConfig := map[string]interface{}{
+		"gateway": map[string]interface{}{
+			"mode": "local",
+			"port": 18789,
+			"bind": "loopback",
+		},
+	}
+
+	if config.APIKey != "" {
+		providerConfig := map[string]interface{}{
+			"apiKey": config.APIKey,
+			"api":    "openai-completions",
+			"models": []map[string]interface{}{
+				{"id": model, "name": model, "input": []string{"text", "image"}},
+			},
+		}
+
+		switch providerName {
+		case "anthropic":
+			providerConfig["api"] = "anthropic"
+		case "gemini", "google":
+			providerConfig["api"] = "google-genai"
+		}
+
+		if baseUrl != "" {
+			providerConfig["baseUrl"] = baseUrl
+		}
+
+		minConfig["models"] = map[string]interface{}{
+			"providers": map[string]interface{}{
+				providerName: providerConfig,
+			},
+		}
+
+		minConfig["agents"] = map[string]interface{}{
+			"defaults": map[string]interface{}{
+				"model": map[string]interface{}{
+					"primary": providerName + "/" + model,
+				},
+			},
+		}
+	}
+
+	data, err := json.MarshalIndent(minConfig, "", "  ")
+	if err != nil {
+		return fmt.Errorf("%s", fmt.Sprintf(i18n.T(i18n.MsgErrSerializeConfigFailed), err))
+	}
+
+	if err := os.WriteFile(configPath, data, 0600); err != nil {
+		return fmt.Errorf("%s", fmt.Sprintf(i18n.T(i18n.MsgErrWriteConfigFailed), err))
+	}
+
+	i.emitter.EmitLog(i18n.T(i18n.MsgInstallerConfigWritten, map[string]interface{}{"Path": configPath}))
+	return nil
+}
+
+func (i *Installer) StartGateway(ctx context.Context) error {
+	return i.StartGatewayWithConfig(ctx, InstallConfig{})
+}
+
+func (i *Installer) StartGatewayWithConfig(ctx context.Context, config InstallConfig) error {
+	i.emitter.EmitStep("start", "check-config", i18n.T(i18n.MsgInstallerCheckingConfig), 76)
+
+	cfgPath := GetOpenClawConfigPath()
+	cfgExists, cfgValid, cfgDetail := checkConfigFileValid(cfgPath)
+	if !cfgExists {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerConfigNotExist))
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerAddProviderFirst))
+		return nil
+	}
+	if !cfgValid {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerConfigInvalid, map[string]interface{}{"Detail": cfgDetail}))
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerFixConfigFirst))
+		return nil
+	}
+	i.emitter.EmitLog(i18n.T(i18n.MsgInstallerConfigOk, map[string]interface{}{"Path": cfgPath}))
+
+	if checkOpenClawConfigured(cfgPath) {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerProviderConfigured))
+	} else {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerProviderNotConfigured))
+	}
+
+	for countdown := 3; countdown > 0; countdown-- {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerCountdown, map[string]interface{}{"Seconds": countdown}))
+		time.Sleep(1 * time.Second)
+	}
+
+	i.emitter.EmitStep("start", "start-gateway", i18n.T(i18n.MsgInstallerStartingGateway), 80)
+
+	svc := openclaw.NewService()
+	st := svc.Status()
+	if st.Running {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerGatewayAlreadyRunning, map[string]interface{}{"Detail": st.Detail}))
+		return nil
+	}
+
+	i.emitter.EmitLog(i18n.T(i18n.MsgInstallerStartingGateway))
+	if err := svc.Start(); err != nil {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerGatewayStartFailed, map[string]interface{}{"Error": err.Error()}))
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerGatewayManualStart))
+		return nil
+	}
+
+	i.emitter.EmitLog(i18n.T(i18n.MsgInstallerWaitingGateway))
+	time.Sleep(2 * time.Second)
+	for attempt := 1; attempt <= 15; attempt++ {
+		st = svc.Status()
+		if st.Running {
+			i.emitter.EmitLog(i18n.T(i18n.MsgInstallerGatewayStarted, map[string]interface{}{"Detail": st.Detail}))
+			return nil
+		}
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerCheckingGateway, map[string]interface{}{"Current": attempt, "Total": 15}))
+		time.Sleep(1 * time.Second)
+	}
+
+	i.emitter.EmitLog(i18n.T(i18n.MsgInstallerGatewayNotReady))
+	if stateDir := ResolveStateDir(); stateDir != "" {
+		logPath := filepath.Join(stateDir, "logs", "gateway.log")
+		if data, err := os.ReadFile(logPath); err == nil {
+			lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+			start := len(lines) - 10
+			if start < 0 {
+				start = 0
+			}
+			for _, line := range lines[start:] {
+				if strings.TrimSpace(line) != "" {
+					i.emitter.EmitLog(fmt.Sprintf("  [gateway.log] %s", line))
+				}
+			}
+		}
+	}
+
+	i.emitter.EmitLog(i18n.T(i18n.MsgInstallerGatewayManualStart))
+	return nil
+}
+
+func resolveOpenClawFullPath(cmdName string) string {
+	if p, err := exec.LookPath(cmdName); err == nil {
+		return p
+	}
+
+	npmBin := getNpmGlobalBin()
+	if npmBin != "" {
+		var candidate string
+		if runtime.GOOS == "windows" {
+			candidate = filepath.Join(npmBin, cmdName+".cmd")
+		} else {
+			candidate = filepath.Join(npmBin, cmdName)
+		}
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+	}
+
+	if runtime.GOOS == "windows" {
+		home, _ := os.UserHomeDir()
+		candidates := []string{
+			filepath.Join(os.Getenv("APPDATA"), "npm", cmdName+".cmd"),
+			filepath.Join(home, "AppData", "Roaming", "npm", cmdName+".cmd"),
+			filepath.Join(os.Getenv("ProgramFiles"), "nodejs", cmdName+".cmd"),
+		}
+		for _, c := range candidates {
+			if c != "" {
+				if _, err := os.Stat(c); err == nil {
+					return c
+				}
+			}
+		}
+	}
+
+	return cmdName
+}
+
+func getNpmGlobalBin() string {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	vCmd := exec.CommandContext(ctx, "npm", "bin", "-g")
+	executil.HideWindow(vCmd)
+	out, err := vCmd.CombinedOutput()
+	if err != nil {
+		vCmd2 := exec.CommandContext(ctx, "npm", "prefix", "-g")
+		executil.HideWindow(vCmd2)
+		out, err = vCmd2.CombinedOutput()
+		if err != nil {
+			return ""
+		}
+		prefix := strings.TrimSpace(string(out))
+		if runtime.GOOS == "windows" {
+			return prefix
+		}
+		return filepath.Join(prefix, "bin")
+	}
+	return strings.TrimSpace(string(out))
+}
+
+func (i *Installer) RunDoctor(ctx context.Context) (*DoctorResult, error) {
+	i.emitter.EmitStep("verify", "doctor", i18n.T(i18n.MsgInstallerRunningDoctor), 90)
+
+	cmd := exec.CommandContext(ctx, "openclaw", "doctor")
+	executil.HideWindow(cmd)
+	output, err := cmd.CombinedOutput()
+
+	result := &DoctorResult{
+		Output: string(output),
+	}
+
+	if err != nil {
+		result.Success = false
+		result.Error = err.Error()
+	} else {
+		result.Success = true
+	}
+
+	return result, nil
+}
+
+type DoctorResult struct {
+	Success bool   `json:"success"`
+	Output  string `json:"output"`
+	Error   string `json:"error,omitempty"`
+}
+
+func (i *Installer) InstallVPNTool(ctx context.Context, tool string) error {
+	if tool == "zerotier" {
+		if detectTool("zerotier-cli", "--version").Installed {
+			i.emitter.EmitLog(i18n.T(i18n.MsgInstallerVpnAlreadyInstalled, map[string]interface{}{"Tool": "ZeroTier"}))
+			return nil
+		}
+	} else if tool == "tailscale" {
+		if detectTool("tailscale", "version").Installed {
+			i.emitter.EmitLog(i18n.T(i18n.MsgInstallerVpnAlreadyInstalled, map[string]interface{}{"Tool": "Tailscale"}))
+			return nil
+		}
+	}
+
+	i.emitter.EmitStep("install", "install-"+tool, i18n.T(i18n.MsgInstallerInstallingPackage, map[string]interface{}{"Package": tool}), 45)
+	sc := i.newSC("install", "install-"+tool)
+
+	switch tool {
+	case "zerotier":
+		switch runtime.GOOS {
+		case "windows":
+			if detectTool("winget", "--version").Installed {
+				return sc.RunShell(ctx, "winget install --id ZeroTier.ZeroTierOne --accept-package-agreements --accept-source-agreements")
+			}
+			i.emitter.EmitLog(i18n.T(i18n.MsgInstallerManualVpnDownload, map[string]interface{}{"Tool": "ZeroTier", "Url": "https://www.zerotier.com/download/"}))
+			return fmt.Errorf("%s", i18n.T(i18n.MsgErrWindowsNeedManualZerotier))
+		case "darwin":
+			if i.env.Tools["brew"].Installed {
+				return sc.RunShell(ctx, "brew install --cask zerotier-one")
+			}
+			i.emitter.EmitLog(i18n.T(i18n.MsgInstallerManualVpnDownload, map[string]interface{}{"Tool": "ZeroTier", "Url": "https://www.zerotier.com/download/"}))
+			return fmt.Errorf("%s", i18n.T(i18n.MsgErrMacosNeedBrewZerotier))
+		case "linux":
+			return sc.RunShell(ctx, "curl -s https://install.zerotier.com | sudo bash")
+		default:
+			return fmt.Errorf("%s", fmt.Sprintf(i18n.T(i18n.MsgErrUnsupportedOSWithName), runtime.GOOS))
+		}
+
+	case "tailscale":
+		switch runtime.GOOS {
+		case "windows":
+			if detectTool("winget", "--version").Installed {
+				return sc.RunShell(ctx, "winget install --id tailscale.tailscale --accept-package-agreements --accept-source-agreements")
+			}
+			i.emitter.EmitLog(i18n.T(i18n.MsgInstallerManualVpnDownload, map[string]interface{}{"Tool": "Tailscale", "Url": "https://tailscale.com/download"}))
+			return fmt.Errorf("%s", i18n.T(i18n.MsgErrWindowsNeedManualTailscale))
+		case "darwin":
+			if i.env.Tools["brew"].Installed {
+				return sc.RunShell(ctx, "brew install --cask tailscale")
+			}
+			i.emitter.EmitLog(i18n.T(i18n.MsgInstallerManualVpnDownload, map[string]interface{}{"Tool": "Tailscale", "Url": "https://tailscale.com/download"}))
+			return fmt.Errorf("%s", i18n.T(i18n.MsgErrMacosNeedBrewTailscale))
+		case "linux":
+			return sc.RunShell(ctx, "curl -fsSL https://tailscale.com/install.sh | sh")
+		default:
+			return fmt.Errorf("%s", fmt.Sprintf(i18n.T(i18n.MsgErrUnsupportedOSWithName), runtime.GOOS))
+		}
+
+	default:
+		return fmt.Errorf("%s", fmt.Sprintf(i18n.T(i18n.MsgErrUnknownTool), tool))
+	}
+}
+
+// UpdateOpenClaw updates OpenClaw to the latest version via npm.
+func (i *Installer) UpdateOpenClaw(ctx context.Context) error {
+	if !i.env.Tools["npm"].Installed {
+		return fmt.Errorf("npm is not available, cannot update")
+	}
+
+	i.emitter.EmitLog("Updating OpenClaw via npm global install...")
+	if err := i.installViaNpmWithOptions(ctx, "openclaw", ""); err != nil {
+		return fmt.Errorf("npm update failed: %w", err)
+	}
+
+	i.emitter.EmitLog("✓ OpenClaw updated successfully")
+	return nil
+}
+
+// skillDep describes a single skill runtime dependency to install.
+type skillDep struct {
+	name       string // binary name used in detectTool
+	label      string // human-readable label for logs
+	versionArg string // arg passed to detectTool
+	// per-platform install commands (empty string = skip on that platform)
+	brewFormula string // macOS: brew install <formula>
+	aptPkg      string // Linux (apt): sudo apt-get install -y <pkg>
+	dnfPkg      string // Linux (dnf/yum): sudo dnf install -y <pkg>
+	pacmanPkg   string // Linux (pacman): sudo pacman -S --noconfirm <pkg>
+	wingetID    string // Windows: winget install --id <id>
+	goModule    string // fallback: go install <module>
+	pipxPkg     string // fallback: pipx install <pkg>
+}
+
+// skillDeps returns the list of skill runtime dependencies to install.
+func skillDeps() []skillDep {
+	return []skillDep{
+		{
+			name: "go", label: "Go", versionArg: "version",
+			brewFormula: "go", aptPkg: "golang", dnfPkg: "golang", pacmanPkg: "go", wingetID: "GoLang.Go",
+		},
+		{
+			name: "python", label: "Python", versionArg: "--version",
+			brewFormula: "python@3", aptPkg: "python3", dnfPkg: "python3", pacmanPkg: "python", wingetID: "Python.Python.3.12",
+		},
+		{
+			name: "uv", label: "uv (Python)", versionArg: "--version",
+			brewFormula: "uv", aptPkg: "", dnfPkg: "", pacmanPkg: "", wingetID: "astral-sh.uv",
+			// Linux: use official install script (handled specially)
+		},
+		{
+			name: "ffmpeg", label: "FFmpeg", versionArg: "-version",
+			brewFormula: "ffmpeg", aptPkg: "ffmpeg", dnfPkg: "ffmpeg", pacmanPkg: "ffmpeg", wingetID: "Gyan.FFmpeg",
+		},
+		{
+			name: "jq", label: "jq", versionArg: "--version",
+			brewFormula: "jq", aptPkg: "jq", dnfPkg: "jq", pacmanPkg: "jq", wingetID: "jqlang.jq",
+		},
+		{
+			name: "rg", label: "ripgrep", versionArg: "--version",
+			brewFormula: "ripgrep", aptPkg: "ripgrep", dnfPkg: "ripgrep", pacmanPkg: "ripgrep", wingetID: "BurntSushi.ripgrep.MSVC",
+		},
+	}
+}
+
+// InstallSkillDeps detects and installs missing skill runtime dependencies.
+// All installs are non-fatal — failures are logged but do not block the flow.
+func (i *Installer) InstallSkillDeps(ctx context.Context) {
+	deps := skillDeps()
+	total := len(deps)
+	installed := 0
+	skipped := 0
+
+	i.emitter.EmitPhase("skill-deps", "Installing skill runtime dependencies...", 42)
+
+	for idx, dep := range deps {
+		progress := 42 + (idx*6)/total // spread across 42-48 range
+
+		// Check if already installed
+		// Python needs special detection (python3 / python fallback)
+		var alreadyInstalled bool
+		if dep.name == "python" {
+			alreadyInstalled = detectPython().Installed
+		} else {
+			alreadyInstalled = detectTool(dep.name, dep.versionArg).Installed
+		}
+		if alreadyInstalled {
+			i.emitter.EmitLog(fmt.Sprintf("✓ %s already installed, skipping", dep.label))
+			skipped++
+			continue
+		}
+
+		i.emitter.EmitStep("skill-deps", "install-"+dep.name,
+			fmt.Sprintf("Installing %s...", dep.label), progress)
+
+		err := i.installSingleSkillDep(ctx, dep)
+		var postInstalled bool
+		if dep.name == "python" {
+			postInstalled = detectPython().Installed
+		} else {
+			postInstalled = detectTool(dep.name, dep.versionArg).Installed
+		}
+		if err != nil {
+			i.emitter.EmitLog(fmt.Sprintf("⚠️ %s install failed: %v (skipping)", dep.label, err))
+		} else if postInstalled {
+			i.emitter.EmitLog(fmt.Sprintf("✓ %s installed successfully", dep.label))
+			installed++
+		} else {
+			i.emitter.EmitLog(fmt.Sprintf("⚠️ %s install completed but binary not found (may need restart)", dep.label))
+		}
+	}
+
+	i.emitter.EmitLog(fmt.Sprintf("Skill deps: %d installed, %d already present, %d skipped/failed",
+		installed, skipped, total-installed-skipped))
+}
+
+// installSingleSkillDep installs one skill dependency using the best available method.
+func (i *Installer) installSingleSkillDep(ctx context.Context, dep skillDep) error {
+	sc := i.newSC("skill-deps", "install-"+dep.name)
+
+	switch runtime.GOOS {
+	case "darwin":
+		// macOS: prefer brew
+		if dep.brewFormula != "" && i.env.Tools["brew"].Installed {
+			return sc.RunShell(ctx, fmt.Sprintf("brew install %s", dep.brewFormula))
+		}
+
+	case "linux":
+		pm := i.env.PackageManager
+		hasSudo := i.env.HasSudo
+		// apt (Debian/Ubuntu)
+		if dep.aptPkg != "" && pm == "apt" && hasSudo {
+			return sc.RunShell(ctx, fmt.Sprintf("sudo apt-get install -y %s", dep.aptPkg))
+		}
+		// dnf (Fedora/RHEL 8+)
+		if dep.dnfPkg != "" && (pm == "dnf" || pm == "yum") && hasSudo {
+			return sc.RunShell(ctx, fmt.Sprintf("sudo %s install -y %s", pm, dep.dnfPkg))
+		}
+		// pacman (Arch/Manjaro)
+		if dep.pacmanPkg != "" && pm == "pacman" && hasSudo {
+			return sc.RunShell(ctx, fmt.Sprintf("sudo pacman -S --noconfirm %s", dep.pacmanPkg))
+		}
+		// Special case: uv — use official install script on any Linux
+		if dep.name == "uv" {
+			return sc.RunShell(ctx, "curl -LsSf https://astral.sh/uv/install.sh | sh")
+		}
+
+	case "windows":
+		// Windows: prefer winget
+		if dep.wingetID != "" && detectTool("winget", "--version").Installed {
+			return sc.RunShell(ctx, fmt.Sprintf("winget install --id %s --accept-package-agreements --accept-source-agreements", dep.wingetID))
+		}
+	}
+
+	// Fallback: go install (for go module deps)
+	if dep.goModule != "" && detectTool("go", "version").Installed {
+		return sc.Run(ctx, "go", "install", dep.goModule)
+	}
+
+	return fmt.Errorf("no suitable install method for %s on %s", dep.label, runtime.GOOS)
+}
+
+func (i *Installer) AutoInstall(ctx context.Context, config InstallConfig) (*InstallResult, error) {
+	result := &InstallResult{}
+	needsRestart := false
+
+	if config.Version == "" {
+		config.Version = "openclaw" // default international version
+	}
+
+	if config.SudoPassword != "" {
+		i.sudoPassword = config.SudoPassword
+		i.env.HasSudo = true
+	}
+
+	i.emitter.EmitPhase("install", i18n.T(i18n.MsgInstallerPhaseInstallDeps), 0)
+
+	nodeNeedsInstall := !i.env.Tools["node"].Installed ||
+		!isNodeVersionSufficient(i.env.Tools["node"].Version)
+	if nodeNeedsInstall {
+		if i.env.Tools["node"].Installed {
+			i.emitter.EmitLog(i18n.T(i18n.MsgScannerWarnNodeMinorLow, map[string]interface{}{"Version": i.env.Tools["node"].Version}))
+		}
+		if err := i.InstallNode(ctx); err != nil {
+			result.ErrorMessage = i18n.T(i18n.MsgInstallerNodeInstallFailed)
+			result.ErrorDetails = err.Error()
+			i.emitter.EmitError(result.ErrorMessage, result)
+			return result, err
+		}
+		if nodeInfo := detectNodeWithFallback(); nodeInfo.Installed {
+			i.env.Tools["node"] = nodeInfo
+			if npmInfo := detectTool("npm", "--version"); npmInfo.Installed {
+				i.env.Tools["npm"] = npmInfo
+				i.emitter.EmitLog(i18n.T(i18n.MsgInstallerNpmReady, map[string]interface{}{"Version": npmInfo.Version}))
+			}
+		} else {
+			needsRestart = true
+			i.emitter.EmitLog(i18n.T(i18n.MsgInstallerEnvNotEffective, map[string]interface{}{"Tool": "Node.js"}))
+		}
+	}
+
+	if !i.env.Tools["git"].Installed {
+		if err := i.InstallGit(ctx); err != nil {
+			i.emitter.EmitLog(i18n.T(i18n.MsgInstallerInstallFailedSkip, map[string]interface{}{"Tool": "Git", "Error": err.Error()}))
+		} else if gitInfo := detectTool("git", "--version"); gitInfo.Installed {
+			i.env.Tools["git"] = gitInfo
+		}
+	}
+
+	if !i.env.OpenClawInstalled {
+		if err := i.InstallOpenClawWithConfig(ctx, config); err != nil {
+			result.ErrorMessage = i18n.T(i18n.MsgInstallerOpenclawInstallFailed)
+			result.ErrorDetails = err.Error()
+			i.emitter.EmitError(result.ErrorMessage, result)
+			return result, err
+		}
+		if !detectTool("openclaw", "--version").Installed {
+			needsRestart = true
+			i.emitter.EmitLog(i18n.T(i18n.MsgInstallerEnvNotEffective, map[string]interface{}{"Tool": "OpenClaw"}))
+		}
+	}
+
+	if !needsRestart {
+		if err := i.InstallClawHub(ctx, config.Registry); err != nil {
+			i.emitter.EmitLog(i18n.T(i18n.MsgInstallerInstallFailedSkip, map[string]interface{}{"Tool": "ClawHub CLI", "Error": err.Error()}))
+		}
+	}
+
+	if !needsRestart {
+		i.InstallSkillDeps(ctx)
+	}
+
+	if config.InstallZeroTier || config.InstallTailscale {
+		i.emitter.EmitPhase("vpn-tools", i18n.T(i18n.MsgInstallerPhaseVpnTools), 45)
+		if config.InstallZeroTier {
+			if err := i.InstallVPNTool(ctx, "zerotier"); err != nil {
+				i.emitter.EmitLog(i18n.T(i18n.MsgInstallerInstallFailedSkip, map[string]interface{}{"Tool": "ZeroTier", "Error": err.Error()}))
+			} else if config.ZerotierNetworkId != "" {
+				i.emitter.EmitLog(i18n.T(i18n.MsgInstallerJoiningZerotier, map[string]interface{}{"NetworkId": config.ZerotierNetworkId}))
+				sc := i.newSC("install", "zerotier-join")
+				joinCmd := "sudo zerotier-cli join " + config.ZerotierNetworkId
+				if runtime.GOOS == "windows" {
+					joinCmd = "zerotier-cli join " + config.ZerotierNetworkId
+				}
+				if err := sc.RunShell(ctx, joinCmd); err != nil {
+					i.emitter.EmitLog(i18n.T(i18n.MsgInstallerZerotierJoinFailed, map[string]interface{}{"Error": err.Error()}))
+				} else {
+					i.emitter.EmitLog(i18n.T(i18n.MsgInstallerZerotierJoined, map[string]interface{}{"NetworkId": config.ZerotierNetworkId}))
+				}
+			}
+		}
+		if config.InstallTailscale {
+			if err := i.InstallVPNTool(ctx, "tailscale"); err != nil {
+				i.emitter.EmitLog(i18n.T(i18n.MsgInstallerInstallFailedSkip, map[string]interface{}{"Tool": "Tailscale", "Error": err.Error()}))
+			}
+		}
+	}
+
+	if !config.SkipConfig {
+		i.emitter.EmitPhase("configure", i18n.T(i18n.MsgInstallerPhaseConfigure), 50)
+		if err := i.ConfigureOpenClaw(ctx, config); err != nil {
+			result.ErrorMessage = i18n.T(i18n.MsgInstallerConfigFailed)
+			result.ErrorDetails = err.Error()
+			i.emitter.EmitError(result.ErrorMessage, result)
+			return result, err
+		}
+	} else {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerSkipConfigGenerateDefault))
+		if err := i.ensureDefaultConfig(); err != nil {
+			i.emitter.EmitLog(i18n.T(i18n.MsgInstallerGenerateDefaultConfigFailed, map[string]interface{}{"Error": err.Error()}))
+		}
+	}
+
+	if !config.SkipGateway {
+		i.emitter.EmitPhase("start", i18n.T(i18n.MsgInstallerPhaseStartGateway), 75)
+		if err := i.StartGatewayWithConfig(ctx, config); err != nil {
+			result.ErrorMessage = i18n.T(i18n.MsgInstallerGatewayStartFailedMsg)
+			result.ErrorDetails = err.Error()
+			i.emitter.EmitError(result.ErrorMessage, result)
+			return result, err
+		}
+	} else {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerSkipGatewayManualStart))
+	}
+
+	i.emitter.EmitPhase("verify", i18n.T(i18n.MsgInstallerPhaseVerify), 90)
+	i.emitter.EmitLog(i18n.T(i18n.MsgInstallerRunningTests))
+	doctor, err := i.RunDoctor(ctx)
+	if err != nil {
+		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerDiagnosticWarning, map[string]interface{}{"Error": err.Error()}))
+	}
+
+	result.Success = true
+	if info := detectTool("openclaw", "--version"); info.Installed {
+		result.Version = info.Version
+	}
+	result.ConfigPath = GetOpenClawConfigPath()
+	_, cfgValid, _ := checkConfigFileValid(result.ConfigPath)
+	cfgConfigured := checkOpenClawConfigured(result.ConfigPath)
+	gwRunning, gwPort := checkGatewayRunning()
+	result.GatewayPort = gwPort
+
+	var summary []InstallSummaryItem
+
+	nodeInfo := detectNodeWithFallback()
+	if nodeInfo.Installed {
+		summary = append(summary, InstallSummaryItem{Label: "Node.js", Status: "ok", Detail: nodeInfo.Version, Category: "deps"})
+	} else if needsRestart {
+		summary = append(summary, InstallSummaryItem{Label: "Node.js", Status: "warn", Detail: i18n.T(i18n.MsgInstallerSummaryInstalledRestart), Category: "deps"})
+	} else {
+		summary = append(summary, InstallSummaryItem{Label: "Node.js", Status: "fail", Detail: i18n.T(i18n.MsgInstallerSummaryNotInstalled), Category: "deps"})
+	}
+
+	npmInfo := detectTool("npm", "--version")
+	if npmInfo.Installed {
+		summary = append(summary, InstallSummaryItem{Label: "npm", Status: "ok", Detail: npmInfo.Version, Category: "deps"})
+	} else {
+		summary = append(summary, InstallSummaryItem{Label: "npm", Status: "warn", Detail: i18n.T(i18n.MsgInstallerSummaryNotDetected), Category: "deps"})
+	}
+
+	gitInfo := detectTool("git", "--version")
+	if gitInfo.Installed {
+		summary = append(summary, InstallSummaryItem{Label: "Git", Status: "ok", Detail: gitInfo.Version, Category: "deps"})
+	} else {
+		summary = append(summary, InstallSummaryItem{Label: "Git", Status: "warn", Detail: i18n.T(i18n.MsgInstallerSummaryNotInstalled), Category: "deps"})
+	}
+
+	ocInfo := detectTool("openclaw", "--version")
+	if ocInfo.Installed {
+		summary = append(summary, InstallSummaryItem{Label: "OpenClaw", Status: "ok", Detail: ocInfo.Version, Category: "deps"})
+	} else if needsRestart {
+		summary = append(summary, InstallSummaryItem{Label: "OpenClaw", Status: "warn", Detail: i18n.T(i18n.MsgInstallerSummaryInstalledRestart), Category: "deps"})
+	} else {
+		summary = append(summary, InstallSummaryItem{Label: "OpenClaw", Status: "fail", Detail: i18n.T(i18n.MsgInstallerSummaryNotInstalled), Category: "deps"})
+	}
+
+	chInfo := detectTool("clawhub", "--version")
+	if chInfo.Installed {
+		summary = append(summary, InstallSummaryItem{Label: "ClawHub CLI", Status: "ok", Detail: chInfo.Version, Category: "deps"})
+	} else {
+		summary = append(summary, InstallSummaryItem{Label: "ClawHub CLI", Status: "warn", Detail: i18n.T(i18n.MsgInstallerSummaryOptional), Category: "deps"})
+	}
+
+	if config.InstallZeroTier {
+		ztInfo := detectTool("zerotier-cli", "--version")
+		if ztInfo.Installed {
+			detail := ztInfo.Version
+			if config.ZerotierNetworkId != "" {
+				detail += "  " + i18n.T(i18n.MsgInstallerSummaryNetwork, map[string]interface{}{"NetworkId": config.ZerotierNetworkId})
+			}
+			summary = append(summary, InstallSummaryItem{Label: "ZeroTier", Status: "ok", Detail: detail, Category: "optional"})
+		} else {
+			summary = append(summary, InstallSummaryItem{Label: "ZeroTier", Status: "fail", Detail: i18n.T(i18n.MsgInstallerSummaryInstallFailed), Category: "optional"})
+		}
+	}
+	if config.InstallTailscale {
+		tsInfo := detectTool("tailscale", "--version")
+		if tsInfo.Installed {
+			summary = append(summary, InstallSummaryItem{Label: "Tailscale", Status: "ok", Detail: tsInfo.Version, Category: "optional"})
+		} else {
+			summary = append(summary, InstallSummaryItem{Label: "Tailscale", Status: "fail", Detail: i18n.T(i18n.MsgInstallerSummaryInstallFailed), Category: "optional"})
+		}
+	}
+
+	for _, dep := range []struct{ name, flag string }{
+		{"go", "--version"}, {"uv", "--version"}, {"ffmpeg", "-version"}, {"jq", "--version"}, {"rg", "--version"},
+	} {
+		info := detectTool(dep.name, dep.flag)
+		if info.Installed {
+			summary = append(summary, InstallSummaryItem{Label: dep.name, Status: "ok", Detail: info.Version, Category: "optional"})
+		}
+	}
+
+	summary = append(summary, InstallSummaryItem{Label: i18n.T(i18n.MsgInstallerSummaryConfigFile), Status: func() string {
+		if cfgValid {
+			return "ok"
+		}
+		return "warn"
+	}(), Detail: result.ConfigPath, Category: "config"})
+
+	if cfgConfigured {
+		summary = append(summary, InstallSummaryItem{Label: i18n.T(i18n.MsgInstallerSummaryModelProvider), Status: "ok", Detail: i18n.T(i18n.MsgInstallerSummaryConfigured), Category: "config"})
+	} else {
+		summary = append(summary, InstallSummaryItem{Label: i18n.T(i18n.MsgInstallerSummaryModelProvider), Status: "warn", Detail: i18n.T(i18n.MsgInstallerSummaryNotConfigured), Category: "config"})
+	}
+
+	gwMode := "local"
+	gwBind := "loopback"
+	if cfgValid {
+		if raw := readOpenClawConfigRaw(result.ConfigPath); raw != nil {
+			if gw, ok := raw["gateway"].(map[string]interface{}); ok {
+				if m, ok := gw["mode"].(string); ok {
+					gwMode = m
+				}
+				if b, ok := gw["bind"].(string); ok {
+					gwBind = b
+				}
+			}
+		}
+	}
+
+	if gwRunning {
+		summary = append(summary, InstallSummaryItem{Label: "Gateway", Status: "ok", Detail: i18n.T(i18n.MsgInstallerSummaryRunning, map[string]interface{}{"Port": gwPort, "Mode": gwMode, "Bind": gwBind}), Category: "gateway"})
+	} else if config.SkipGateway {
+		summary = append(summary, InstallSummaryItem{Label: "Gateway", Status: "skip", Detail: i18n.T(i18n.MsgInstallerSummarySkipped), Category: "gateway"})
+	} else {
+		summary = append(summary, InstallSummaryItem{Label: "Gateway", Status: "warn", Detail: i18n.T(i18n.MsgInstallerSummaryNotRunning, map[string]interface{}{"Port": gwPort}), Category: "gateway"})
+	}
+
+	var completeMsg string
+	if needsRestart {
+		completeMsg = i18n.T(i18n.MsgInstallerCompleteRestartRequired)
+	} else if config.SkipConfig {
+		completeMsg = i18n.T(i18n.MsgInstallerCompleteManualConfig)
+	} else {
+		completeMsg = i18n.T(i18n.MsgInstallerCompleteSuccess)
+	}
+
+	i.emitter.EmitComplete(completeMsg, map[string]interface{}{
+		"version":          result.Version,
+		"configPath":       result.ConfigPath,
+		"port":             result.GatewayPort,
+		"gatewayRunning":   gwRunning,
+		"configValid":      cfgValid,
+		"configConfigured": cfgConfigured,
+		"doctor":           doctor,
+		"needsRestart":     needsRestart,
+		"skipConfig":       config.SkipConfig,
+		"packageName":      config.Version,
+		"summary":          summary,
+	})
+
+	return result, nil
+}

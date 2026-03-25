@@ -1,0 +1,68 @@
+services:
+  haclaw:
+    build: .
+    image: haclaw-local:latest
+    container_name: haclaw
+    init: true
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:18701:18788"
+    volumes:
+      - haclaw-data:/data/haclaw
+      # Persist OpenClaw config, state, and logs across container updates
+      # OpenClaw is preinstalled in the image; this volume keeps config and runtime data
+      # 持久化 OpenClaw 配置、状态与日志，OpenClaw 已预装在镜像中
+      - haclaw-openclaw-data:/data/openclaw
+      # Persist runtime overlay binaries (HAClaw/OpenClaw updates) across container recreations
+      # 持久化运行时覆盖二进制文件，容器重建后保留更新
+      - haclaw-runtime:/data/runtime
+    environment:
+      OCD_CONFIG: /data/haclaw/HAClaw.json
+      OPENCLAW_HOME: /data/openclaw/home
+      OPENCLAW_STATE_DIR: /data/openclaw/state
+      OPENCLAW_CONFIG_PATH: /data/openclaw/state/openclaw.json
+      NPM_CONFIG_PREFIX: /data/openclaw/npm
+      OCD_DB_SQLITE_PATH: /data/haclaw/HAClaw.db
+      OCD_LOG_FILE: /data/haclaw/HAClaw.log
+      OCD_GATEWAY_LOG: /data/openclaw/logs/gateway.log
+      OCD_SETUP_INSTALL_LOG: /data/openclaw/logs/install.log
+      OCD_SETUP_DOCTOR_LOG: /data/openclaw/logs/doctor.log
+      OCD_RUNTIME_DIR: /data/runtime
+      # OpenClaw Gateway connection config (default: local in-container gateway)
+      # 如需连接宿主机或外部 Gateway，可覆盖为 host.docker.internal 或实际 IP
+      OCD_OPENCLAW_GATEWAY_HOST: 127.0.0.1
+      OCD_OPENCLAW_GATEWAY_PORT: 18789
+      # OCD_OPENCLAW_GATEWAY_TOKEN: your_token_here
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:18788/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2.0"
+    # Log rotation: prevent unbounded log growth
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+    networks:
+      - haclaw-net
+
+networks:
+  haclaw-net:
+    name: haclaw-net
+    driver: bridge
+
+volumes:
+  haclaw-data:
+    name: haclaw-data
+  haclaw-openclaw-data:
+    name: openclaw-data
+  haclaw-runtime:
+    name: haclaw-runtime
