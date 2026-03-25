@@ -6,6 +6,8 @@
 
 **The Universal, MacOS-Inspired Web Desktop for Autonomous AI Agents**
 
+<p><b>Created By Dr.Hani Akrim</b></p>
+
 [![Release](https://img.shields.io/github/v/release/haniakrim21/HAClaw-OS?style=for-the-badge&logo=rocket&color=0ea5e9)](https://github.com/haniakrim21/HAClaw-OS/releases)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue?style=for-the-badge&logo=docker)](https://github.com/haniakrim21/HAClaw-OS)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
@@ -95,5 +97,5 @@ We welcome contributions wholeheartedly! Whether you're fixing bugs, adding new 
 This project is licensed under the [MIT License](LICENSE) — free to use, modify, and distribute for both personal and commercial purposes.
 
 <div align="center">
-  <sub>Modernized & maintained by <a href="https://github.com/haniakrim21">Hani Akrim</a> &bull; Powered by OpenClaw</sub>
+  <sub>Created By <a href="https://github.com/haniakrim21">Dr.Hani Akrim</a> &bull; Powered by OpenClaw</sub>
 </div>
