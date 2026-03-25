@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
 
 # HAClaw-OS
 
@@ -7,8 +7,10 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-[![Release](https://img.shields.io/github/v/release/HAClaw-OS/HAClaw-OS?style=for-the-badge&logo=rocket)](https://github.com/HAClaw-OS/HAClaw-OS/releases)
-[![Build](https://img.shields.io/badge/Build-Passing-success?style=for-the-badge&logo=github-actions)](https://github.com/HAClaw-OS/HAClaw-OS/actions)
+<p><b>Created By Dr.Hani Akrim</b></p>
+
+[![Release](https://img.shields.io/github/v/release/haniakrim21/HAClaw-OS?style=for-the-badge&logo=rocket&color=0ea5e9)](https://github.com/haniakrim21/HAClaw-OS/releases)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue?style=for-the-badge&logo=docker)](https://github.com/haniakrim21/HAClaw-OS)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 ---
@@ -346,5 +348,5 @@ This project is licensed under the [MIT License](LICENSE) — free to use, modif
 <br>
 
 <div align="center">
-  <sub>Designed with ❤️ by HAClaw-OS</sub>
+  <sub>Created By <a href="https://github.com/haniakrim21">Dr.Hani Akrim</a> &bull; Powered by OpenClaw</sub>
 </div>
