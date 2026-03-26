@@ -250,7 +250,26 @@ export function useConfigEditor(): UseConfigEditorReturn {
       if (freshData?.hash) baseHashRef.current = freshData.hash;
     };
     try {
-      const raw = JSON.stringify(config, null, 2);
+      const payload = structuredClone(config);
+      // Auto-fix validation requirements for dmPolicy="open" across all channels
+      if (payload.channels && typeof payload.channels === 'object') {
+        Object.values(payload.channels).forEach((ch: any) => {
+          if (!ch || typeof ch !== 'object') return;
+          const enforceAllowFrom = (cfg: any) => {
+            if (cfg.dmPolicy === 'open' && (!cfg.allowFrom || (Array.isArray(cfg.allowFrom) && cfg.allowFrom.length === 0))) {
+              cfg.allowFrom = ['*'];
+            }
+          };
+          enforceAllowFrom(ch);
+          if (ch.accounts && typeof ch.accounts === 'object') {
+            Object.values(ch.accounts).forEach((acct: any) => {
+              if (acct && typeof acct === 'object') enforceAllowFrom(acct);
+            });
+          }
+        });
+      }
+
+      const raw = JSON.stringify(payload, null, 2);
       // 统一优先走 WebSocket 保存（本地/远程网关均适用）
       if (baseHashRef.current) {
         // 有 hash → 用 configSafeApply（自动刷新 hash + 重试）
@@ -261,17 +280,18 @@ export function useConfigEditor(): UseConfigEditorReturn {
       } else {
         // 无 hash → 尝试 configSetAll + reload，失败时降级本地写入
         try {
-          await gwApi.configSetAll(config);
+          await gwApi.configSetAll(payload);
           await gwApi.configReload().catch(() => {});
           // 刷新 hash 以便后续保存走 configSafeApply
           await refreshHash(1000);
-        } catch {
+        } catch (applyErr: any) {
           // WS 不可用，降级本地写入
-          if (mode === 'local') {
-            await configApi.update(config);
+          const isProxyError = (applyErr?.code === 'GW_PROXY_FAILED' || applyErr?.status === 502 || applyErr?.status === 504) && !applyErr?.message?.toLowerCase().includes('validation');
+          if (mode === 'local' && isProxyError) {
+            await configApi.update(payload);
             await gwApi.configReload().catch(() => {});
           } else {
-            throw new Error('Gateway not connected');
+            throw applyErr;
           }
         }
       }
