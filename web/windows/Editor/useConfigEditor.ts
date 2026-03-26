@@ -255,9 +255,19 @@ export function useConfigEditor(): UseConfigEditorReturn {
       // 统一优先走 WebSocket 保存（本地/远程网关均适用）
       if (baseHashRef.current) {
         // 有 hash → 用 configApply（原子写入+重载）
-        const res: any = await gwApi.configApply(raw, baseHashRef.current);
-        if (res?.config) setConfig(res.config);
-        await refreshHash();
+        try {
+          const res: any = await gwApi.configApply(raw, baseHashRef.current);
+          if (res?.config) setConfig(res.config);
+          await refreshHash();
+        } catch (applyErr: any) {
+          if (mode === 'local') {
+            await configApi.update(config);
+            await gwApi.configReload().catch(() => {});
+            await refreshHash();
+          } else {
+            throw applyErr;
+          }
+        }
       } else {
         // 无 hash → 尝试 configSetAll + reload，失败时降级本地写入
         try {
