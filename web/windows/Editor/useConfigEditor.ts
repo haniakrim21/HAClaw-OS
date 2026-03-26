@@ -208,7 +208,7 @@ export function useConfigEditor(): UseConfigEditorReturn {
       try {
         data = await gwApi.configGet();
         if (data?.hash) baseHashRef.current = data.hash;
-        gwApi.configSchema().then((s: any) => setSchema(s)).catch(() => {});
+        gwApi.configSchema().then((s: any) => setSchema(s)).catch(() => { });
       } catch {
         // WS 不可用（网关未连接），降级读本地文件
         if (mode === 'local') {
@@ -283,7 +283,7 @@ export function useConfigEditor(): UseConfigEditorReturn {
         // 无 hash → 尝试 configSetAll + reload，失败时降级本地写入
         try {
           await gwApi.configSetAll(payload);
-          await gwApi.configReload().catch(() => {});
+          await gwApi.configReload().catch(() => { });
           // 刷新 hash 以便后续保存走 configSafeApply
           await refreshHash(1000);
         } catch (applyErr: any) {
@@ -291,9 +291,9 @@ export function useConfigEditor(): UseConfigEditorReturn {
           const isProxyError = (applyErr?.code === 'GW_PROXY_FAILED' || applyErr?.status === 502 || applyErr?.status === 504) && !applyErr?.message?.toLowerCase().includes('validation');
           if (mode === 'local' && isProxyError) {
             await configApi.update(payload);
-            await gwApi.configReload().catch(() => {});
+            await gwApi.configReload().catch(() => { });
           } else {
-            throw applyErr;
+            throw applyErr; // Re-throw the error from gwApi.configSetAll
           }
         }
       }
