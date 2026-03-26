@@ -274,20 +274,12 @@ export function useConfigEditor(): UseConfigEditorReturn {
       // 统一优先走 WebSocket 保存（本地/远程网关均适用）
       if (baseHashRef.current) {
         // 有 hash → 用 configApply（原子写入+重载）
-        try {
-          const res: any = await gwApi.configApply(raw, baseHashRef.current);
+        // WARNING: Because the payload came from the gateway, it might contain __OPENCLAW_REDACTED__ strings.
+        // We MUST NOT fall back to configApi.update(payload) here, because openclaw CLI will blindly overwrite the API keys with the redacted placeholder.
+        await gwApi.configApply(raw, baseHashRef.current).then(async (res: any) => {
           if (res?.config) setConfig(res.config);
           await refreshHash();
-        } catch (applyErr: any) {
-          const isProxyError = (applyErr?.code === 'GW_PROXY_FAILED' || applyErr?.status === 502 || applyErr?.status === 504) && !applyErr?.message?.toLowerCase().includes('validation');
-          if (mode === 'local' && isProxyError) {
-            await configApi.update(payload);
-            await gwApi.configReload().catch(() => {});
-            await refreshHash();
-          } else {
-            throw applyErr;
-          }
-        }
+        });
       } else {
         // 无 hash → 尝试 configSetAll + reload，失败时降级本地写入
         try {
@@ -296,7 +288,7 @@ export function useConfigEditor(): UseConfigEditorReturn {
           // 刷新 hash 以便后续保存走 configApply
           await refreshHash();
         } catch (applyErr: any) {
-          // WS 不可用，降级本地写入
+          // WS 不可用，降级本地写入 (SAFE because config was loaded via configApi.get so it has no redacted strings)
           const isProxyError = (applyErr?.code === 'GW_PROXY_FAILED' || applyErr?.status === 502 || applyErr?.status === 504) && !applyErr?.message?.toLowerCase().includes('validation');
           if (mode === 'local' && isProxyError) {
             await configApi.update(payload);
