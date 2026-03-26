@@ -1,4 +1,4 @@
-﻿package handlers
+package handlers
 
 import (
 	"encoding/json"
@@ -27,6 +27,9 @@ func NewConfigHandler() *ConfigHandler {
 
 // configPath returns the OpenClaw config file path.
 func configPath() string {
+	if envPath := os.Getenv("OPENCLAW_CONFIG_PATH"); envPath != "" {
+		return envPath
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return ""

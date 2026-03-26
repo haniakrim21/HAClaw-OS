@@ -2068,7 +2068,8 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
   const handleDeleteSession = useCallback(async (key: string) => {
     if (!gwReady || deleting) return;
     // Cannot delete main session
-    if (key === 'main') {
+    if (key === 'main' || key.endsWith(':main')) {
+      toast('error', cRef.current.cannotDeleteMain || 'Cannot delete main session');
       setDeleteConfirmKey(null);
       return;
     }
@@ -2083,13 +2084,15 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
         setMessages([]);
       }
       setDeleteConfirmKey(null);
+      toast('success', cRef.current.deleteOk || 'Deleted successfully');
     } catch (err: any) {
       console.error('Delete failed:', err);
+      toast('error', cRef.current.deleteFailed || 'Delete failed');
     } finally {
       setDeleting(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deleting, sessionKey]);
+  }, [deleting, sessionKey, gwReady, toast]);
 
   // Slash command selection
   const selectSlashCommand = useCallback((cmd: string) => {
