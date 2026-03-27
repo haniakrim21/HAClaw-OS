@@ -71,6 +71,34 @@ const Editor: React.FC<EditorProps> = ({ language }) => {
     }
   }, [jsonContent, saving, edit.invalidJson]);
 
+  const applyBestPractices = useCallback(() => {
+    try {
+      const parsed = JSON.parse(jsonContent);
+      
+      // 1. Reverse proxy headers trust
+      if (!parsed.gateway) parsed.gateway = {};
+      if (!Array.isArray(parsed.gateway.trustedProxies)) {
+        parsed.gateway.trustedProxies = ['127.0.0.1', '::1'];
+      }
+      
+      // 2. Disable autoAllowSkills
+      if (!parsed.defaults) parsed.defaults = {};
+      parsed.defaults.autoAllowSkills = false;
+      
+      // 3. Multi-user sandbox boundaries
+      if (!parsed.agents) parsed.agents = {};
+      if (!parsed.agents.defaults) parsed.agents.defaults = {};
+      if (!parsed.agents.defaults.sandbox) parsed.agents.defaults.sandbox = {};
+      parsed.agents.defaults.sandbox.mode = 'all';
+      
+      setJsonContent(JSON.stringify(parsed, null, 2));
+      setSaveError('');
+      setJsonValid(true);
+    } catch {
+      setSaveError('Cannot apply best practices: Invalid JSON format');
+    }
+  }, [jsonContent]);
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-[#1a1c20] relative">
       <header className="h-12 border-b border-slate-200 dark:border-white/5 theme-panel flex items-center justify-between px-3 md:px-4 shrink-0 overflow-x-auto no-scrollbar">
@@ -82,6 +110,7 @@ const Editor: React.FC<EditorProps> = ({ language }) => {
           <span className="hidden sm:inline text-[11px] font-mono text-slate-400">openclaw.json</span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <button onClick={applyBestPractices} className="px-3 md:px-4 h-7 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 text-[10px] md:text-[11px] font-bold rounded-lg border border-amber-200 dark:border-amber-500/20 shadow-sm transition-all flex items-center gap-1.5"><span className="material-symbols-outlined text-[13px]">shield_spark</span><span className="hidden md:inline">Apply Best Practices</span></button>
           <button onClick={handleSave} disabled={saving} className="px-3 md:px-4 h-7 bg-primary text-white text-[10px] md:text-[11px] font-bold rounded-lg shadow-lg shadow-primary/20 disabled:opacity-60 disabled:cursor-not-allowed">{saving ? (edit.saving || edit.saveReload) : edit.saveReload}</button>
         </div>
       </header>
