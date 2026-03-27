@@ -21,7 +21,7 @@ _2026-03-27_
 - add secProfile tool strategy labels for all 13 locales
 
 ---
-**Full Changelog**: [v0.0.32...v0.0.33](https://github.com/HAClaw-OS/HAClaw-OS/compare/v0.0.32...v0.0.33)
+**Full Changelog**: [v0.0.32...v0.0.33](https://github.com/haniakrim21/HAClaw-OS/compare/v0.0.32...v0.0.33)
 
 
 
@@ -47,7 +47,7 @@ _2026-03-27_
 - upgrade Node.js from 22 to 24
 
 ---
-**Full Changelog**: [v0.0.31...v0.0.32](https://github.com/HAClaw-OS/HAClaw-OS/compare/v0.0.31...v0.0.32)
+**Full Changelog**: [v0.0.31...v0.0.32](https://github.com/haniakrim21/HAClaw-OS/compare/v0.0.31...v0.0.32)
 
 
 
@@ -69,7 +69,7 @@ _2026-03-27_
 - remove 1054 unused keys per locale across 13 languages
 
 ---
-**Full Changelog**: [v0.0.30...v0.0.31](https://github.com/HAClaw-OS/HAClaw-OS/compare/v0.0.30...v0.0.31)
+**Full Changelog**: [v0.0.30...v0.0.31](https://github.com/haniakrim21/HAClaw-OS/compare/v0.0.30...v0.0.31)
 
 
 
@@ -120,7 +120,7 @@ _2026-03-26_
 - remove agent info and kind chip from UsagePanel (shown in sidebar)
 
 ---
-**Full Changelog**: [v0.0.29...v0.0.30](https://github.com/HAClaw-OS/HAClaw-OS/compare/v0.0.29...v0.0.30)
+**Full Changelog**: [v0.0.29...v0.0.30](https://github.com/haniakrim21/HAClaw-OS/compare/v0.0.29...v0.0.30)
 
 
 
@@ -146,7 +146,7 @@ _2026-03-25_
 - preserve partial stream on error and suppress error during active streaming
 
 ---
-**Full Changelog**: [v0.0.28...v0.0.29](https://github.com/HAClaw-OS/HAClaw-OS/compare/v0.0.28...v0.0.29)
+**Full Changelog**: [v0.0.28...v0.0.29](https://github.com/haniakrim21/HAClaw-OS/compare/v0.0.28...v0.0.29)
 
 
 
@@ -180,7 +180,7 @@ _2026-03-25_
 - translate DM to native terms in zh and zh-TW locales
 
 ---
-**Full Changelog**: [v0.0.27...v0.0.28](https://github.com/HAClaw-OS/HAClaw-OS/compare/v0.0.27...v0.0.28)
+**Full Changelog**: [v0.0.27...v0.0.28](https://github.com/haniakrim21/HAClaw-OS/compare/v0.0.27...v0.0.28)
 
 
 
@@ -212,7 +212,7 @@ _2026-03-24_
 - bump openclawCompat to >=2026.3.23
 
 ---
-**Full Changelog**: [v0.0.26...v0.0.27](https://github.com/HAClaw-OS/HAClaw-OS/compare/v0.0.26...v0.0.27)
+**Full Changelog**: [v0.0.26...v0.0.27](https://github.com/haniakrim21/HAClaw-OS/compare/v0.0.26...v0.0.27)
 
 
 
@@ -256,7 +256,7 @@ _2026-03-24_
 - add account lockout policy and prominent mirror warnings
 
 ---
-**Full Changelog**: [v0.0.25...v0.0.26](https://github.com/HAClaw-OS/HAClaw-OS/compare/v0.0.25...v0.0.26)
+**Full Changelog**: [v0.0.25...v0.0.26](https://github.com/haniakrim21/HAClaw-OS/compare/v0.0.25...v0.0.26)
 
 
 
@@ -277,7 +277,7 @@ _2026-03-23_
 - remove duplicate admin credentials output from startup banner
 
 ---
-**Full Changelog**: [v0.0.24...v0.0.25](https://github.com/HAClaw-OS/HAClaw-OS/compare/v0.0.24...v0.0.25)
+**Full Changelog**: [v0.0.24...v0.0.25](https://github.com/haniakrim21/HAClaw-OS/compare/v0.0.24...v0.0.25)
 
 
 
@@ -318,7 +318,7 @@ _2026-03-23_
 - update README to reflect unified installer for Docker
 
 ---
-**Full Changelog**: [v0.0.23...v0.0.24](https://github.com/HAClaw-OS/HAClaw-OS/compare/v0.0.23...v0.0.24)
+**Full Changelog**: [v0.0.23...v0.0.24](https://github.com/haniakrim21/HAClaw-OS/compare/v0.0.23...v0.0.24)
 
 
 
@@ -352,7 +352,7 @@ _2026-03-22_
 - remove green checkmark badge from chat welcome screen
 
 ---
-**Full Changelog**: [v0.0.22...v0.0.23](https://github.com/HAClaw-OS/HAClaw-OS/compare/v0.0.22...v0.0.23)
+**Full Changelog**: [v0.0.22...v0.0.23](https://github.com/haniakrim21/HAClaw-OS/compare/v0.0.22...v0.0.23)
 
 
 
@@ -377,7 +377,7 @@ _2026-03-21_
 - auto-set supportsUsageInStreaming for custom openai-completions providers
 
 ---
-**Full Changelog**: [v0.0.21...v0.0.22](https://github.com/HAClaw-OS/HAClaw-OS/compare/v0.0.21...v0.0.22)
+**Full Changelog**: [v0.0.21...v0.0.22](https://github.com/haniakrim21/HAClaw-OS/compare/v0.0.21...v0.0.22)
 
 
 
@@ -427,7 +427,7 @@ _2026-03-20_
 - collapse session toolbar into overflow menu
 
 ---
-**Full Changelog**: [v0.0.20...v0.0.21](https://github.com/HAClaw-OS/HAClaw-OS/compare/v0.0.20...v0.0.21)
+**Full Changelog**: [v0.0.20...v0.0.21](https://github.com/haniakrim21/HAClaw-OS/compare/v0.0.20...v0.0.21)
 
 
 
@@ -477,7 +477,7 @@ _2026-03-19_
 - add -NoDocker flag to skip Docker builds via [skip-docker] tag marker
 
 ---
-**Full Changelog**: [v0.0.19...v0.0.20](https://github.com/HAClaw-OS/HAClaw-OS/compare/v0.0.19...v0.0.20)
+**Full Changelog**: [v0.0.19...v0.0.20](https://github.com/haniakrim21/HAClaw-OS/compare/v0.0.19...v0.0.20)
 
 
 
@@ -522,7 +522,7 @@ _2026-03-19_
 - add missing logout and sort keys across 10 locales
 
 ---
-**Full Changelog**: [v0.0.18...v0.0.19](https://github.com/HAClaw-OS/HAClaw-OS/compare/v0.0.18...v0.0.19)
+**Full Changelog**: [v0.0.18...v0.0.19](https://github.com/haniakrim21/HAClaw-OS/compare/v0.0.18...v0.0.19)
 
 
 
@@ -543,7 +543,7 @@ _2026-03-18_
 - use official skillhub cli installer
 
 ---
-**Full Changelog**: [v0.0.17...v0.0.18](https://github.com/HAClaw-OS/HAClaw-OS/compare/v0.0.17...v0.0.18)
+**Full Changelog**: [v0.0.17...v0.0.18](https://github.com/haniakrim21/HAClaw-OS/compare/v0.0.17...v0.0.18)
 
 
 
@@ -648,7 +648,7 @@ _2026-03-18_
 - expand Docker section with ports, env vars, volumes, and resource limits
 
 ---
-**Full Changelog**: [v0.0.16...v0.0.17](https://github.com/HAClaw-OS/HAClaw-OS/compare/v0.0.16...v0.0.17)
+**Full Changelog**: [v0.0.16...v0.0.17](https://github.com/haniakrim21/HAClaw-OS/compare/v0.0.16...v0.0.17)
 
 
 
@@ -726,7 +726,7 @@ _2026-03-15_
 - bump openclawCompat to >=2026.3.12
 
 ---
-**Full Changelog**: [v0.0.15...v0.0.16](https://github.com/HAClaw-OS/HAClaw-OS/compare/v0.0.15...v0.0.16)
+**Full Changelog**: [v0.0.15...v0.0.16](https://github.com/haniakrim21/HAClaw-OS/compare/v0.0.15...v0.0.16)
 
 
 
