@@ -10,7 +10,7 @@
     "icon": "forum",
     "color": "from-orange-500 to-red-500",
     "tags": ["reddit", "social", "news", "digest"],
-    "author": "HAClaw Team",
+    "author": "HAClaw-OS Team",
     "newbie": false,
     "costTier": "low"
   },

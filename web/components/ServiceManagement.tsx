@@ -8,7 +8,7 @@ interface ServiceManagementProps {
 
 export const ServiceManagement: React.FC<ServiceManagementProps> = ({ s }) => {
   const { toast } = useToast();
-  const [status, setStatus] = useState<{ openclaw_installed: boolean; haclaw_installed: boolean } | null>(null);
+  const [status, setStatus] = useState<{ openclaw_installed: boolean; haclawx_installed: boolean } | null>(null);
   const [loading, setLoading] = useState(false);
 
   const loadStatus = async () => {
@@ -24,15 +24,15 @@ export const ServiceManagement: React.FC<ServiceManagementProps> = ({ s }) => {
     loadStatus();
   }, []);
 
-  const handleInstall = async (service: 'openclaw' | 'haclaw') => {
+  const handleInstall = async (service: 'openclaw' | 'haclawx') => {
     setLoading(true);
     try {
       if (service === 'openclaw') {
         await gatewayApi.daemonInstall();
         toast(s.serviceInstalled || 'OpenClaw service installed', 'success');
       } else {
-        await serviceApi.installHAClaw();
-        toast(s.serviceInstalled || 'HAClaw service installed', 'success');
+        await serviceApi.installHAClaw-OS();
+        toast(s.serviceInstalled || 'HAClaw-OS service installed', 'success');
       }
       await loadStatus();
     } catch (err: any) {
@@ -42,15 +42,15 @@ export const ServiceManagement: React.FC<ServiceManagementProps> = ({ s }) => {
     }
   };
 
-  const handleUninstall = async (service: 'openclaw' | 'haclaw') => {
+  const handleUninstall = async (service: 'openclaw' | 'haclawx') => {
     setLoading(true);
     try {
       if (service === 'openclaw') {
         await gatewayApi.daemonUninstall();
         toast(s.serviceUninstalled || 'OpenClaw service uninstalled', 'success');
       } else {
-        await serviceApi.uninstallHAClaw();
-        toast(s.serviceUninstalled || 'HAClaw service uninstalled', 'success');
+        await serviceApi.uninstallHAClaw-OS();
+        toast(s.serviceUninstalled || 'HAClaw-OS service uninstalled', 'success');
       }
       await loadStatus();
     } catch (err: any) {
@@ -92,27 +92,27 @@ export const ServiceManagement: React.FC<ServiceManagementProps> = ({ s }) => {
         </button>
       </div>
 
-      {/* HAClaw Service */}
+      {/* HAClaw-OS Service */}
       <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-white/5">
         <div className="flex items-center gap-2">
           <span className="material-symbols-outlined text-[18px]">dashboard</span>
           <div>
-            <div className="text-[12px] font-medium">HAClaw</div>
+            <div className="text-[12px] font-medium">HAClaw-OS</div>
             <div className="text-[10px] text-slate-500 dark:text-white/50">
-              {status.haclaw_installed ? (s.serviceInstalled || 'Installed') : (s.serviceNotInstalled || 'Not installed')}
+              {status.haclawx_installed ? (s.serviceInstalled || 'Installed') : (s.serviceNotInstalled || 'Not installed')}
             </div>
           </div>
         </div>
         <button
-          onClick={() => status.haclaw_installed ? handleUninstall('haclaw') : handleInstall('haclaw')}
+          onClick={() => status.haclawx_installed ? handleUninstall('haclawx') : handleInstall('haclawx')}
           disabled={loading}
           className={`px-3 py-1.5 rounded-md text-[11px] font-medium transition-colors ${
-            status.haclaw_installed
+            status.haclawx_installed
               ? 'bg-red-500 hover:bg-red-600 text-white'
               : 'bg-primary hover:bg-primary/90 text-white'
           } disabled:opacity-50`}
         >
-          {status.haclaw_installed ? (s.uninstall || 'Uninstall') : (s.install || 'Install')}
+          {status.haclawx_installed ? (s.uninstall || 'Uninstall') : (s.install || 'Install')}
         </button>
       </div>
     </div>

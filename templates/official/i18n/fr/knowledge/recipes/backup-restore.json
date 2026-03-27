@@ -2,12 +2,12 @@
   "name": "Sauvegarde et restauration",
   "description": "Sauvegarder la configuration, mémoire et historique de conversations d'OpenClaw, avec support de migration vers de nouveaux appareils",
   "content": {
-    "body": "## Que sauvegarder\n\n| Élément | Chemin | Importance |\n|---------|--------|------------|\n| Fichier de configuration | `~/.haclaw/config.yaml` | Essentiel |\n| Configuration des agents | `~/.haclaw/agents/` | Essentiel |\n| Fichiers mémoire | `~/.haclaw/memory/` | Important |\n| Historique de sessions | `~/.haclaw/sessions/` | Optionnel |\n| Identifiants | `~/.haclaw/credentials/` | Important |\n\n## Méthodes de sauvegarde\n\n### Méthode 1 : Sauvegarde manuelle\n```bash\ncp -r ~/.haclaw ~/haclaw-backup-$(date +%Y%m%d)\n```\n\n### Méthode 2 : Via CLI\n```bash\nopenclaw config export > ma-sauvegarde.yaml\n```\n\n### Méthode 3 : Interface HAClaw\nCliquez sur « Exporter la configuration » en bas du « Centre de configuration ».\n\n## Restaurer\n\n1. Installer OpenClaw : `npm install -g openclaw@latest`\n2. Copier les fichiers dans `~/.haclaw/`\n3. Démarrer la passerelle : `openclaw gateway run`\n\n## Champs de configuration\n\nChemin : `~/.haclaw/`",
+    "body": "## Que sauvegarder\n\n| Élément | Chemin | Importance |\n|---------|--------|------------|\n| Fichier de configuration | `~/.haclawx/config.yaml` | Essentiel |\n| Configuration des agents | `~/.haclawx/agents/` | Essentiel |\n| Fichiers mémoire | `~/.haclawx/memory/` | Important |\n| Historique de sessions | `~/.haclawx/sessions/` | Optionnel |\n| Identifiants | `~/.haclawx/credentials/` | Important |\n\n## Méthodes de sauvegarde\n\n### Méthode 1 : Sauvegarde manuelle\n```bash\ncp -r ~/.haclawx ~/haclawx-backup-$(date +%Y%m%d)\n```\n\n### Méthode 2 : Via CLI\n```bash\nopenclaw config export > ma-sauvegarde.yaml\n```\n\n### Méthode 3 : Interface HAClaw-OS\nCliquez sur « Exporter la configuration » en bas du « Centre de configuration ».\n\n## Restaurer\n\n1. Installer OpenClaw : `npm install -g openclaw@latest`\n2. Copier les fichiers dans `~/.haclawx/`\n3. Démarrer la passerelle : `openclaw gateway run`\n\n## Champs de configuration\n\nChemin : `~/.haclawx/`",
     "steps": [
       "Confirmer le périmètre de sauvegarde",
       "Exécuter la sauvegarde",
       "Stocker les fichiers en lieu sûr",
-      "Pour restaurer, copier dans ~/.haclaw/ et redémarrer"
+      "Pour restaurer, copier dans ~/.haclawx/ et redémarrer"
     ]
   }
 }

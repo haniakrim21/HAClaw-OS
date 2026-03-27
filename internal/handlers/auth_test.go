@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"HAClaw/internal/database"
-	"HAClaw/internal/web"
-	"HAClaw/internal/webconfig"
+	"HAClaw-OS/internal/database"
+	"HAClaw-OS/internal/web"
+	"HAClaw-OS/internal/webconfig"
 
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"

@@ -1,99 +1,350 @@
-<div align="center">
+﻿<div align="center">
 
-![HAClaw-OS Banner](https://capsule-render.vercel.app/api?type=waving&color=0ea5e9&height=250&section=header&text=HAClaw-OS&fontSize=80&fontColor=ffffff&animation=fadeIn&fontAlignY=35&desc=Complexity%20within%2C%20simplicity%20without&descAlignY=55&descAlign=50)
+# HAClaw-OS
 
-# HAClaw-OS 🦀
+**Complexity within, simplicity without.**<br>
+**繁于内，简于形。**
 
-**The Universal, MacOS-Inspired Web Desktop for Autonomous AI Agents**
+**English** | [简体中文](README.zh-CN.md)
 
-[![Release](https://img.shields.io/github/v/release/haniakrim21/HAClaw-OS?style=for-the-badge&logo=rocket&color=0ea5e9)](https://github.com/haniakrim21/HAClaw-OS/releases)
-[![Docker](https://img.shields.io/badge/Docker-Ready-blue?style=for-the-badge&logo=docker)](https://github.com/haniakrim21/HAClaw-OS)
+[![Release](https://img.shields.io/github/v/release/HAClaw-OS/HAClaw-OS?style=for-the-badge&logo=rocket)](https://github.com/HAClaw-OS/HAClaw-OS/releases)
+[![Build](https://img.shields.io/badge/Build-Passing-success?style=for-the-badge&logo=github-actions)](https://github.com/HAClaw-OS/HAClaw-OS/actions)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
-
-</div>
 
 ---
 
-**HAClaw-OS** is an open-source, beautifully designed visual management platform tailored for the **OpenClaw** ecosystem. Crafted with a premium interface inspired by macOS, it lowers the barrier to entry for orchestrating AI agents, managing LLM models, and observing intelligent workflows. 
+**HAClaw-OS** is an open-source web visual management platform built for [OpenClaw](https://github.com/openclaw/openclaw). It is designed to lower the barrier to entry, making installation, configuration, monitoring, and optimization simpler and more efficient, while providing a more accessible onboarding experience for users worldwide, especially beginners.
 
-Whether you're an AI enthusiast, a developer, or a power user, HAClaw-OS brings a native desktop feel directly to your browser.
+</div>
 
 > [!CAUTION]
-> **Beta Preview** — This is an early preview release actively being maintained. Do not use in critical production environments without prior testing.
+> **Beta Preview** — This is an early preview release. It has not undergone comprehensive testing. **Do not use in production environments.**
 
 <br>
 
-## ✨ Why Choose HAClaw-OS?
+## Quick Navigation
 
-| Feature | Description |
-| :---: | :--- |
-| 💎 **Pixel-Perfect UI** | Native macOS feel with stunning glassmorphism, fluid animations, and dark/light themes. |
-| 🎛️ **Gateway Control** | Start, stop, and restart your AI Gateway instantly with real-time health monitoring. |
-| 🖼 **Visual Configurator**| Edit configurations and tweak agent profiles without ever touching JSON or YAML files. |
-| 🚀 **Next-Gen Models** | Out-of-the-box support for the newest powerhouse models like **Gemini 2.5 Pro** and **OpenAI o1**. |
-| 🧩 **Template Center** | Deploy new agent personas and roles in seconds from built-in community templates. |
-| 📊 **Live Dashboard** | Real-time system metrics, session tracking, and activity monitoring directly in the dock. |
-| 🌍 **i18n Ready** | Ships with 13 built-in languages, easily extensible worldwide. |
-| 📱 **Responsive Design**| Works seamlessly across 4K desktop monitors, tablets, and mobile devices. |
+- [Screenshots](#-screenshots)
+- [Why HAClaw-OS?](#-why-haclawx)
+- [Quick Start](#-quick-start)
+- [Docker Install](#docker-install)
+- [Features](#-features)
+- [Tech Stack](#-tech-stack)
 
-<br>
-
-## 📸 Interface Preview
+## 📸 Screenshots
 
 <div align="center">
   <img src="assets/screenshots/dashboard.png" width="800" alt="Dashboard Overview" />
-  <p><sub>The Main Dashboard Overview</sub></p>
+  <p><sub>Dashboard Overview</sub></p>
 </div>
 
-| <img src="assets/screenshots/scenarios.png" width="390" alt="Scenario Templates" /> | <img src="assets/screenshots/multi-agent.png" width="390" alt="Multi-Agent Workflow" /> |
-| :---: | :---: |
-| *Scenario Templates* | *Multi-Agent Workflows* |
+<br>
+
+<div align="center">
+  <img src="assets/screenshots/scenarios.png" width="390" alt="Scenario Templates" />
+  &nbsp;
+  <img src="assets/screenshots/multi-agent.png" width="390" alt="Multi-Agent Workflow" />
+  <p><sub>Scenario Templates &amp; Multi-Agent Workflow</sub></p>
+</div>
 
 <br>
 
-## 🚀 Quick Start (Docker Deployment)
-
-We highly recommend utilizing Docker for the smoothest full-stack deployment. The bundled image includes HAClaw-OS, the OpenClaw Gateway, and all essential runtimes (Go, Python3, uv, ffmpeg, jq).
-
-```bash
-# 1. Download the docker-compose manifest
-curl -fsSL https://raw.githubusercontent.com/haniakrim21/HAClaw-OS/main/docker-compose.yml -o docker-compose.yml
-
-# 2. Deploy your personal OS in detached mode
-docker compose up -d
-
-# 3. Access your gateway
-# Open your browser and navigate to http://localhost:18700
-```
-
-On your first run, HAClaw-OS will auto-generate a secure admin account. You can view your initial credentials by checking the container logs:
-```bash
-docker logs haclaw
-```
+<div align="center">
+  <img src="assets/screenshots/config.png" width="390" alt="Configuration Center" />
+  &nbsp;
+  <img src="assets/screenshots/skills.png" width="390" alt="Skills Center" />
+  <p><sub>Configuration Center &amp; Skills Center</sub></p>
+</div>
 
 <br>
 
-## 🛠️ Tech Stack Architecture
+## ✨ Why HAClaw-OS?
 
-**HAClaw-OS** runs independently as a high-performance single binary using state-of-the-art web technology.
+### macOS-Grade Visual Experience
 
-| Layer | Technology | Details |
+The interface faithfully recreates the macOS design language — refined glassmorphism, rounded cards, and smooth animation transitions. Managing AI agents feels as natural as using a native desktop app.
+
+### Beginner-Friendly Setup
+
+Guided wizards and pre-built templates let you complete OpenClaw's initial configuration and model setup without memorizing a single command.
+
+### Deep Configuration
+
+Fine-tune every OpenClaw parameter — model switching, memory management, plugin loading, channel routing — all through a beautiful visual editor.
+
+### Real-Time Observability
+
+Built-in monitoring dashboard with live execution status, resource consumption, and task history — full visibility into every agent's behavior.
+
+### Cross-Platform
+
+Single binary, zero dependencies. Runs natively on Windows, macOS (Intel & Apple Silicon), and Linux (amd64 & arm64). Download and run — that's it.
+
+### Responsive & Mobile-Ready
+
+Fully responsive layout that adapts seamlessly from large desktop monitors to tablets and mobile phones. Manage your AI agents on the go — no compromise on functionality.
+
+### Multilingual Support
+
+Full i18n architecture with 13 built-in languages. Adding a new language requires only a translated JSON folder and a two-line code change.
+
+### Local & Remote Gateway
+
+Seamlessly manage both local and remote OpenClaw gateways. Switch between gateway profiles with one click — perfect for multi-environment setups like dev, staging, and production.
+
+## 🚀 Quick Start
+
+### Deployment Options
+
+Choose the deployment method that best fits your needs:
+
+#### 1️⃣ Local Deployment (Recommended)
+
+Install HAClaw-OS on the same server as OpenClaw for full feature access and direct command execution.
+
+**✅ Advantages:**
+- Full feature support including direct OpenClaw command execution
+- Lower latency and faster response times
+- No network dependency between HAClaw-OS and OpenClaw
+
+#### 2️⃣ Remote Gateway
+
+Install HAClaw-OS on your local machine and connect to remote OpenClaw instances via WebSocket.
+
+**⚠️ Limitations:**
+- Some features requiring direct OpenClaw command execution are unavailable
+- Depends on stable network connection between HAClaw-OS and OpenClaw Gateway
+- Slightly higher latency for operations
+
+---
+
+### One-Click Install & Maintain
+
+The unified installer detects existing installations and lets you **install, update, manage, or uninstall** both Binary and Docker deployments from a single adaptive menu.
+
+**macOS / Linux**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/HAClaw-OS/HAClaw-OS/main/install.sh | bash
+```
+
+**Windows (PowerShell)**
+
+```powershell
+irm https://raw.githubusercontent.com/HAClaw-OS/HAClaw-OS/main/install.ps1 | iex
+```
+
+### Manual Download
+
+Download from [Releases](https://github.com/HAClaw-OS/HAClaw-OS/releases). Single file, no dependencies. Just run.
+
+```bash
+# Run with default settings (localhost:18788)
+./HAClaw-OS
+
+# Specify port and bind address
+./HAClaw-OS --port 18788 --bind 0.0.0.0
+
+# Create initial admin user on first run
+./HAClaw-OS --user admin --pass your_password
+
+# All options combined
+./HAClaw-OS --bind 0.0.0.0 --port 18788 --user admin --pass your_password
+```
+
+| Flag | Short | Description |
+| :--- | :---: | :--- |
+| `--port` | `-p` | Server port (default: `18788`) |
+| `--bind` | `-b` | Bind address (default: `127.0.0.1`) |
+| `--user` | `-u` | Initial admin username (first run only) |
+| `--pass` | | Initial admin password (min 6 chars) |
+| `--debug` | | Enable debug logging |
+
+### CLI Commands
+
+| Command | Usage | Description |
 | :--- | :--- | :--- |
-| **Backend** | Go (Golang) | Ultra-fast single-binary backend with zero runtime dependencies. |
-| **Frontend** | React + Tailwind | Highly responsive, customizable interface with interactive physics. |
-| **Database** | SQLite | Serverless flat-file SQL logic for ultra-fast portability. |
-| **Real-time** | WebSocket + SSE | Low-latency bi-directional communication channels. |
+| `reset-password` | `HAClaw-OS reset-password <user> <pass>` | Reset a user's password |
+| `reset-username` | `HAClaw-OS reset-username <old> <new>` | Change a user's username |
+| `list-users` | `HAClaw-OS list-users` | List all registered users |
+| `unlock` | `HAClaw-OS unlock <user>` | Unlock a locked user account |
+
+> [!TIP]
+> **Forgot your credentials?** Run `HAClaw-OS list-users` to find your username, then `HAClaw-OS reset-password <username> <new_password>` to reset your password.
+> If your password contains special characters (e.g. `!`, `$`, `#`, `&`), wrap it in **single quotes** to prevent shell interpretation: `HAClaw-OS reset-password admin 'P@ss!w0rd#$'`.
+
+> [!WARNING]
+> **Account lockout:** After **5** consecutive failed login attempts, the account is automatically locked for **15 minutes**. During this period, login is blocked even with the correct password. To unlock immediately, run `HAClaw-OS unlock <username>`.
+
+> [!IMPORTANT]
+> **Security Reminder:** On first run, if no `--user` and `--pass` are provided, the auto-generated admin credentials will be printed to the console. Please change your username and password in the settings page immediately after logging in.
+
+<br>
+
+### Docker Install
+
+> **Recommended:** Use the [one-click installer](#one-click-install--maintain) above — choose **Docker** when prompted. It handles download, port configuration, mirror detection, and shows credentials automatically.
+
+**Manual method:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/HAClaw-OS/HAClaw-OS/main/docker-compose.yml -o docker-compose.yml
+docker compose up -d
+```
+
+After updating the image, recreate the container to apply Dockerfile and entrypoint changes:
+
+```bash
+docker compose up -d --force-recreate
+```
+
+Open your browser at `http://localhost:18700` (Docker) or `http://localhost:18788` (native). The first run will auto-generate an admin account — credentials will be shown in the container logs.
+
+HAClaw-OS and OpenClaw run in the same container. OpenClaw is **preinstalled** in the official Docker image with version-pinned compatibility. On startup, the container entrypoint auto-starts the OpenClaw Gateway if a configuration file exists. If OpenClaw is not yet configured, complete the Setup Wizard in the web UI — no manual installation is needed.
+
+The official Docker image also preinstalls common skill/runtime dependencies including `go`, `python3`, `uv`, `ffmpeg`, `jq`, `ripgrep`, `wget`, and `make`, so many OpenClaw skills can run out of the box without extra system package installation.
+
+By default, the bundled HAClaw-OS service connects to the local in-container Gateway at `127.0.0.1:18789`. If you need to use a host or external Gateway instead, override `OCD_OPENCLAW_GATEWAY_HOST` and `OCD_OPENCLAW_GATEWAY_PORT` in `docker-compose.yml`.
+
+```bash
+# View credentials
+docker logs haclawx
+```
+
+#### Docker Configuration
+
+**Ports:**
+
+| Port | Service | Description |
+| :--- | :--- | :--- |
+| `18700` → `18788` | HAClaw-OS Web UI | Main dashboard (host 18700 → container 18788) |
+| `18789` | OpenClaw Gateway | Optional: expose for external debugging |
+
+To expose the Gateway port, add `- "18789:18789"` under `ports` in `docker-compose.yml`.
+
+Note that exposing `18789` alone does not guarantee host access to the Gateway. The generated minimal OpenClaw config binds the Gateway to `loopback` by default, so you may also need to adjust the Gateway bind setting for external access.
+
+**Environment Variables:**
+
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `OPENCLAW_HOME` | `/data/openclaw/home` | OpenClaw home root override |
+| `OPENCLAW_STATE_DIR` | `/data/openclaw/state` | OpenClaw state directory |
+| `OPENCLAW_CONFIG_PATH` | `/data/openclaw/state/openclaw.json` | OpenClaw config file path |
+| `NPM_CONFIG_PREFIX` | `/data/openclaw/npm` | Persistent npm prefix for user-installed upgrades |
+| `OCD_DB_SQLITE_PATH` | `/data/haclawx/HAClaw-OS.db` | HAClaw-OS SQLite database path |
+| `OCD_LOG_FILE` | `/data/haclawx/HAClaw-OS.log` | HAClaw-OS server log path |
+| `OCD_GATEWAY_LOG` | `/data/openclaw/logs/gateway.log` | Persistent OpenClaw Gateway log |
+| `OCD_SETUP_INSTALL_LOG` | `/data/openclaw/logs/install.log` | Setup/install log path |
+| `OCD_SETUP_DOCTOR_LOG` | `/data/openclaw/logs/doctor.log` | Doctor/diagnostic log path |
+| `OCD_OPENCLAW_GATEWAY_HOST` | `127.0.0.1` | Gateway host address |
+| `OCD_OPENCLAW_GATEWAY_PORT` | `18789` | Gateway port |
+| `OCD_OPENCLAW_GATEWAY_TOKEN` | *(empty)* | Gateway auth token |
+| `OCD_PORT` | `18788` | HAClaw-OS listen port (internal) |
+| `OCD_BIND` | `0.0.0.0` | HAClaw-OS bind address |
+| `TZ` | `UTC` | Container timezone (e.g. `Asia/Shanghai`) |
+
+**Preinstalled Runtime Tools:**
+
+- **`go`**
+- **`python3`**
+- **`uv`**
+- **`ffmpeg`**
+- **`jq`**
+- **`ripgrep`**
+- **`wget`**
+- **`make`**
+
+> [!NOTE]
+> The Docker image is larger than a minimal runtime because it includes the full runtime toolchain for OpenClaw skills. This ensures many skills can run out of the box without requiring you to install system packages inside the container.
+
+**Volumes:**
+
+| Volume | Mount Point | Description |
+| :--- | :--- | :--- |
+| `haclawx-data` | `/data/haclawx` | HAClaw-OS database and app logs |
+| `haclawx-openclaw-data` | `/data/openclaw` | OpenClaw config, state, logs, and user-installed upgrades |
+
+> [!TIP]
+> OpenClaw is bundled in the image and its configuration is persisted via Docker volumes. After `docker pull` and recreate, OpenClaw remains available and your configuration is preserved.
+
+**Persistent Paths:**
+
+| Path | Purpose |
+| :--- | :--- |
+| `/data/openclaw/npm` | User-installed npm packages (upgrades) |
+| `/data/openclaw/state` | OpenClaw state directory |
+| `/data/openclaw/state/openclaw.json` | OpenClaw config file |
+| `/data/openclaw/logs/gateway.log` | Gateway startup/runtime log |
+| `/data/openclaw/logs/install.log` | Setup/install log |
+| `/data/openclaw/logs/doctor.log` | Doctor/diagnostic log |
+| `/data/openclaw/bootstrap/gateway-bootstrap.json` | Entrypoint bootstrap status |
+
+OpenClaw is preinstalled in the Docker image. If it is not yet configured, HAClaw-OS will guide you through the Setup Wizard to complete the initial configuration.
+
+The container health check uses `/api/v1/health` for liveness. For diagnostics, you can call `/api/v1/health?detailed=true` to inspect HAClaw-OS, OpenClaw, Gateway, and bootstrap state together.
+
+**Resource Limits:**
+
+The default `docker-compose.yml` sets memory limit to 2 GB and CPU limit to 2 cores. Adjust `deploy.resources.limits` as needed.
+
+<br>
+
+## ✨ Features
+
+| | Feature | Description |
+| :---: | :--- | :--- |
+| 💎 | **Pixel-Perfect UI** | Native macOS feel with glassmorphism, smooth animations, dark/light themes |
+| 🎛️ | **Gateway Control** | Start, stop, restart your Gateway instantly with real-time health monitoring |
+| 🖼 | **Visual Config Editor** | Edit configurations and agent profiles without touching JSON/YAML |
+| 🧙 | **Setup Wizard** | Step-by-step guided setup for first-time users |
+| 🧩 | **Template Center** | Deploy new agent personas in seconds with built-in templates |
+| 📊 | **Live Dashboard** | Real-time metrics, session tracking, and activity monitoring |
+| 🛡️ | **Security Built-in** | JWT auth, HttpOnly cookies, and alert system from day one |
+| 🌍 | **i18n Ready** | 13 built-in languages, easily extensible |
+| 📱 | **Responsive Design** | Works seamlessly on desktop and mobile |
+
+<br>
+
+## 🛠️ Tech Stack
+
+| Layer | Technology | Notes |
+| :--- | :--- | :--- |
+| **Backend** | Go (Golang) | Single-binary backend with no external runtime dependency |
+| **Frontend** | React + TailwindCSS | Responsive, theme-aware UI |
+| **Database** | SQLite / PostgreSQL | SQLite by default, PostgreSQL optional |
+| **Real-time** | WebSocket + SSE | Bi-directional real-time communication |
+| **Deployment** | Single binary, cross-platform | Windows / macOS / Linux |
+| **Container** | Docker / Docker Compose | One-command container deployment for amd64 & arm64 |
 
 <br>
 
 ## 🤝 Contributing
 
-We welcome contributions wholeheartedly! Whether you're fixing bugs, adding new LLM support, optimizing the UI, or improving documentation, your help is appreciated. Submit a pull request or open an issue to start a discussion.
+We welcome contributions! Whether you're fixing bugs, adding features, or improving documentation, your help is appreciated.
+
+<br>
+
+## 💬 A Note from the Author
+
+This is my first open-source project, and I hope it will continue to improve with the help of the community. If you run into any issues or have ideas for improvement, feel free to open an [Issue](https://github.com/HAClaw-OS/HAClaw-OS/issues) or submit a [Pull Request](https://github.com/HAClaw-OS/HAClaw-OS/pulls). Thank you for your support. Every piece of feedback helps this project grow.
+
+> *An AI predicted this project would go viral. But as we all know, AIs do hallucinate sometimes 😅*
+
+<br>
 
 ## 📄 License
 
 This project is licensed under the [MIT License](LICENSE) — free to use, modify, and distribute for both personal and commercial purposes.
 
+<br>
+
+## ⭐ Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=HAClaw-OS/HAClaw-OS&type=Date)](https://star-history.com/#HAClaw-OS/HAClaw-OS&Date)
+
+<br>
+
 <div align="center">
-  <sub>Modernized & maintained by <a href="https://github.com/haniakrim21">Hani Akrim</a> &bull; Powered by OpenClaw</sub>
+  <sub>Designed with ❤️ by HAClaw-OS</sub>
 </div>

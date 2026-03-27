@@ -51,7 +51,7 @@ export interface Preferences {
   startupWindow: StartupWindowMode;
 }
 
-const PREFS_KEY = 'clawdeck-preferences';
+const PREFS_KEY = 'haclaw-preferences';
 
 const DEFAULT_WALLPAPER: WallpaperConfig = {
   gradientEnabled: true,
@@ -178,7 +178,7 @@ export function updatePreferences(patch: Partial<Preferences>): Preferences {
   return next;
 }
 
-const WALLPAPER_CACHE_KEY = 'clawdeck-wallpaper-cache';
+const WALLPAPER_CACHE_KEY = 'haclaw-wallpaper-cache';
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
 export function getCachedWallpaper(): string | null {

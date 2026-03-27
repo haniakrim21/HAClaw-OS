@@ -15,11 +15,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 
-	"HAClaw/internal/i18n"
-	"HAClaw/internal/logger"
-	"HAClaw/internal/safego"
-	"HAClaw/internal/sentinel"
-	"HAClaw/internal/webconfig"
+	"HAClaw-OS/internal/i18n"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/safego"
+	"HAClaw-OS/internal/sentinel"
+	"HAClaw-OS/internal/webconfig"
 )
 
 type RequestFrame struct {
@@ -796,7 +796,7 @@ func (c *GWClient) sendConnect(conn *websocket.Conn, nonce string) {
 		MaxProtocol: 3,
 		Client: ConnectClient{
 			ID:          "gateway-client",
-			DisplayName: "HAClaw",
+			DisplayName: "HAClaw-OS",
 			Version:     "0.2.0",
 			Platform:    "go",
 			Mode:        "backend",

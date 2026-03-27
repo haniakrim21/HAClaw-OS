@@ -3,8 +3,8 @@
 import (
 	"net/http"
 
-	"HAClaw/internal/openclaw"
-	"HAClaw/internal/web"
+	"HAClaw-OS/internal/openclaw"
+	"HAClaw-OS/internal/web"
 )
 
 // GatewayDiagnoseHandler handles gateway diagnosis.

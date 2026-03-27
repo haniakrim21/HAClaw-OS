@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"strings"
 
-	"HAClaw/internal/constants"
-	"HAClaw/internal/database"
-	"HAClaw/internal/openclaw"
-	"HAClaw/internal/snapshots"
-	"HAClaw/internal/web"
+	"HAClaw-OS/internal/constants"
+	"HAClaw-OS/internal/database"
+	"HAClaw-OS/internal/openclaw"
+	"HAClaw-OS/internal/snapshots"
+	"HAClaw-OS/internal/web"
 )
 
 type SnapshotHandler struct {

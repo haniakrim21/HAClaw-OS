@@ -1,4 +1,4 @@
-package translate
+﻿package translate
 
 import (
 	"bytes"
@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"HAClaw/internal/logger"
+	"HAClaw-OS/internal/logger"
 )
 
 // LLMConfig holds the configuration for using an LLM model as the translation engine.

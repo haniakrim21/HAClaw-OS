@@ -192,8 +192,8 @@ const Gateway: React.FC<GatewayProps> = ({ language }) => {
       }
     };
 
-    window.addEventListener('clawdeck:open-window', handler as EventListener);
-    return () => window.removeEventListener('clawdeck:open-window', handler as EventListener);
+    window.addEventListener('haclaw:open-window', handler as EventListener);
+    return () => window.removeEventListener('haclaw:open-window', handler as EventListener);
   }, []);
 
   // 获取网关配置列表

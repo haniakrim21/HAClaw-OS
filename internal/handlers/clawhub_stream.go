@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"HAClaw/internal/executil"
-	"HAClaw/internal/logger"
+	"HAClaw-OS/internal/executil"
+	"HAClaw-OS/internal/logger"
 )
 
 // InstallStreamSSE installs a ClawHub skill via SSE, streaming install logs in real time.

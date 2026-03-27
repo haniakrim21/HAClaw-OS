@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"HAClaw/internal/database"
-	"HAClaw/internal/web"
+	"HAClaw-OS/internal/database"
+	"HAClaw-OS/internal/web"
 )
 
 // AuditHandler manages audit log queries.

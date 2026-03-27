@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"HAClaw/internal/openclaw"
-	"HAClaw/internal/web"
+	"HAClaw-OS/internal/openclaw"
+	"HAClaw-OS/internal/web"
 )
 
 // GatewayLogHandler serves gateway log viewing.

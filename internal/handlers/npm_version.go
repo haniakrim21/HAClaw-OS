@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"HAClaw/internal/executil"
-	"HAClaw/internal/logger"
+	"HAClaw-OS/internal/executil"
+	"HAClaw-OS/internal/logger"
 )
 
 // npmVersionCache caches the latest version from npm registry.

@@ -60,7 +60,7 @@ const UpdateTab: React.FC<UpdateTabProps> = ({ s, language, inputCls, rowCls }) 
   const [ocNotesExpanded, setOcNotesExpanded] = useState(false);
 
   // ── 服务状态 ──
-  const [serviceStatus, setServiceStatus] = useState<{ openclaw_installed: boolean; haclaw_installed: boolean; is_docker?: boolean } | null>(null);
+  const [serviceStatus, setServiceStatus] = useState<{ openclaw_installed: boolean; haclawx_installed: boolean; is_docker?: boolean } | null>(null);
   const [serviceLoading, setServiceLoading] = useState(false);
 
   // ── Docker 运行时覆盖 ──
@@ -123,7 +123,7 @@ const UpdateTab: React.FC<UpdateTabProps> = ({ s, language, inputCls, rowCls }) 
     setSelfUpdating(true);
     setSelfUpdateProgress({ stage: 'connecting', percent: 0 });
     try {
-      const resp = await fetch(isDockerRuntime ? '/api/v1/runtime/haclaw/update' : '/api/v1/self-update/apply', {
+      const resp = await fetch(isDockerRuntime ? '/api/v1/runtime/haclawx/update' : '/api/v1/self-update/apply', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -147,13 +147,8 @@ const UpdateTab: React.FC<UpdateTabProps> = ({ s, language, inputCls, rowCls }) 
                 if (p.done) {
                   toast('success', isDockerRuntime ? (sRef.current.runtimeUpdateOk || sRef.current.selfUpdateDone) : sRef.current.selfUpdateDone);
                   if (isDockerRuntime) {
-                    await loadRuntimeStatus();
-                    selfUpdateApi.info().then(d => setSelfUpdateVersion(d)).catch(() => { });
-                    setSelfUpdateInfo(prev => prev ? {
-                      ...prev,
-                      available: false,
-                      currentVersion: prev.latestVersion || prev.currentVersion,
-                    } : prev);
+                    // Server restarts with new binary after ~2s; reload to pick up the new frontend bundle + version
+                    setTimeout(() => window.location.reload(), 5000);
                   } else {
                     setTimeout(() => window.location.reload(), 3000);
                   }
@@ -171,14 +166,14 @@ const UpdateTab: React.FC<UpdateTabProps> = ({ s, language, inputCls, rowCls }) 
       toast('error', isDockerRuntime ? (sRef.current.runtimeUpdateFailed || sRef.current.selfUpdateFailed) : sRef.current.selfUpdateFailed);
     }
     setSelfUpdating(false);
-  }, [selfUpdateInfo, toast, isDockerRuntime, loadRuntimeStatus]);
+  }, [selfUpdateInfo, toast, isDockerRuntime]);
 
   // Release notes translation — cached in SQLite via backend
   const handleTranslateNotes = useCallback(async (text: string, product?: string, ver?: string) => {
     if (!text || language === 'en') return;
     setNotesTranslating(true);
     try {
-      const res = await selfUpdateApi.translateNotes(text, language, product || 'haclaw', ver || '0');
+      const res = await selfUpdateApi.translateNotes(text, language, product || 'haclawx', ver || '0');
       setTranslatedNotes(res.translated);
       setShowTranslated(true);
     } catch {
@@ -298,17 +293,17 @@ const UpdateTab: React.FC<UpdateTabProps> = ({ s, language, inputCls, rowCls }) 
     }
   }, []);
 
-  const handleServiceInstall = useCallback(async (service: 'openclaw' | 'haclaw') => {
+  const handleServiceInstall = useCallback(async (service: 'openclaw' | 'haclawx') => {
     setServiceLoading(true);
     try {
       if (service === 'openclaw') {
         const res = await gatewayApi.daemonInstall();
         // Immediately reflect the installed state from the response
-        setServiceStatus(prev => prev ? { ...prev, openclaw_installed: res.installed } : { openclaw_installed: res.installed, haclaw_installed: false });
+        setServiceStatus(prev => prev ? { ...prev, openclaw_installed: res.installed } : { openclaw_installed: res.installed, haclawx_installed: false });
         toast('success', sRef.current.serviceInstalled || 'OpenClaw service installed');
       } else {
-        await serviceApi.installHAClaw();
-        toast('success', sRef.current.serviceInstalled || 'HAClaw service installed');
+        await serviceApi.installHAClaw-OS();
+        toast('success', sRef.current.serviceInstalled || 'HAClaw-OS service installed');
       }
       await loadServiceStatus();
     } catch (err: any) {
@@ -318,17 +313,17 @@ const UpdateTab: React.FC<UpdateTabProps> = ({ s, language, inputCls, rowCls }) 
     }
   }, [toast, loadServiceStatus]);
 
-  const handleServiceUninstall = useCallback(async (service: 'openclaw' | 'haclaw') => {
+  const handleServiceUninstall = useCallback(async (service: 'openclaw' | 'haclawx') => {
     setServiceLoading(true);
     try {
       if (service === 'openclaw') {
         const res = await gatewayApi.daemonUninstall();
         // Immediately reflect the uninstalled state from the response
-        setServiceStatus(prev => prev ? { ...prev, openclaw_installed: res.installed } : { openclaw_installed: res.installed, haclaw_installed: false });
+        setServiceStatus(prev => prev ? { ...prev, openclaw_installed: res.installed } : { openclaw_installed: res.installed, haclawx_installed: false });
         toast('success', sRef.current.serviceUninstalled || 'OpenClaw service uninstalled');
       } else {
-        await serviceApi.uninstallHAClaw();
-        toast('success', sRef.current.serviceUninstalled || 'HAClaw service uninstalled');
+        await serviceApi.uninstallHAClaw-OS();
+        toast('success', sRef.current.serviceUninstalled || 'HAClaw-OS service uninstalled');
       }
       await loadServiceStatus();
     } catch (err: any) {
@@ -438,14 +433,14 @@ const UpdateTab: React.FC<UpdateTabProps> = ({ s, language, inputCls, rowCls }) 
         </div>
       )}
 
-      {/* ── 🦀 HAClaw 更新卡片 ── */}
+      {/* ── 🦀 HAClaw-OS 更新卡片 ── */}
       <div className={rowCls}>
         <div className="px-5 py-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <span className="text-[18px]">🦀</span>
-              <h4 className="text-[13px] font-bold text-slate-700 dark:text-white/70">HAClaw</h4>
-              <SmartLink href="https://github.com/haniakrim21/HAClaw-OS" className="flex items-center text-slate-400 dark:text-white/30 hover:text-primary transition-colors" title="GitHub">
+              <h4 className="text-[13px] font-bold text-slate-700 dark:text-white/70">HAClaw-OS</h4>
+              <SmartLink href="https://github.com/HAClaw-OS/HAClaw-OS" className="flex items-center text-slate-400 dark:text-white/30 hover:text-primary transition-colors" title="GitHub">
                 <svg className="w-[14px] h-[14px]" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
               </SmartLink>
             </div>
@@ -523,7 +518,7 @@ const UpdateTab: React.FC<UpdateTabProps> = ({ s, language, inputCls, rowCls }) 
                           {showTranslated ? (s.showOriginal || 'Original') : (s.showTranslation || 'Translated')}
                         </button>
                       ) : (
-                        <button onClick={() => handleTranslateNotes(selfUpdateInfo.releaseNotes!, 'haclaw', selfUpdateInfo.latestVersion || selfUpdateInfo.currentVersion)} disabled={notesTranslating}
+                        <button onClick={() => handleTranslateNotes(selfUpdateInfo.releaseNotes!, 'haclawx', selfUpdateInfo.latestVersion || selfUpdateInfo.currentVersion)} disabled={notesTranslating}
                           className="flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-medium text-primary/70 hover:bg-primary/10 disabled:opacity-40 transition-colors">
                           <span className={`material-symbols-outlined text-[12px] ${notesTranslating ? 'animate-spin' : ''}`}>
                             {notesTranslating ? 'progress_activity' : 'translate'}
@@ -612,7 +607,7 @@ const UpdateTab: React.FC<UpdateTabProps> = ({ s, language, inputCls, rowCls }) 
                               {showTranslated ? (s.showOriginal || 'Original') : (s.showTranslation || 'Translated')}
                             </button>
                           ) : (
-                            <button onClick={() => handleTranslateNotes(selfUpdateInfo.releaseNotes!, 'haclaw', selfUpdateInfo.latestVersion || selfUpdateInfo.currentVersion)} disabled={notesTranslating}
+                            <button onClick={() => handleTranslateNotes(selfUpdateInfo.releaseNotes!, 'haclawx', selfUpdateInfo.latestVersion || selfUpdateInfo.currentVersion)} disabled={notesTranslating}
                               className="flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-medium text-primary/70 hover:bg-primary/10 disabled:opacity-40 transition-colors">
                               <span className={`material-symbols-outlined text-[12px] ${notesTranslating ? 'animate-spin' : ''}`}>
                                 {notesTranslating ? 'progress_activity' : 'translate'}
@@ -651,7 +646,7 @@ const UpdateTab: React.FC<UpdateTabProps> = ({ s, language, inputCls, rowCls }) 
                     <span className="material-symbols-outlined text-[16px]">download</span>
                     {selfUpdateInfo.downloadUrl ? (isDockerRuntime ? (s.runtimeOverlay || s.selfUpdateDownload) : s.selfUpdateDownload) : s.selfUpdateNoAsset}
                   </button>
-                  <SmartLink href="https://github.com/haniakrim21/HAClaw-OS/releases"
+                  <SmartLink href="https://github.com/HAClaw-OS/HAClaw-OS/releases"
                     className="flex items-center justify-center gap-1 px-4 py-2.5 rounded-lg border border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/60 text-[12px] font-bold hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
                     <span className="material-symbols-outlined text-[14px]">open_in_new</span>
                     {s.viewReleases}
@@ -895,7 +890,7 @@ const UpdateTab: React.FC<UpdateTabProps> = ({ s, language, inputCls, rowCls }) 
               <h4 className="text-[13px] font-bold text-slate-700 dark:text-white/70">{s.updateCompat || 'Compatibility'}</h4>
             </div>
             <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-slate-50 dark:bg-white/[0.03] text-[11px]">
-              <span className="text-slate-400 dark:text-white/40">{s.updateCompatReq || 'HAClaw requires OpenClaw'}:</span>
+              <span className="text-slate-400 dark:text-white/40">{s.updateCompatReq || 'HAClaw-OS requires OpenClaw'}:</span>
               <span className="font-mono font-bold text-slate-700 dark:text-white/70">{selfUpdateVersion.openclawCompat}</span>
               {ocUpdateInfo?.currentVersion && (
                 <span className={`ms-auto px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -924,9 +919,9 @@ const UpdateTab: React.FC<UpdateTabProps> = ({ s, language, inputCls, rowCls }) 
             </p>
 
             <div className="space-y-2">
-              {/* HAClaw Runtime */}
+              {/* HAClaw-OS Runtime */}
               {(() => {
-                const c = runtimeStatus.haclaw;
+                const c = runtimeStatus.haclawx;
                 return (
                   <div className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-colors ${
                     c.using_overlay
@@ -936,7 +931,7 @@ const UpdateTab: React.FC<UpdateTabProps> = ({ s, language, inputCls, rowCls }) 
                     <span className="text-[16px]">🦀</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-[12px] font-bold text-slate-700 dark:text-white/70">HAClaw</p>
+                        <p className="text-[12px] font-bold text-slate-700 dark:text-white/70">HAClaw-OS</p>
                         {c.using_overlay && (
                           <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400">
                             {s.runtimeUsingOverlay || 'Using overlay'}
@@ -953,7 +948,7 @@ const UpdateTab: React.FC<UpdateTabProps> = ({ s, language, inputCls, rowCls }) 
                     </div>
                     {c.using_overlay && (
                       <button
-                        onClick={() => handleRuntimeRollback('haclaw')}
+                        onClick={() => handleRuntimeRollback('haclawx')}
                         disabled={runtimeRollingBack}
                         className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-bold bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors disabled:opacity-40 shrink-0"
                       >
@@ -1011,7 +1006,7 @@ const UpdateTab: React.FC<UpdateTabProps> = ({ s, language, inputCls, rowCls }) 
               })()}
             </div>
 
-            {(runtimeStatus.haclaw.using_overlay || runtimeStatus.openclaw.using_overlay) && (
+            {(runtimeStatus.haclawx.using_overlay || runtimeStatus.openclaw.using_overlay) && (
               <div className="flex items-center gap-1.5 mt-2.5 text-[10px] text-amber-500 dark:text-amber-400/70">
                 <span className="material-symbols-outlined text-[13px]">info</span>
                 {s.runtimeRestartHint || 'Restart the container to activate the updated binary'}
@@ -1083,40 +1078,40 @@ const UpdateTab: React.FC<UpdateTabProps> = ({ s, language, inputCls, rowCls }) 
                 </div>
               </div>
 
-              {/* HAClaw Service */}
+              {/* HAClaw-OS Service */}
               <div className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-colors ${
-                serviceStatus.haclaw_installed
+                serviceStatus.haclawx_installed
                   ? 'bg-emerald-50 dark:bg-mac-green/5 border-emerald-200 dark:border-mac-green/20'
                   : 'bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/[0.06]'
               }`}>
                 <span className="text-[16px]">🦀</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-bold text-slate-700 dark:text-white/70">HAClaw</p>
+                  <p className="text-[12px] font-bold text-slate-700 dark:text-white/70">HAClaw-OS</p>
                   <p className="text-[10px] text-slate-400 dark:text-white/30 mt-0.5">
-                    {serviceStatus.haclaw_installed
+                    {serviceStatus.haclawx_installed
                       ? (s.serviceAutoStartEnabled || 'Auto-start enabled')
                       : (s.serviceAutoStartDisabled || 'Not registered, manual start required')}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {serviceStatus.haclaw_installed && (
+                  {serviceStatus.haclawx_installed && (
                     <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 dark:bg-mac-green/15 text-emerald-600 dark:text-mac-green">
                       {s.serviceInstalled || 'Installed'}
                     </span>
                   )}
                   <button
-                    onClick={() => serviceStatus.haclaw_installed ? handleServiceUninstall('haclaw') : handleServiceInstall('haclaw')}
+                    onClick={() => serviceStatus.haclawx_installed ? handleServiceUninstall('haclawx') : handleServiceInstall('haclawx')}
                     disabled={serviceLoading}
                     className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-bold transition-colors disabled:opacity-40 ${
-                      serviceStatus.haclaw_installed
+                      serviceStatus.haclawx_installed
                         ? 'bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20'
                         : 'bg-emerald-50 dark:bg-mac-green/10 text-emerald-600 dark:text-mac-green hover:bg-emerald-100 dark:hover:bg-mac-green/20'
                     }`}
                   >
                     <span className={`material-symbols-outlined text-[13px] ${serviceLoading ? 'animate-spin' : ''}`}>
-                      {serviceLoading ? 'progress_activity' : serviceStatus.haclaw_installed ? 'delete_forever' : 'install_desktop'}
+                      {serviceLoading ? 'progress_activity' : serviceStatus.haclawx_installed ? 'delete_forever' : 'install_desktop'}
                     </span>
-                    {serviceStatus.haclaw_installed ? (s.uninstallService || 'Remove') : (s.installService || 'Install')}
+                    {serviceStatus.haclawx_installed ? (s.uninstallService || 'Remove') : (s.installService || 'Install')}
                   </button>
                 </div>
               </div>

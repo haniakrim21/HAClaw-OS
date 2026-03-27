@@ -7,12 +7,12 @@ import (
 	"net/http"
 	"time"
 
-	"HAClaw/internal/constants"
-	"HAClaw/internal/database"
-	"HAClaw/internal/logger"
-	"HAClaw/internal/runtime"
-	"HAClaw/internal/updater"
-	"HAClaw/internal/web"
+	"HAClaw-OS/internal/constants"
+	"HAClaw-OS/internal/database"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/runtime"
+	"HAClaw-OS/internal/updater"
+	"HAClaw-OS/internal/web"
 )
 
 // RuntimeHandler handles Docker runtime overlay API endpoints.
@@ -39,9 +39,9 @@ func (h *RuntimeHandler) Status(w http.ResponseWriter, r *http.Request) {
 	web.OK(w, r, h.mgr.GetAllStatus())
 }
 
-// UpdateHAClaw downloads and installs a HAClaw binary to the runtime overlay.
-// POST /api/v1/runtime/haclaw/update  { "downloadUrl": "..." }
-func (h *RuntimeHandler) UpdateHAClaw(w http.ResponseWriter, r *http.Request) {
+// UpdateHAClaw-OS downloads and installs a HAClaw-OS binary to the runtime overlay.
+// POST /api/v1/runtime/haclawx/update  { "downloadUrl": "..." }
+func (h *RuntimeHandler) UpdateHAClaw-OS(w http.ResponseWriter, r *http.Request) {
 	if h.mgr == nil {
 		web.Fail(w, r, "RUNTIME_NOT_AVAILABLE", "runtime manager not initialized", http.StatusServiceUnavailable)
 		return
@@ -78,12 +78,12 @@ func (h *RuntimeHandler) UpdateHAClaw(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Minute)
 	defer cancel()
 
-	err := h.mgr.InstallHAClaw(ctx, body.DownloadURL, sendSSE)
+	err := h.mgr.InstallHAClaw-OS(ctx, body.DownloadURL, sendSSE)
 	if err != nil {
 		h.auditRepo.Create(&database.AuditLog{
 			UserID: web.GetUserID(r), Username: web.GetUsername(r),
 			Action: constants.ActionRuntimeUpdate, Result: "failed",
-			Detail: "haclaw: " + err.Error(), IP: r.RemoteAddr,
+			Detail: "haclawx: " + err.Error(), IP: r.RemoteAddr,
 		})
 		sendSSE(updater.ApplyProgress{Stage: "error", Error: err.Error()})
 		return
@@ -92,18 +92,18 @@ func (h *RuntimeHandler) UpdateHAClaw(w http.ResponseWriter, r *http.Request) {
 	h.auditRepo.Create(&database.AuditLog{
 		UserID: web.GetUserID(r), Username: web.GetUsername(r),
 		Action: constants.ActionRuntimeUpdate, Result: "success",
-		Detail: "haclaw runtime overlay updated", IP: r.RemoteAddr,
+		Detail: "haclawx runtime overlay updated", IP: r.RemoteAddr,
 	})
 
 	logger.Log.Info().
 		Str("user", web.GetUsername(r)).
-		Msg("HAClaw runtime overlay updated via API, scheduling restart")
+		Msg("HAClaw-OS runtime overlay updated via API, scheduling restart")
 
 	// Read the overlay binary path from the manifest and restart with it.
 	// restartSelf() would re-exec os.Executable() (the old image binary),
 	// so we must use the overlay path explicitly.
 	overlayBin := ""
-	if mf, err := h.mgr.ReadManifest(runtime.ComponentHAClaw); err == nil && mf != nil {
+	if mf, err := h.mgr.ReadManifest(runtime.ComponentHAClaw-OS); err == nil && mf != nil {
 		overlayBin = mf.BinaryPath
 	}
 
@@ -187,12 +187,12 @@ func (h *RuntimeHandler) Rollback(w http.ResponseWriter, r *http.Request) {
 
 	var comp runtime.Component
 	switch body.Component {
-	case "haclaw":
-		comp = runtime.ComponentHAClaw
+	case "haclawx":
+		comp = runtime.ComponentHAClaw-OS
 	case "openclaw":
 		comp = runtime.ComponentOpenClaw
 	default:
-		web.Fail(w, r, "INVALID_PARAMS", "component must be 'haclaw' or 'openclaw'", http.StatusBadRequest)
+		web.Fail(w, r, "INVALID_PARAMS", "component must be 'haclawx' or 'openclaw'", http.StatusBadRequest)
 		return
 	}
 

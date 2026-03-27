@@ -2,13 +2,13 @@ import React, { useMemo } from 'react';
 import { SectionProps } from '../sectionTypes';
 import { ConfigSection, ConfigCard, TextField, NumberField, SelectField, SwitchField, ArrayField, AddButton, EmptyState } from '../fields';
 import { getTranslation } from '../../../locales';
-import { getTooltip } from '../../../locales/tooltips';
+import { schemaTooltip } from '../schemaTooltip';
 
 // Options moved inside component
 
-export const AgentsSection: React.FC<SectionProps> = ({ config, setField, getField, deleteField, language }) => {
+export const AgentsSection: React.FC<SectionProps> = ({ config, schema, setField, getField, deleteField, language }) => {
   const es = useMemo(() => (getTranslation(language) as any).es || {}, [language]);
-  const tip = (key: string) => getTooltip(key, language);
+  const tip = (key: string) => schemaTooltip(key, language, schema);
   const d = (p: string[]) => getField(['agents', 'defaults', ...p]);
   const sd = (p: string[], v: any) => setField(['agents', 'defaults', ...p], v);
 
@@ -58,7 +58,7 @@ export const AgentsSection: React.FC<SectionProps> = ({ config, setField, getFie
         <SelectField label={es.subagentThinking} tooltip={tip('agents.defaults.subagents.thinking')} value={d(['subagents', 'thinking']) || 'off'} onChange={v => sd(['subagents', 'thinking'], v)} options={THINKING_OPTIONS} />
         <SelectField label={es.verboseDefault} tooltip={tip('agents.defaults.verboseDefault')} value={d(['verboseDefault']) || 'off'} onChange={v => sd(['verboseDefault'], v)} options={VERBOSE_OPTIONS} />
         <SelectField label={es.elevatedDefault} tooltip={tip('agents.defaults.elevatedDefault')} value={d(['elevatedDefault']) || 'off'} onChange={v => sd(['elevatedDefault'], v)} options={ELEVATED_OPTIONS} />
-        <SelectField label={es.typingMode} value={d(['typingMode']) || 'never'} onChange={v => sd(['typingMode'], v)} options={TYPING_OPTIONS} />
+        <SelectField label={es.typingMode} tooltip={tip('agents.defaults.typingMode')} value={d(['typingMode']) || 'never'} onChange={v => sd(['typingMode'], v)} options={TYPING_OPTIONS} />
         <SelectField label={es.compactionMode} tooltip={tip('agents.defaults.compaction.mode')} value={d(['compaction', 'mode']) || 'default'} onChange={v => sd(['compaction', 'mode'], v)} options={COMPACTION_OPTIONS} />
         <TextField label={es.compactionModel || 'Compaction Model'} tooltip={tip('agents.defaults.compaction.model')} value={d(['compaction', 'model']) || ''} onChange={v => sd(['compaction', 'model'], v)} placeholder={es.phProviderModelId} />
         <SwitchField label={es.truncateAfterCompaction || 'Truncate After Compaction'} tooltip={tip('agents.defaults.compaction.truncateAfterCompaction')} value={d(['compaction', 'truncateAfterCompaction']) === true} onChange={v => sd(['compaction', 'truncateAfterCompaction'], v)} />
@@ -69,8 +69,8 @@ export const AgentsSection: React.FC<SectionProps> = ({ config, setField, getFie
         <SelectField label={es.mode} tooltip={tip('agents.defaults.humanDelay.mode')} value={d(['humanDelay', 'mode']) || 'off'} onChange={v => sd(['humanDelay', 'mode'], v)} options={HUMAN_DELAY_OPTIONS} />
         {d(['humanDelay', 'mode']) !== 'off' && (
           <>
-            <NumberField label={es.lblMinMs} value={d(['humanDelay', 'minMs'])} onChange={v => sd(['humanDelay', 'minMs'], v)} min={0} />
-            <NumberField label={es.lblMaxMs} value={d(['humanDelay', 'maxMs'])} onChange={v => sd(['humanDelay', 'maxMs'], v)} min={0} />
+            <NumberField label={es.lblMinMs} tooltip={tip('agents.defaults.humanDelay.minMs')} value={d(['humanDelay', 'minMs'])} onChange={v => sd(['humanDelay', 'minMs'], v)} min={0} />
+            <NumberField label={es.lblMaxMs} tooltip={tip('agents.defaults.humanDelay.maxMs')} value={d(['humanDelay', 'maxMs'])} onChange={v => sd(['humanDelay', 'maxMs'], v)} min={0} />
           </>
         )}
       </ConfigSection>

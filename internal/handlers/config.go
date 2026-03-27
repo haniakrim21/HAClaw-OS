@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"HAClaw/internal/constants"
-	"HAClaw/internal/database"
-	"HAClaw/internal/logger"
-	"HAClaw/internal/openclaw"
-	"HAClaw/internal/web"
+	"HAClaw-OS/internal/constants"
+	"HAClaw-OS/internal/database"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/openclaw"
+	"HAClaw-OS/internal/web"
 )
 
 // ConfigHandler manages OpenClaw config read/write.

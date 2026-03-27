@@ -390,7 +390,7 @@ export const TemplatesSectionV2: React.FC<TemplatesSectionV2Props> = ({ language
                     {templateSystem.resolveI18n(previewTemplate, language).name}
                   </h3>
                   <p className="text-[10px] text-slate-500 dark:text-white/40">
-                    {previewTemplate.targetFile} • {previewTemplate.author || 'HAClaw'}
+                    {previewTemplate.targetFile} • {previewTemplate.author || 'HAClaw-OS'}
                   </p>
                 </div>
               </div>

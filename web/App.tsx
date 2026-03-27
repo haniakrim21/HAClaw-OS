@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { ToastProvider } from './components/Toast';
 import { ConfirmProvider } from './components/ConfirmDialog';
@@ -188,7 +188,7 @@ const App: React.FC = () => {
   const [isLocked, setIsLocked] = useState(true);
   const [authChecking, setAuthChecking] = useState(true);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-  const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('lang') as Language) || 'en');
+  const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('lang') as Language) || 'zh');
   const [windows, setWindows] = useState<WindowState[]>(() => {
     const p = loadPreferences();
     return buildWindows(language, p.startupWindow);
@@ -379,8 +379,8 @@ const App: React.FC = () => {
       }
       openWindow(id);
     };
-    window.addEventListener('clawdeck:open-window', handler as EventListener);
-    return () => window.removeEventListener('clawdeck:open-window', handler as EventListener);
+    window.addEventListener('haclaw:open-window', handler as EventListener);
+    return () => window.removeEventListener('haclaw:open-window', handler as EventListener);
   }, [openWindow]);
 
   // Navigate to Sessions window and select a specific session

@@ -1,8 +1,8 @@
 ﻿package database
 
 import (
-	"HAClaw/internal/i18n"
-	"HAClaw/internal/logger"
+	"HAClaw-OS/internal/i18n"
+	"HAClaw-OS/internal/logger"
 
 	"gorm.io/gorm"
 )

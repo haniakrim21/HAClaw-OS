@@ -1,6 +1,6 @@
-﻿# HAClaw Web UI
+﻿# HAClaw-OS Web UI
 
-HAClaw 的 Web 前端界面，基于 React + TypeScript + TailwindCSS 构建。
+HAClaw-OS 的 Web 前端界面，基于 React + TypeScript + TailwindCSS 构建。
 
 ## 技术栈
 

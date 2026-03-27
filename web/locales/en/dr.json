@@ -50,13 +50,11 @@
   "actionReviewAlerts": "Review Alerts",
   "actionOpenEvents": "Open Gateway Events",
   "overviewLoadFail": "Health overview load failed",
-  "checksLoadFail": "Checks load failed",
   "cardAvailabilityHint": "Gateway diagnostic check pass rate",
   "cardEvents24hHint": "Total activity events (all levels); status based on high+critical count",
   "cardErrors1hHint": "High + critical exception events in 1 hour",
   "cardResourceHint": "System memory usage",
   "trendHint": "Top: Health Score / Bottom: Stacked Exceptions",
-  "riskHint": "Last 24 hours",
   "healthScore": "Health Score",
   "healthSnapshot": "Health Snapshot",
   "summaryGateway": "Gateway",
@@ -66,7 +64,6 @@
   "summaryOff": "Off",
   "summaryRecentWindow": "1h / 24h",
   "summaryRiskMix": "critical / high / medium",
-  "summaryRecentSourceFallback": "system",
   "summaryStable": "Stable, no recent exceptions",
   "summaryGatewayOffline": "Gateway offline, immediate action recommended",
   "summaryCriticalRecent": "Critical exceptions in the last 5 minutes: {count}",
@@ -103,22 +100,12 @@
   "timelineJustNow": "Just now",
   "timelineMinAgo": "{n}m ago",
   "timelineHourAgo": "{n}h ago",
-  "healthCheckTrend": "Health Check Trend",
-  "healthCheckPass": "Pass",
-  "healthCheckFail": "Fail",
-  "healthCheckConsecutiveFails": "Consecutive Failures",
-  "thresholdWarn": "Warning",
-  "thresholdDanger": "Danger",
-  "trendScoreDrop": "Drop",
   "wsDisconnected": "Live updates paused, data may be stale",
   "wsReconnected": "Reconnected",
-  "frequencyLabel": "Frequency",
   "collapse": "Collapse",
   "expand": "Expand",
   "firstRunTitle": "No Diagnostics Yet",
   "firstRunMessage": "Health maintenance requires an initial diagnostic scan. Run it now?",
-  "firstRunConfirm": "Run Now",
-  "firstRunSkip": "Later",
   "exceptionModalTitle": "Recent Exceptions",
   "exceptionModalEmpty": "No exception records",
   "exceptionModalJump": "Go to source",
@@ -135,30 +122,55 @@
   "cachedResultHint": "Showing cached results. Click \"Run Now\" for fresh data.",
   "scoreUp": "vs last +{n}",
   "scoreDown": "vs last -{n}",
-  "scoreNoChange": "Same as last",
   "viewAllEvents": "View all events",
   "deductionSessionErrors": "Session Errors",
   "deductionRuleSession": "Each error session: -3, max 15",
   "summarySessionErrors": "Session Errors",
   "summarySessionErrorsDetail": "{errors} errors / {sessions} sessions",
-  "summarySessionErrorsDetected": "Session errors detected ({errors} errors in {sessions} sessions)",
   "checkCatalog": {
-    "openclaw_install": { "name": "OpenClaw Install" },
-    "config_file": { "name": "Config File" },
-    "gateway_status": { "name": "Gateway Status" },
-    "pid_lock": { "name": "PID Lock" },
-    "port_default": { "name": "Port Check" },
-    "disk_space": { "name": "Disk Space" },
-    "gateway_diag_openclaw_installed": { "name": "OpenClaw Installed" },
-    "gateway_diag_config_exists": { "name": "Config File Exists" },
-    "gateway_diag_config_valid": { "name": "Config File Valid" },
-    "gateway_diag_gateway_process": { "name": "Gateway Process" },
-    "gateway_diag_port_reachable": { "name": "Port Reachable" },
-    "gateway_diag_gateway_api": { "name": "Gateway API Response" },
-    "gateway_diag_port_conflict": { "name": "Port Conflict Check" },
-    "gateway_diag_auth_token": { "name": "Auth Token Match" }
+    "openclaw_install": {
+      "name": "OpenClaw Install"
+    },
+    "config_file": {
+      "name": "Config File"
+    },
+    "gateway_status": {
+      "name": "Gateway Status"
+    },
+    "pid_lock": {
+      "name": "PID Lock"
+    },
+    "port_default": {
+      "name": "Port Check"
+    },
+    "disk_space": {
+      "name": "Disk Space"
+    },
+    "gateway_diag_openclaw_installed": {
+      "name": "OpenClaw Installed"
+    },
+    "gateway_diag_config_exists": {
+      "name": "Config File Exists"
+    },
+    "gateway_diag_config_valid": {
+      "name": "Config File Valid"
+    },
+    "gateway_diag_gateway_process": {
+      "name": "Gateway Process"
+    },
+    "gateway_diag_port_reachable": {
+      "name": "Port Reachable"
+    },
+    "gateway_diag_gateway_api": {
+      "name": "Gateway API Response"
+    },
+    "gateway_diag_port_conflict": {
+      "name": "Port Conflict Check"
+    },
+    "gateway_diag_auth_token": {
+      "name": "Auth Token Match"
+    }
   },
-  "tabLlm": "LLM Health",
   "tabTesting": "Test Center",
   "llmLoadFail": "Failed to load LLM status",
   "llmProviders": "Providers",
@@ -187,7 +199,6 @@
   "llmExpires": "expires",
   "llmFallbackTitle": "Fallback Chains",
   "llmNoFallback": "No fallback chains configured",
-  "llmRole": "Role",
   "llmErrorDist": "Error Distribution",
   "llmNoErrors": "No errors detected",
   "llmRunProbeHint": "Run a probe to check provider health",
@@ -196,7 +207,6 @@
   "llmClearHistory": "Clear",
   "llmNoHistory": "No probe history",
   "llmSuccessRate": "Success Rate Trend",
-  "tcQuickActions": "Quick Actions",
   "tcQuickProbeAll": "Probe All Providers",
   "tcQuickRefreshAuth": "Refresh Auth Status",
   "tcQuickDoctor": "Full Diagnostics",
@@ -248,7 +258,6 @@
   "tcUpdateStatusDesc": "Show update channel and version status",
   "tcSystemPresence": "System Presence",
   "tcSystemPresenceDesc": "List system presence entries from gateway",
-  "tcCustomCommand": "Custom Command",
   "tcCustomPlaceholder": "openclaw models status --probe --json",
   "tcRun": "Run",
   "tcOutput": "Output",
@@ -259,7 +268,7 @@
   "tcModeLocal": "Local",
   "tcModeRemote": "Remote",
   "tcModeUnavailable": "Unavailable",
-  "tcModeLocalHint": "Commands execute locally on the HAClaw host",
+  "tcModeLocalHint": "Commands execute locally on the HAClaw-OS host",
   "tcModeRemoteHint": "Commands are proxied to the remote gateway via WebSocket RPC",
   "tcModeUnavailableHint": "Cannot execute commands — gateway not connected or CLI not installed",
   "tcRemoteDisconnected": "Remote gateway not connected",
@@ -370,7 +379,6 @@
   "raIneligible": "Ineligible",
   "raProvider": "Provider",
   "raEntries": "entries",
-  "raIndexSize": "Size",
   "raCriticalIssues": "critical issues",
   "raCritical": "Critical",
   "raPassed": "Passed",
@@ -444,9 +452,7 @@
   "securityAuditCritical": "{count} critical issue(s)",
   "securityAuditWarn": "{count} warning(s)",
   "securityAuditInfo": "{count} info",
-  "securityAuditTotal": "{total} finding(s) total",
   "securityAuditEmpty": "No security issues detected",
-  "securityAuditError": "Security audit failed",
   "securityAuditAutoFix": "Auto Fix",
   "securityAuditBatchFix": "Fix All ({count})",
   "securityAuditBatchFixTitle": "Batch Fix Security Issues",
@@ -466,15 +472,7 @@
   "deductionSecurity": "Security Audit",
   "deductionRuleSecurity": "Critical: -15/item (max 40), Warn: -5/item (max 20)",
   "sourceSecurity": "Security Audit",
-  "dashSecurityTitle": "Security",
-  "dashSecurityOk": "All checks passed",
-  "dashSecurityWarn": "{count} warning(s)",
-  "dashSecurityCritical": "{count} critical",
-  "dashSecurityFindings": "{total} finding(s)",
-
   "saDetailLabel": "Detail",
-  "saRemediationLabel": "Remediation",
-
   "sa.fs.state_dir.symlink": "State dir is a symlink",
   "sa.fs.state_dir.perms_world_writable": "State dir is world-writable",
   "sa.fs.state_dir.perms_group_writable": "State dir is group-writable",
@@ -493,7 +491,6 @@
   "sa.fs.sessions_store.perms_readable": "sessions.json is readable by others",
   "sa.fs.log_file.perms_readable": "Log file is readable by others",
   "sa.fs.synced_dir": "State/config path is in a synced folder",
-
   "sa.gateway.bind_no_auth": "Gateway binds beyond loopback without auth",
   "sa.gateway.loopback_no_auth": "Gateway auth missing on loopback",
   "sa.gateway.trusted_proxies_missing": "Reverse proxy headers are not trusted",
@@ -517,11 +514,9 @@
   "sa.gateway.http.session_key_override_enabled": "HTTP API session-key override is enabled",
   "sa.gateway.nodes.allow_commands_dangerous": "Dangerous node commands explicitly enabled",
   "sa.gateway.nodes.deny_commands_ineffective": "Some gateway.nodes.denyCommands entries are ineffective",
-
   "sa.config.insecure_or_dangerous_flags": "Insecure or dangerous config flags enabled",
   "sa.config.secrets.gateway_password_in_config": "Gateway password is stored in config",
   "sa.config.secrets.hooks_token_in_config": "Hooks token is stored in config",
-
   "sa.hooks.token_too_short": "Hooks token looks short",
   "sa.hooks.token_reuse_gateway_token": "Hooks token reuses the Gateway token",
   "sa.hooks.path_root": "Hooks base path is '/'",
@@ -531,10 +526,8 @@
   "sa.hooks.installs_unpinned_npm_specs": "Hook installs include unpinned npm specs",
   "sa.hooks.installs_missing_integrity": "Hook installs are missing integrity metadata",
   "sa.hooks.installs_version_drift": "Hook install records drift from installed versions",
-
   "sa.discovery.mdns_full_mode": "mDNS full mode can leak host metadata",
   "sa.logging.redact_off": "Log sensitive data redaction is off",
-
   "sa.channels.dm.open": "Channel DMs are open to everyone",
   "sa.channels.dm.open_invalid": "Channel DM config looks inconsistent",
   "sa.channels.dm.disabled": "Channel DMs are disabled",
@@ -550,7 +543,6 @@
   "sa.channels.telegram.groups.allowFrom.missing": "Telegram group commands have no sender allowlist",
   "sa.channels.feishu.doc_owner_open_id": "Feishu doc create can grant requester permissions",
   "sa.channels.warning": "Channel security warning",
-
   "sa.plugins.extensions_no_allowlist": "Extensions exist but plugins.allow is not set",
   "sa.plugins.tools_reachable_permissive_policy": "Extension plugin tools reachable under permissive policy",
   "sa.plugins.installs_unpinned_npm_specs": "Plugin installs include unpinned npm specs",
@@ -560,11 +552,9 @@
   "sa.plugins.code_safety.scan_failed": "Plugin code scan failed",
   "sa.plugins.code_safety.entry_path": "Plugin entry path is abnormal",
   "sa.plugins.code_safety.entry_escape": "Plugin entry path escapes",
-
   "sa.skills.code_safety": "Skill code safety check",
   "sa.skills.code_safety.scan_failed": "Skill code scan failed",
   "sa.skills.workspace.symlink_escape": "Workspace skill files resolve outside workspace root",
-
   "sa.sandbox.docker_config_mode_off": "Sandbox mode off but Docker settings configured",
   "sa.sandbox.dangerous_bind_mount": "Dangerous bind mount in sandbox config",
   "sa.sandbox.bind_mount_non_absolute": "Sandbox bind mount uses non-absolute source path",
@@ -575,15 +565,12 @@
   "sa.sandbox.browser_container.hash_label_missing": "Sandbox browser container missing config hash label",
   "sa.sandbox.browser_container.hash_epoch_stale": "Sandbox browser container hash epoch is stale",
   "sa.sandbox.browser_container.non_loopback_publish": "Sandbox browser container publishes on non-loopback",
-
   "sa.browser.control_invalid_config": "Browser control config is invalid",
   "sa.browser.control_no_auth": "Browser control has no auth configured",
   "sa.browser.remote_cdp_http": "Remote CDP uses HTTP (unencrypted)",
-
   "sa.models.legacy": "Some configured models look legacy",
   "sa.models.weak_tier": "Some configured models are below recommended tiers",
   "sa.models.small_params": "Small models require sandboxing and web tools disabled",
-
   "sa.tools.profile_minimal_overridden": "Global tools.profile=minimal overridden by agent profiles",
   "sa.tools.elevated.allowFrom.wildcard": "Elevated tools allowFrom contains wildcard",
   "sa.tools.elevated.allowFrom.large": "Elevated tools allowFrom has too many entries",
@@ -591,13 +578,10 @@
   "sa.tools.exec.host_sandbox_no_sandbox_agents": "Some agents have no sandbox for exec",
   "sa.tools.exec.safe_bin_trusted_dirs_risky": "Safe exec trusted dirs are risky",
   "sa.tools.exec.safe_bins_interpreter_unprofiled": "Safe exec interpreters have no sandbox profile",
-
   "sa.security.exposure.open_groups_with_elevated": "Open group policy with elevated tools enabled",
   "sa.security.exposure.open_groups_with_runtime_or_fs": "Open group policy with runtime/filesystem tools",
   "sa.security.trust_model.multi_user_heuristic": "Multi-user trust model detected",
-
   "sa.summary.attack_surface": "Attack surface summary",
-
   "saRem.fs.state_dir.symlink": "Verify the symlink target is trusted",
   "saRem.fs.state_dir.perms_world_writable": "Run chmod 700 to restrict state dir permissions",
   "saRem.fs.state_dir.perms_group_writable": "Run chmod 700 to restrict state dir permissions",
@@ -620,6 +604,5 @@
   "memoryEmbedding": "Embedding",
   "memoryEmbeddingOk": "Available",
   "memoryEmbeddingFail": "Unavailable",
-  "memoryAgent": "Agent",
   "memoryUnavailable": "Memory not available"
 }

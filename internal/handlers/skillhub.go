@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"HAClaw/internal/executil"
-	"HAClaw/internal/logger"
-	"HAClaw/internal/web"
+	"HAClaw-OS/internal/executil"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/web"
 )
 
 const skillHubRemoteBaseURL = "https://lightmake.site/api"
@@ -342,7 +342,7 @@ func (h *SkillHubHandler) proxyRemoteSkillHubJSON(w http.ResponseWriter, r *http
 		return
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "HAClaw/skillhub-proxy")
+	req.Header.Set("User-Agent", "HAClaw-OS/skillhub-proxy")
 
 	resp, err := client.Do(req)
 	if err != nil {

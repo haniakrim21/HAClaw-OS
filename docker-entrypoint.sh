@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-CLAWDECKX_DATA_DIR="${OCD_DATA_DIR:-/data/haclaw}"
+CLAWDECKX_DATA_DIR="${OCD_DATA_DIR:-/data/haclawx}"
 OPENCLAW_DATA_DIR="${OPENCLAW_DATA_DIR:-/data/openclaw}"
 OPENCLAW_STATE_DIR="${OPENCLAW_STATE_DIR:-${OPENCLAW_HOME:-$HOME}/.openclaw}"
 OPENCLAW_CONFIG="${OPENCLAW_CONFIG_PATH:-$OPENCLAW_STATE_DIR/openclaw.json}"
@@ -13,7 +13,7 @@ BOOTSTRAP_FILE="${BOOTSTRAP_DIR}/gateway-bootstrap.json"
 RUNTIME_DIR="${OCD_RUNTIME_DIR:-/data/runtime}"
 
 mkdir -p "$CLAWDECKX_DATA_DIR" "$OPENCLAW_DATA_DIR" "$OPENCLAW_STATE_DIR" "$OPENCLAW_DATA_DIR/logs" "$NPM_CONFIG_PREFIX" "$BOOTSTRAP_DIR" \
-         "$RUNTIME_DIR/haclaw" "$RUNTIME_DIR/openclaw"
+         "$RUNTIME_DIR/haclawx" "$RUNTIME_DIR/openclaw"
 export NPM_CONFIG_PREFIX
 export PATH="$NPM_CONFIG_PREFIX/bin:$HOME/.local/bin:$HOME/bin:$PATH"
 export OPENCLAW_STATE_DIR
@@ -22,13 +22,13 @@ export OCD_RUNTIME_DIR="$RUNTIME_DIR"
 
 # ── Runtime overlay: write image version stamps on first boot ──
 if [ ! -f /app/.image-version ]; then
-    /app/haclaw version 2>/dev/null | head -1 > /app/.image-version || echo "unknown" > /app/.image-version
+    /app/haclawx version 2>/dev/null | head -1 > /app/.image-version || echo "unknown" > /app/.image-version
 fi
 if [ ! -f /opt/openclaw/.image-version ] && command -v openclaw &>/dev/null; then
     openclaw --version 2>/dev/null | head -1 > /opt/openclaw/.image-version || echo "unknown" > /opt/openclaw/.image-version
 fi
 
-# write_bootstrap writes a JSON bootstrap status file for HAClaw to read
+# write_bootstrap writes a JSON bootstrap status file for HAClaw-OS to read
 write_bootstrap() {
     local status="$1" reason="$2" pid="${3:-0}" openclaw_bin="${4:-}" openclaw_ver="${5:-}"
     BOOTSTRAP_FILE="$BOOTSTRAP_FILE" \
@@ -146,7 +146,7 @@ ensure_default_skillhub() {
     fi
 
     echo "[docker-entrypoint] Installing SkillHub CLI..."
-    if bash -lc 'curl --connect-timeout 10 --max-time 30 -fsSL https://skillhub-1388575217.cos.ap-guangzhou.myqcloud.com/install/install.sh | bash -s -- --cli-only' >/tmp/skillhub-install.log 2>&1; then
+    if bash -lc 'curl -fsSL https://skillhub-1388575217.cos.ap-guangzhou.myqcloud.com/install/install.sh | bash -s -- --cli-only' >/tmp/skillhub-install.log 2>&1; then
         echo "[docker-entrypoint] SkillHub CLI installed"
         return 0
     fi
@@ -231,7 +231,7 @@ if command -v openclaw &>/dev/null; then
         elif kill -0 "$GATEWAY_PID" 2>/dev/null; then
             echo "[docker-entrypoint] WARNING: OpenClaw gateway not ready within ${GATEWAY_WAIT_SECONDS}s (pid=$GATEWAY_PID)" >&2
             echo "[docker-entrypoint] Gateway is still running — it may need more time on first boot." >&2
-            echo "[docker-entrypoint] Check gateway logs: docker compose exec haclaw tail -30 $GATEWAY_LOG" >&2
+            echo "[docker-entrypoint] Check gateway logs: docker compose exec haclawx tail -30 $GATEWAY_LOG" >&2
             write_bootstrap "timeout" "gateway not ready within ${GATEWAY_WAIT_SECONDS}s" "$GATEWAY_PID" "$OPENCLAW_BIN" "$OPENCLAW_VER"
         fi
     else
@@ -244,11 +244,11 @@ else
 fi
 
 # ── Runtime overlay: prefer updated binary from persistent volume ──
-CLAWDECKX_BIN="/app/haclaw"
-if [ -x "$RUNTIME_DIR/haclaw/haclaw" ] && [ -f "$RUNTIME_DIR/haclaw/manifest.json" ]; then
-    echo "[docker-entrypoint] Using runtime overlay HAClaw from $RUNTIME_DIR/haclaw/haclaw"
-    CLAWDECKX_BIN="$RUNTIME_DIR/haclaw/haclaw"
+CLAWDECKX_BIN="/app/haclawx"
+if [ -x "$RUNTIME_DIR/haclawx/haclawx" ] && [ -f "$RUNTIME_DIR/haclawx/manifest.json" ]; then
+    echo "[docker-entrypoint] Using runtime overlay HAClaw-OS from $RUNTIME_DIR/haclawx/haclawx"
+    CLAWDECKX_BIN="$RUNTIME_DIR/haclawx/haclawx"
 fi
 
-# Start HAClaw (exec replaces shell so tini can manage signals)
+# Start HAClaw-OS (exec replaces shell so tini can manage signals)
 exec "$CLAWDECKX_BIN" serve "$@"

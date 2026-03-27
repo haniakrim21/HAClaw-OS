@@ -1,7 +1,7 @@
 ﻿package commands
 
 import (
-	"HAClaw/internal/i18n"
+	"HAClaw-OS/internal/i18n"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"

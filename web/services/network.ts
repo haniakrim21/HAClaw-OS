@@ -128,7 +128,7 @@ export async function findFastestMirror(
 export async function getGitHubURL(path: string): Promise<string> {
   const best = await findFastestMirror(
     GITHUB_MIRRORS,
-    '/haniakrim21/HAClaw-OS',
+    '/HAClaw-OS/HAClaw-OS',
     'github'
   );
 
@@ -204,7 +204,7 @@ export async function testAllMirrors(): Promise<{
   npm: MirrorTestResult[];
 }> {
   const [githubResults, npmResults] = await Promise.all([
-    Promise.all(GITHUB_MIRRORS.map(s => testMirror(s, '/haniakrim21/HAClaw-OS', 5000))),
+    Promise.all(GITHUB_MIRRORS.map(s => testMirror(s, '/HAClaw-OS/HAClaw-OS', 5000))),
     Promise.all(NPM_REGISTRY_MIRRORS.map(s => testMirror(s, '/-/ping', 5000))),
   ]);
 

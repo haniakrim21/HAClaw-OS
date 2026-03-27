@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"HAClaw/internal/i18n"
+	"HAClaw-OS/internal/i18n"
 )
 
 const languageKey contextKey = "language"

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 const IS_DEV = import.meta.env.DEV;
-const ENABLED_KEY = 'clawdeck.hookMonitor';
+const ENABLED_KEY = 'haclaw.hookMonitor';
 
 function isEnabled(): boolean {
   if (!IS_DEV) return false;
@@ -11,8 +11,8 @@ function isEnabled(): boolean {
 /**
  * useHookMonitor — dev-only hook state logger.
  *
- * Enable in browser console:  localStorage.setItem('clawdeck.hookMonitor', '1')
- * Disable:                    localStorage.removeItem('clawdeck.hookMonitor')
+ * Enable in browser console:  localStorage.setItem('haclaw.hookMonitor', '1')
+ * Disable:                    localStorage.removeItem('haclaw.hookMonitor')
  *
  * Usage:
  *   useHookMonitor('Dashboard', { gwStatus, sessions, health });

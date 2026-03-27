@@ -22,7 +22,7 @@ func GenerateJWT(userID uint, username, role, secret string, expire time.Duratio
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
 			IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
-			Issuer:    "HAClaw",
+			Issuer:    "HAClaw-OS",
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

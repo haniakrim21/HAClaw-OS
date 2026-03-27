@@ -7,7 +7,7 @@ export interface TemplateCache {
 }
 
 export class TemplateCacheManager {
-  private cachePrefix = 'haclaw_template_cache_';
+  private cachePrefix = 'haclawx_template_cache_';
   private maxSize: number;
 
   constructor(maxSize: number = 100 * 1024 * 1024) {
@@ -212,8 +212,8 @@ export class GitHubTemplateLoader {
   private cache: TemplateCacheManager;
   private apiBase = 'https://api.github.com';
   private rawBase = 'https://raw.githubusercontent.com';
-  private versionPrefix = 'haclaw_tpl_ver_';
-  private bulkPrefix = 'haclaw_tpl_bulk_';
+  private versionPrefix = 'haclawx_tpl_ver_';
+  private bulkPrefix = 'haclawx_tpl_bulk_';
   private manifestTTL = 86400000; // 24 hours - templates rarely update
   private templateTTL = 604800000; // 7 days - templates cached long (version-gated)
 

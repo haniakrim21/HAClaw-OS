@@ -2,24 +2,21 @@
 
 ### 🐛 Bug Fixes / 修复
 
-- derive cookie name from request Host header for Docker port mapping
-- restart with overlay binary after runtime update
-- read tokens from multi-account config path in test-channel
-- port-specific cookie name to prevent cross-instance collision
-- enhance config load diagnostics for JWT secret persistence tracking
-- add diagnostic logging for 401 auth failures in middleware
-- use correct param name 'key' for sessions.messages RPC
-- persist JWT secret across Docker restarts and add diagnostic logging
+- route recipe install through gateway RPC
+- ignore cached URL translations
+- reject garbage translations containing URLs for skill names
+- use clipboard fallback for context menu copy in Sessions
+- use clipboard fallback for code block copy in non-HTTPS context
 
 ### 🎨 UI & Styling / 界面优化
 
-- fix model dropdown dark mode contrast
+- move tool policy above model picker in UsagePanel
 
-### 🔧 Maintenance / 维护
+### 🌐 Internationalization / 国际化
 
-- bump openclawCompat to >=2026.3.23
+- add secProfile tool strategy labels for all 13 locales
 
 ---
-**Full Changelog**: [v0.0.26...v0.0.27](https://github.com/HAClaw/HAClaw/compare/v0.0.26...v0.0.27)
+**Full Changelog**: [v0.0.32...v0.0.33](https://github.com/HAClaw-OS/HAClaw-OS/compare/v0.0.32...v0.0.33)
 
 

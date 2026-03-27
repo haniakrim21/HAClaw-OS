@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"HAClaw/internal/database"
-	"HAClaw/internal/i18n"
-	"HAClaw/internal/logger"
-	"HAClaw/internal/webconfig"
+	"HAClaw-OS/internal/database"
+	"HAClaw-OS/internal/i18n"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/webconfig"
 )
 
 func ResetUsername(args []string) int {

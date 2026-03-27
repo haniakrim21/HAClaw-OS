@@ -1,7 +1,7 @@
 // IndexedDB-based cache for large data (replaces localStorage which has 5MB limit).
 // Uses a simple key-value store with expiry metadata.
 
-const DB_NAME = 'haclaw_cache';
+const DB_NAME = 'haclawx_cache';
 const DB_VERSION = 1;
 const STORE_NAME = 'kv';
 

@@ -596,7 +596,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ language, onClose, onOpenEdit
                     <div className="space-y-2">
                       <p className="text-xs text-red-600 dark:text-red-400/70 font-medium">{sw.rootThenReopen}</p>
                       <code className="block px-3 py-2 bg-red-100 dark:bg-red-500/15 rounded-lg text-[11px] font-mono text-red-800 dark:text-red-300 select-all">
-                        {scanResult.os === 'windows' ? 'HAClaw.exe' : './HAClaw'}
+                        {scanResult.os === 'windows' ? 'HAClaw-OS.exe' : './HAClaw-OS'}
                       </code>
                     </div>
                   </div>

@@ -3,8 +3,8 @@
 import (
 	"testing"
 
-	"HAClaw/internal/database"
-	"HAClaw/internal/webconfig"
+	"HAClaw-OS/internal/database"
+	"HAClaw-OS/internal/webconfig"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"

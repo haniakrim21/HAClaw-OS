@@ -176,7 +176,7 @@ const LockScreen: React.FC<LockScreenProps> = ({
         {!needsSetup && (
           <div className="relative w-[112px] h-[112px] rounded-full overflow-hidden border border-white/30 shadow-2xl mac-glass mb-6 flex items-center justify-center bg-gradient-to-br from-primary/30 via-orange-500/20 to-purple-500/15">
             <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
-            <span className="text-[56px] leading-none select-none drop-shadow-lg relative z-10" role="img" aria-label="HAClaw">🦀</span>
+            <span className="text-[56px] leading-none select-none drop-shadow-lg relative z-10" role="img" aria-label="HAClaw-OS">🦀</span>
           </div>
         )}
 

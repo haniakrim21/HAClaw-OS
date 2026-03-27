@@ -3,7 +3,7 @@
 package tray
 
 import (
-	"HAClaw/internal/i18n"
+	"HAClaw-OS/internal/i18n"
 	"fmt"
 	"os/exec"
 	"runtime"
@@ -21,8 +21,8 @@ func Run(addr string, onQuit func()) {
 
 	systray.Run(func() {
 		systray.SetIcon(generateIcon())
-		systray.SetTitle("HAClaw")
-		systray.SetTooltip(fmt.Sprintf("HAClaw - %s", url))
+		systray.SetTitle("HAClaw-OS")
+		systray.SetTooltip(fmt.Sprintf("HAClaw-OS - %s", url))
 
 		// Click tray icon → open browser
 		systray.SetOnClick(func(menu systray.IMenu) {

@@ -1,7 +1,7 @@
 package prompt
 
 import (
-	"HAClaw/internal/i18n"
+	"HAClaw-OS/internal/i18n"
 	"bufio"
 	"fmt"
 	"os"

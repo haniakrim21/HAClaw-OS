@@ -10,7 +10,7 @@ import (
 	"io"
 	"sort"
 
-	"HAClaw/internal/version"
+	"HAClaw-OS/internal/version"
 )
 
 func buildManifest(resources []ResourceContent) (SnapshotManifest, error) {

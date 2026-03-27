@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"HAClaw/internal/logger"
-	"HAClaw/internal/version"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/version"
 )
 
 // Manager handles the runtime overlay logic for Docker deployments.
@@ -29,7 +29,7 @@ func (m *Manager) RuntimeDir() string {
 
 // EnsureDirs creates the runtime directory structure.
 func (m *Manager) EnsureDirs() error {
-	for _, comp := range []Component{ComponentHAClaw, ComponentOpenClaw} {
+	for _, comp := range []Component{ComponentHAClaw-OS, ComponentOpenClaw} {
 		dir := filepath.Join(m.runtimeDir, string(comp))
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return fmt.Errorf("create runtime dir %s: %w", dir, err)
@@ -67,8 +67,8 @@ func (m *Manager) GetStatus(comp Component) Status {
 	st := Status{Component: comp}
 
 	switch comp {
-	case ComponentHAClaw:
-		st.ImageVersion = imageHAClawVersion()
+	case ComponentHAClaw-OS:
+		st.ImageVersion = imageHAClaw-OSVersion()
 		st.ActiveVersion = version.Version
 	case ComponentOpenClaw:
 		st.ImageVersion = imageOpenClawVersion()
@@ -92,7 +92,7 @@ func (m *Manager) GetStatus(comp Component) Status {
 func (m *Manager) GetAllStatus() AllStatus {
 	return AllStatus{
 		IsDocker:  IsDocker(),
-		HAClaw: m.GetStatus(ComponentHAClaw),
+		HAClaw-OS: m.GetStatus(ComponentHAClaw-OS),
 		OpenClaw:  m.GetStatus(ComponentOpenClaw),
 	}
 }

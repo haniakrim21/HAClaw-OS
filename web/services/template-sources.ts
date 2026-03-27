@@ -62,7 +62,7 @@ export const DEFAULT_TEMPLATE_SOURCES: TemplateSource[] = [
     type: 'cdn',
     enabled: true,
     priority: 95,
-    url: 'https://templates.haclaw.com',
+    url: 'https://templates.haclawx.com',
     cacheTTL: 86400000, // 24 hours
     fallback: 'local'
   },
@@ -72,7 +72,7 @@ export const DEFAULT_TEMPLATE_SOURCES: TemplateSource[] = [
     type: 'github',
     enabled: true,
     priority: 90,
-    repo: 'haniakrim21/HAClaw-OS',
+    repo: 'HAClaw-OS/HAClaw-OS',
     branch: 'main',
     githubPath: 'templates/official',
     fallback: 'local',
@@ -96,7 +96,7 @@ export const DEFAULT_CONFIG: TemplateSourceConfig = {
 
 export class TemplateSourceManager {
   private config: TemplateSourceConfig;
-  private storageKey = 'haclaw_template_sources';
+  private storageKey = 'haclawx_template_sources';
 
   constructor() {
     this.config = this.loadConfig();

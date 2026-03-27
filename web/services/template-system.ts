@@ -1,5 +1,5 @@
 /**
- * HAClaw 统一模板系统
+ * HAClaw-OS 统一模板系统
  * 
  * 完全替代旧的 data/templates.ts 和数据库模板系统
  * 
@@ -428,7 +428,7 @@ class TemplateSystem {
       icon: agent.metadata.icon || 'psychology',
       category: 'persona',
       tags: agent.metadata.tags || [],
-      author: agent.metadata.author || 'HAClaw',
+      author: agent.metadata.author || 'HAClaw-OS',
       source: (agent.metadata.source as any) || 'local',
       builtIn: true,
       version: 1,
@@ -459,7 +459,7 @@ class TemplateSystem {
       icon: scenario.metadata.icon || 'auto_awesome',
       category: 'scenario',
       tags: scenario.metadata.tags || [],
-      author: scenario.metadata.author || 'HAClaw',
+      author: scenario.metadata.author || 'HAClaw-OS',
       source: (scenario.metadata.source as any) || 'local',
       builtIn: true,
       version: 1,

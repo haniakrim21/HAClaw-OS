@@ -10,7 +10,7 @@
     "icon": "task_alt",
     "color": "from-amber-500 to-orange-500",
     "tags": ["tasks", "projects", "productivity", "tracking"],
-    "author": "HAClaw Team",
+    "author": "HAClaw-OS Team",
     "newbie": true,
     "costTier": "low"
   },

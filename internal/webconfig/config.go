@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"HAClaw/internal/secretutil"
+	"HAClaw-OS/internal/secretutil"
 )
 
 type ServerConfig struct {
@@ -116,12 +116,12 @@ func Default() Config {
 		},
 		Database: DatabaseConfig{
 			Driver:     "sqlite",
-			SQLitePath: filepath.Join(dataDir, "HAClaw.db"),
+			SQLitePath: filepath.Join(dataDir, "HAClaw-OS.db"),
 		},
 		Log: LogConfig{
 			Level:      "info",
 			Mode:       "production",
-			FilePath:   filepath.Join(dataDir, "HAClaw.log"),
+			FilePath:   filepath.Join(dataDir, "HAClaw-OS.log"),
 			MaxSizeMB:  10,
 			MaxBackups: 3,
 			MaxAgeDays: 30,
@@ -149,7 +149,7 @@ func ConfigPath() string {
 	if custom := strings.TrimSpace(os.Getenv("OCD_CONFIG")); custom != "" {
 		return custom
 	}
-	return filepath.Join(defaultDataDir(), "HAClaw.json")
+	return filepath.Join(defaultDataDir(), "HAClaw-OS.json")
 }
 
 func Load() (Config, error) {

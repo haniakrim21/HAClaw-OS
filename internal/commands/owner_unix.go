@@ -3,7 +3,7 @@
 package commands
 
 import (
-	"HAClaw/internal/i18n"
+	"HAClaw-OS/internal/i18n"
 	"fmt"
 	"os"
 	"os/user"

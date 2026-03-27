@@ -2,16 +2,16 @@
 set -e
 
 # ==============================================================================
-# HAClaw - One-Click Launcher
+# HAClaw-OS - One-Click Launcher
 # ==============================================================================
 
 # Save script to temp file for reliable re-exec (curl|bash sets $0 to "bash")
 SELF_SCRIPT="${BASH_SOURCE[0]:-}"
 if [ -z "$SELF_SCRIPT" ] || [ "$SELF_SCRIPT" = "bash" ] || [ "$SELF_SCRIPT" = "/bin/bash" ] || [ ! -f "$SELF_SCRIPT" ]; then
-    SELF_SCRIPT="/tmp/.haclaw-installer.sh"
+    SELF_SCRIPT="/tmp/.haclawx-installer.sh"
     # When piped, save stdin (already consumed) — re-download if needed
     if [ ! -f "$SELF_SCRIPT" ]; then
-        curl -fsSL "https://raw.githubusercontent.com/HAClaw/HAClaw/main/install.sh" -o "$SELF_SCRIPT" 2>/dev/null || true
+        curl -fsSL "https://raw.githubusercontent.com/HAClaw-OS/HAClaw-OS/main/install.sh" -o "$SELF_SCRIPT" 2>/dev/null || true
     fi
 fi
 
@@ -24,7 +24,7 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Installation paths - prefer current directory
-BINARY_NAME="haclaw"
+BINARY_NAME="haclawx"
 DEFAULT_PORT=18788
 INTERNAL_PORT=18788
 DEFAULT_HOST_PORT=18700
@@ -33,13 +33,13 @@ PORT=$DEFAULT_PORT
 CONFIG_DIR=""
 DATA_DIR=""
 
-# Function to check if HAClaw is installed and find its location
+# Function to check if HAClaw-OS is installed and find its location
 check_installed() {
     # Check current directory (preferred location)
     if [ -f "./$BINARY_NAME" ] && [ -x "./$BINARY_NAME" ]; then
         INSTALLED_LOCATION="./$BINARY_NAME"
         RAW_VERSION=$(./$BINARY_NAME --version 2>/dev/null || echo "unknown")
-        # Extract version number from output like "HAClaw 0.0.11"
+        # Extract version number from output like "HAClaw-OS 0.0.11"
         CURRENT_VERSION=$(echo "$RAW_VERSION" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
         if [ -z "$CURRENT_VERSION" ]; then
             CURRENT_VERSION="$RAW_VERSION"
@@ -54,7 +54,7 @@ check_installed() {
 }
 
 # Function to get configured port
-# Priority: OCD_PORT env > data/HAClaw.json server.port > DEFAULT_PORT
+# Priority: OCD_PORT env > data/HAClaw-OS.json server.port > DEFAULT_PORT
 get_config_port() {
     # Check environment variable first
     if [ -n "$OCD_PORT" ] && [ "$OCD_PORT" -gt 0 ] 2>/dev/null && [ "$OCD_PORT" -le 65535 ] 2>/dev/null; then
@@ -65,11 +65,11 @@ get_config_port() {
     # Try to read from config file
     local config_file=""
     if [ -n "$INSTALLED_LOCATION" ]; then
-        config_file="$(dirname "$INSTALLED_LOCATION")/data/HAClaw.json"
+        config_file="$(dirname "$INSTALLED_LOCATION")/data/HAClaw-OS.json"
     elif [ -n "$INSTALLED_BINARY" ]; then
-        config_file="$(dirname "$INSTALLED_BINARY")/data/HAClaw.json"
+        config_file="$(dirname "$INSTALLED_BINARY")/data/HAClaw-OS.json"
     else
-        config_file="$(pwd)/data/HAClaw.json"
+        config_file="$(pwd)/data/HAClaw-OS.json"
     fi
     
     if [ -f "$config_file" ]; then
@@ -89,7 +89,7 @@ get_config_port() {
 # Usage: print_access_urls <port>
 print_access_urls() {
     local port="${1:-$PORT}"
-    echo -e "${CYAN}Access HAClaw at / 访问 HAClaw：${NC}"
+    echo -e "${CYAN}Access HAClaw-OS at / 访问 HAClaw-OS：${NC}"
     echo -e "  ${GREEN}http://localhost:${port}${NC}"
     # LAN IPs (exclude loopback)
     local lan_ips
@@ -190,7 +190,7 @@ check_systemd_service() {
     SYSTEMD_SERVICE_TYPE=""
     
     # Check user-level service
-    USER_SERVICE_PATH="$HOME/.config/systemd/user/haclaw.service"
+    USER_SERVICE_PATH="$HOME/.config/systemd/user/haclawx.service"
     if [ -f "$USER_SERVICE_PATH" ]; then
         SYSTEMD_SERVICE_INSTALLED=true
         SYSTEMD_SERVICE_TYPE="user"
@@ -198,7 +198,7 @@ check_systemd_service() {
     fi
     
     # Check system-level service
-    SYSTEM_SERVICE_PATH="/etc/systemd/system/haclaw.service"
+    SYSTEM_SERVICE_PATH="/etc/systemd/system/haclawx.service"
     if [ -f "$SYSTEM_SERVICE_PATH" ]; then
         SYSTEMD_SERVICE_INSTALLED=true
         SYSTEMD_SERVICE_TYPE="system"
@@ -206,13 +206,13 @@ check_systemd_service() {
     fi
     
     # Check if service is enabled/active via systemctl
-    if systemctl --user is-enabled --quiet haclaw 2>/dev/null; then
+    if systemctl --user is-enabled --quiet haclawx 2>/dev/null; then
         SYSTEMD_SERVICE_INSTALLED=true
         SYSTEMD_SERVICE_TYPE="user"
         return 0
     fi
     
-    if systemctl is-enabled --quiet haclaw 2>/dev/null; then
+    if systemctl is-enabled --quiet haclawx 2>/dev/null; then
         SYSTEMD_SERVICE_INSTALLED=true
         SYSTEMD_SERVICE_TYPE="system"
         return 0
@@ -239,10 +239,10 @@ install_systemd_service() {
     mkdir -p "$HOME/.config/systemd/user"
     
     # Create service file
-    USER_SERVICE_PATH="$HOME/.config/systemd/user/haclaw.service"
+    USER_SERVICE_PATH="$HOME/.config/systemd/user/haclawx.service"
     cat > "$USER_SERVICE_PATH" << EOF
 [Unit]
-Description=HAClaw Service
+Description=HAClaw-OS Service
 After=network.target
 
 [Service]
@@ -264,7 +264,7 @@ EOF
     # systemctl --user requires a D-Bus session bus which may not exist
     # in non-interactive pipes (curl | bash) or SSH sessions without lingering.
     if systemctl --user daemon-reload 2>/dev/null; then
-        systemctl --user enable haclaw 2>/dev/null
+        systemctl --user enable haclawx 2>/dev/null
         echo -e "${GREEN}✓ Auto-start service installed / 自动启动服务已安装${NC}"
         echo -e "${GREEN}✓ Service will start automatically on next system boot / 服务将在下次系统启动时自动运行${NC}"
     else
@@ -273,7 +273,7 @@ EOF
         echo -e "${CYAN}After logging in, run these commands to enable the service:"
         echo -e "登录后请运行以下命令启用服务：${NC}"
         echo -e "  ${GREEN}systemctl --user daemon-reload${NC}"
-        echo -e "  ${GREEN}systemctl --user enable haclaw${NC}"
+        echo -e "  ${GREEN}systemctl --user enable haclawx${NC}"
         # Enable lingering so user services start at boot without login
         echo -e "${CYAN}To start service at boot without login / 无需登录即可在开机时启动服务：${NC}"
         echo -e "  ${GREEN}loginctl enable-linger \$(whoami)${NC}"
@@ -293,15 +293,15 @@ stop_service() {
         echo -e "${CYAN}Stopping $SYSTEMD_SERVICE_TYPE-level service... / 正在停止$SYSTEMD_SERVICE_TYPE 级服务...${NC}"
         
         if [ "$SYSTEMD_SERVICE_TYPE" = "user" ]; then
-            systemctl --user stop haclaw
+            systemctl --user stop haclawx
             echo -e "${GREEN}✓ Service stopped / 服务已停止${NC}"
         else
-            sudo systemctl stop haclaw
+            sudo systemctl stop haclawx
             echo -e "${GREEN}✓ Service stopped / 服务已停止${NC}"
         fi
         
         echo ""
-        echo -e "${CYAN}You can now start HAClaw manually with: / 现在可以手动启动 HAClaw：${NC}"
+        echo -e "${CYAN}You can now start HAClaw-OS manually with: / 现在可以手动启动 HAClaw-OS：${NC}"
         echo -e "  ${GREEN}./$BINARY_NAME${NC}"
     else
         echo -e "${YELLOW}No service found / 未发现服务${NC}"
@@ -312,9 +312,9 @@ stop_service() {
 # Docker Mode Functions
 # ==============================================================================
 
-DOCKER_COMPOSE_URL="https://raw.githubusercontent.com/HAClaw/HAClaw/main/docker-compose.yml"
-DOCKER_COMPOSE_URL_CN="https://ghfast.top/https://raw.githubusercontent.com/HAClaw/HAClaw/main/docker-compose.yml"
-DOCKER_IMAGE="knowhunters/haclaw:latest"
+DOCKER_COMPOSE_URL="https://raw.githubusercontent.com/HAClaw-OS/HAClaw-OS/main/docker-compose.yml"
+DOCKER_COMPOSE_URL_CN="https://ghfast.top/https://raw.githubusercontent.com/HAClaw-OS/HAClaw-OS/main/docker-compose.yml"
+DOCKER_IMAGE="knowhunters/haclawx:latest"
 DOCKER_COMPOSE_FILE="docker-compose.yml"
 NEED_MIRROR=false
 DOCKER_MIRROR=""
@@ -333,6 +333,97 @@ sed_inplace() {
     else
         sed -i "$@"
     fi
+}
+
+# Register HAClaw-OS binary in PATH via ~/.local/bin symlink (preferred)
+# or shell profile export as fallback.
+# Usage: register_path <absolute_binary_path>
+register_path() {
+    local binary_abs="$1"
+    # Resolve to absolute path if relative
+    if [[ "$binary_abs" != /* ]]; then
+        binary_abs="$(cd "$(dirname "$binary_abs")" && pwd)/$(basename "$binary_abs")"
+    fi
+    local install_dir
+    install_dir="$(dirname "$binary_abs")"
+    local link_dir="$HOME/.local/bin"
+
+    # Method 1: symlink in ~/.local/bin (XDG standard, cleanest)
+    if mkdir -p "$link_dir" 2>/dev/null; then
+        ln -sf "$binary_abs" "$link_dir/haclawx"
+        echo -e "${GREEN}✓ Created symlink: $link_dir/haclawx → $binary_abs${NC}"
+
+        # Ensure ~/.local/bin is in PATH for future shells
+        if ! echo "$PATH" | tr ':' '\n' | grep -qx "$link_dir"; then
+            local profile_file=""
+            if [ -f "$HOME/.zshrc" ]; then
+                profile_file="$HOME/.zshrc"
+            elif [ -f "$HOME/.bashrc" ]; then
+                profile_file="$HOME/.bashrc"
+            elif [ -f "$HOME/.profile" ]; then
+                profile_file="$HOME/.profile"
+            fi
+            if [ -n "$profile_file" ]; then
+                local marker='# HAClaw-OS PATH'
+                if ! grep -qF "$marker" "$profile_file" 2>/dev/null; then
+                    printf '\n%s\nexport PATH="%s:$PATH"\n' "$marker" "$link_dir" >> "$profile_file"
+                    echo -e "${GREEN}✓ Added $link_dir to PATH in $(basename "$profile_file")${NC}"
+                fi
+            fi
+            echo -e "${YELLOW}  Run ${GREEN}source ~/${profile_file##*/}${YELLOW} or open a new terminal to use ${GREEN}haclawx${YELLOW} globally${NC}"
+        else
+            echo -e "${GREEN}✓ $link_dir is already in PATH${NC}"
+        fi
+        return 0
+    fi
+
+    # Method 2: direct PATH export in shell profile
+    local profile_file=""
+    if [ -f "$HOME/.zshrc" ]; then
+        profile_file="$HOME/.zshrc"
+    elif [ -f "$HOME/.bashrc" ]; then
+        profile_file="$HOME/.bashrc"
+    elif [ -f "$HOME/.profile" ]; then
+        profile_file="$HOME/.profile"
+    fi
+
+    if [ -n "$profile_file" ]; then
+        local marker='# HAClaw-OS PATH'
+        if ! grep -qF "$marker" "$profile_file" 2>/dev/null; then
+            printf '\n%s\nexport PATH="%s:$PATH"\n' "$marker" "$install_dir" >> "$profile_file"
+            echo -e "${GREEN}✓ Added $install_dir to PATH in $(basename "$profile_file")${NC}"
+            echo -e "${YELLOW}  Run ${GREEN}source ~/${profile_file##*/}${YELLOW} or open a new terminal to use ${GREEN}haclawx${YELLOW} globally${NC}"
+        else
+            echo -e "${GREEN}✓ PATH entry already exists in $(basename "$profile_file")${NC}"
+        fi
+        return 0
+    fi
+
+    echo -e "${YELLOW}⚠ Could not auto-register PATH. Add manually:${NC}"
+    echo -e "  ${GREEN}export PATH=\"$install_dir:\$PATH\"${NC}"
+    return 1
+}
+
+# Remove HAClaw-OS PATH registration (for uninstall)
+# Usage: unregister_path
+unregister_path() {
+    local link_dir="$HOME/.local/bin"
+
+    # Remove symlink
+    if [ -L "$link_dir/haclawx" ]; then
+        rm -f "$link_dir/haclawx"
+        echo -e "${GREEN}✓ Removed symlink: $link_dir/haclawx${NC}"
+    fi
+
+    # Remove PATH entries from shell profiles
+    local marker='# HAClaw-OS PATH'
+    for profile_file in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.profile"; do
+        if [ -f "$profile_file" ] && grep -qF "$marker" "$profile_file" 2>/dev/null; then
+            # Remove the marker line and the export line following it
+            sed_inplace "/$marker/,+1d" "$profile_file"
+            echo -e "${GREEN}✓ Removed PATH entry from $(basename "$profile_file")${NC}"
+        fi
+    done
 }
 
 # Download a file with China proxy fallback
@@ -428,10 +519,10 @@ apply_image_mirror() {
         return
     fi
     # The mirror prefix replaces the default Docker Hub pull path
-    # e.g., knowhunters/haclaw:latest → docker.1ms.run/knowhunters/haclaw:latest
+    # e.g., knowhunters/haclawx:latest → docker.1ms.run/knowhunters/haclawx:latest
     local mirror_host
     mirror_host=$(echo "$DOCKER_MIRROR" | sed 's|https\?://||')
-    local original_image="knowhunters/haclaw"
+    local original_image="knowhunters/haclawx"
     local mirrored_image="${mirror_host}/${original_image}"
     if grep -q "$mirrored_image" "$compose_file" 2>/dev/null; then
         return  # Already mirrored
@@ -446,7 +537,7 @@ revert_image_mirror() {
     if [ -z "$DOCKER_MIRROR" ]; then return; fi
     local mirror_host
     mirror_host=$(echo "$DOCKER_MIRROR" | sed 's|https\?://||')
-    local original_image="knowhunters/haclaw"
+    local original_image="knowhunters/haclawx"
     local mirrored_image="${mirror_host}/${original_image}"
     if grep -q "$mirrored_image" "$compose_file" 2>/dev/null; then
         sed_inplace "s|image: ${mirrored_image}|image: ${original_image}|" "$compose_file"
@@ -568,14 +659,14 @@ install_docker_engine() {
 # Prompt user for a new Docker instance name, then call docker_install
 docker_install_new() {
     # Auto-detect next available instance name
-    local default_name="haclaw"
-    if [ -f "docker-compose.yml" ] && grep -q "knowhunters/haclaw" "docker-compose.yml" 2>/dev/null; then
+    local default_name="haclawx"
+    if [ -f "docker-compose.yml" ] && grep -q "knowhunters/haclawx" "docker-compose.yml" 2>/dev/null; then
         # Default instance exists, find next available number
         local n=2
-        while [ -f "docker-compose-haclaw-${n}.yml" ]; do
+        while [ -f "docker-compose-haclawx-${n}.yml" ]; do
             n=$((n + 1))
         done
-        default_name="haclaw-${n}"
+        default_name="haclawx-${n}"
     fi
 
     echo ""
@@ -583,7 +674,7 @@ docker_install_new() {
     echo -e "每个 Docker 部署需要一个唯一的实例名称。${NC}"
     echo ""
     echo -e "Suggested instance name: ${GREEN}${default_name}${NC}"
-    echo -e "Examples: haclaw-2, haclaw-dev, haclaw-test"
+    echo -e "Examples: haclawx-2, haclawx-dev, haclawx-test"
     echo ""
     echo -n "Enter instance name (or press Enter for '${default_name}') / 输入实例名称（回车使用 '${default_name}'）: "
     read -r INSTANCE_NAME </dev/tty
@@ -596,7 +687,7 @@ docker_install_new() {
 
     # Check if this instance name is already in use
     local check_file="docker-compose.yml"
-    if [ "$INSTANCE_NAME" != "haclaw" ]; then
+    if [ "$INSTANCE_NAME" != "haclawx" ]; then
         check_file="docker-compose-${INSTANCE_NAME}.yml"
     fi
     if [ -f "$check_file" ]; then
@@ -613,22 +704,22 @@ docker_install_new() {
     docker_install "$INSTANCE_NAME"
 }
 
-# Install HAClaw via Docker
+# Install HAClaw-OS via Docker
 # Usage: docker_install [instance_name]
-#   instance_name: unique name for this Docker deployment (default: haclaw)
-#   When not "haclaw", compose file is saved as docker-compose-{name}.yml
+#   instance_name: unique name for this Docker deployment (default: haclawx)
+#   When not "haclawx", compose file is saved as docker-compose-{name}.yml
 #   with unique container name and volume names for isolation.
 docker_install() {
-    local instance_name="${1:-haclaw}"
+    local instance_name="${1:-haclawx}"
     local compose_file="docker-compose.yml"
-    if [ "$instance_name" != "haclaw" ]; then
+    if [ "$instance_name" != "haclawx" ]; then
         compose_file="docker-compose-${instance_name}.yml"
     fi
 
     echo ""
     echo -e "${YELLOW}═══════════════════════════════════════════════════════════${NC}"
-    echo -e "${YELLOW}  Install HAClaw (Docker) / 安装 HAClaw (Docker)${NC}"
-    if [ "$instance_name" != "haclaw" ]; then
+    echo -e "${YELLOW}  Install HAClaw-OS (Docker) / 安装 HAClaw-OS (Docker)${NC}"
+    if [ "$instance_name" != "haclawx" ]; then
         echo -e "${YELLOW}  Instance / 实例: ${instance_name}${NC}"
     fi
     echo -e "${YELLOW}═══════════════════════════════════════════════════════════${NC}"
@@ -695,13 +786,13 @@ docker_install() {
     echo -e "${GREEN}✓ Downloaded / 已下载${NC}"
 
     # Step 3.5: Customize compose file for non-default instance (unique names for isolation)
-    if [ "$instance_name" != "haclaw" ]; then
+    if [ "$instance_name" != "haclawx" ]; then
         echo -e "${CYAN}Customizing for instance '$instance_name'... / 正在为实例 '$instance_name' 定制配置...${NC}"
-        sed_inplace "s/container_name: haclaw/container_name: ${instance_name}/" "$compose_file"
-        sed_inplace "s/name: haclaw-data/name: ${instance_name}-data/" "$compose_file"
+        sed_inplace "s/container_name: haclawx/container_name: ${instance_name}/" "$compose_file"
+        sed_inplace "s/name: haclawx-data/name: ${instance_name}-data/" "$compose_file"
         sed_inplace "s/name: openclaw-data/name: ${instance_name}-openclaw-data/" "$compose_file"
-        sed_inplace "s/name: haclaw-runtime/name: ${instance_name}-runtime/" "$compose_file"
-        sed_inplace "s/name: haclaw-net/name: ${instance_name}-net/" "$compose_file"
+        sed_inplace "s/name: haclawx-runtime/name: ${instance_name}-runtime/" "$compose_file"
+        sed_inplace "s/name: haclawx-net/name: ${instance_name}-net/" "$compose_file"
         echo -e "${GREEN}✓ Configured for instance: $instance_name${NC}"
     fi
 
@@ -782,15 +873,15 @@ docker_install() {
     fi
 
     echo ""
-    echo -e "${BLUE}Starting HAClaw container... / 正在启动 HAClaw 容器...${NC}"
+    echo -e "${BLUE}Starting HAClaw-OS container... / 正在启动 HAClaw-OS 容器...${NC}"
     $compose_run up -d
 
     # Step 6: Wait for health check
     # The entrypoint waits up to 120s for the gateway on first boot, then starts
-    # HAClaw. We need to wait longer than 120s to allow the full startup chain.
+    # HAClaw-OS. We need to wait longer than 120s to allow the full startup chain.
     echo ""
-    echo -e "${CYAN}Waiting for HAClaw to become ready (first boot may take ~2 min)...${NC}"
-    echo -e "${CYAN}等待 HAClaw 就绪（首次启动可能需要约 2 分钟）...${NC}"
+    echo -e "${CYAN}Waiting for HAClaw-OS to become ready (first boot may take ~2 min)...${NC}"
+    echo -e "${CYAN}等待 HAClaw-OS 就绪（首次启动可能需要约 2 分钟）...${NC}"
     local max_wait=150
     local waited=0
     while [ $waited -lt $max_wait ]; do
@@ -806,12 +897,12 @@ docker_install() {
     printf "\r                          \r"
 
     if [ $waited -ge $max_wait ]; then
-        echo -e "${YELLOW}⚠ HAClaw is still starting. Check status with:"
-        echo -e "  HAClaw 仍在启动中，请用以下命令检查状态：${NC}"
+        echo -e "${YELLOW}⚠ HAClaw-OS is still starting. Check status with:"
+        echo -e "  HAClaw-OS 仍在启动中，请用以下命令检查状态：${NC}"
         echo -e "  ${GREEN}$compose_run ps${NC}"
         echo -e "  ${GREEN}$compose_run logs --tail 30${NC}"
     else
-        echo -e "${GREEN}✓ HAClaw is ready! / HAClaw 已就绪！${NC}"
+        echo -e "${GREEN}✓ HAClaw-OS is ready! / HAClaw-OS 已就绪！${NC}"
     fi
 
     echo ""
@@ -823,12 +914,12 @@ docker_install() {
     echo ""
     # Resolve actual volume names from compose file (handles custom instance renaming)
     local vol_data vol_openclaw vol_runtime
-    vol_data=$(grep -A1 'haclaw-data:' "$compose_file" 2>/dev/null | grep 'name:' | awk '{print $2}' || echo "${instance_name}-data")
-    vol_openclaw=$(grep -A1 'haclaw-openclaw-data:' "$compose_file" 2>/dev/null | grep 'name:' | awk '{print $2}' || echo "${instance_name}-openclaw-data")
-    vol_runtime=$(grep -A1 'haclaw-runtime:' "$compose_file" 2>/dev/null | grep 'name:' | awk '{print $2}' || echo "${instance_name}-runtime")
+    vol_data=$(grep -A1 'haclawx-data:' "$compose_file" 2>/dev/null | grep 'name:' | awk '{print $2}' || echo "${instance_name}-data")
+    vol_openclaw=$(grep -A1 'haclawx-openclaw-data:' "$compose_file" 2>/dev/null | grep 'name:' | awk '{print $2}' || echo "${instance_name}-openclaw-data")
+    vol_runtime=$(grep -A1 'haclawx-runtime:' "$compose_file" 2>/dev/null | grep 'name:' | awk '{print $2}' || echo "${instance_name}-runtime")
     local vol_base="/var/lib/docker/volumes"
     echo -e "${CYAN}📂 Data volumes (host path) / 数据卷（宿主机路径）：${NC}"
-    echo -e "  HAClaw:  ${GREEN}${vol_base}/${vol_data}/_data${NC}"
+    echo -e "  HAClaw-OS:  ${GREEN}${vol_base}/${vol_data}/_data${NC}"
     echo -e "  OpenClaw:   ${GREEN}${vol_base}/${vol_openclaw}/_data${NC}"
     echo -e "  Runtime:    ${GREEN}${vol_base}/${vol_runtime}/_data${NC}"
     echo ""
@@ -850,17 +941,17 @@ docker_install() {
     exit 0
 }
 
-# Update HAClaw Docker deployment
+# Update HAClaw-OS Docker deployment
 # Usage: docker_update <compose_file> <instance_name>
 docker_update() {
     local compose_file="${1:-$DOCKER_COMPOSE_FILE}"
-    local instance_name="${2:-haclaw}"
+    local instance_name="${2:-haclawx}"
     local compose_run="$COMPOSE_CMD -f $compose_file -p $instance_name"
 
     echo ""
     echo -e "${YELLOW}═══════════════════════════════════════════════════════════${NC}"
-    echo -e "${YELLOW}  Update HAClaw (Docker) / 更新 HAClaw (Docker)${NC}"
-    if [ "$instance_name" != "haclaw" ]; then
+    echo -e "${YELLOW}  Update HAClaw-OS (Docker) / 更新 HAClaw-OS (Docker)${NC}"
+    if [ "$instance_name" != "haclawx" ]; then
         echo -e "${YELLOW}  Instance / 实例: ${instance_name}${NC}"
     fi
     echo -e "${YELLOW}═══════════════════════════════════════════════════════════${NC}"
@@ -933,7 +1024,7 @@ docker_update() {
 
     # Wait for health check
     echo ""
-    echo -e "${CYAN}Waiting for HAClaw to become ready... / 等待 HAClaw 就绪...${NC}"
+    echo -e "${CYAN}Waiting for HAClaw-OS to become ready... / 等待 HAClaw-OS 就绪...${NC}"
     local max_wait=150
     local waited=0
     while [ $waited -lt $max_wait ]; do
@@ -963,21 +1054,21 @@ docker_update() {
     echo ""
 }
 
-# Uninstall HAClaw Docker deployment
+# Uninstall HAClaw-OS Docker deployment
 # Usage: docker_uninstall <compose_file> <instance_name>
 docker_uninstall() {
     local compose_file="${1:-$DOCKER_COMPOSE_FILE}"
-    local instance_name="${2:-haclaw}"
+    local instance_name="${2:-haclawx}"
     local compose_run="$COMPOSE_CMD -f $compose_file -p $instance_name"
 
     echo ""
     echo -e "${YELLOW}═══════════════════════════════════════════════════════════${NC}"
-    echo -e "${YELLOW}  Uninstall HAClaw (Docker: ${instance_name}) / 卸载 HAClaw (Docker: ${instance_name})${NC}"
+    echo -e "${YELLOW}  Uninstall HAClaw-OS (Docker: ${instance_name}) / 卸载 HAClaw-OS (Docker: ${instance_name})${NC}"
     echo -e "${YELLOW}═══════════════════════════════════════════════════════════${NC}"
     echo ""
 
     echo -e "${CYAN}This will: / 将执行：${NC}"
-    echo "  - Stop and remove the HAClaw container / 停止并删除 HAClaw 容器"
+    echo "  - Stop and remove the HAClaw-OS container / 停止并删除 HAClaw-OS 容器"
     echo ""
 
     # Ask about volumes
@@ -1037,7 +1128,7 @@ docker_uninstall() {
         for m in "${DOCKER_MIRRORS[@]}"; do
             local mhost
             mhost=$(echo "$m" | sed 's|https\?://||')
-            docker rmi "${mhost}/knowhunters/haclaw:latest" 2>/dev/null || true
+            docker rmi "${mhost}/knowhunters/haclawx:latest" 2>/dev/null || true
         done
         echo -e "${GREEN}✓ Image removed / 镜像已删除${NC}"
     fi
@@ -1059,7 +1150,7 @@ docker_uninstall() {
 # Usage: docker_management_menu <compose_file> <instance_name>
 docker_management_menu() {
     local compose_file="${1:-$DOCKER_COMPOSE_FILE}"
-    local instance_name="${2:-haclaw}"
+    local instance_name="${2:-haclawx}"
     local compose_run="$COMPOSE_CMD -f $compose_file -p $instance_name"
 
     check_docker_compose || return 1
@@ -1120,12 +1211,12 @@ docker_management_menu() {
         2)
             if [ "$is_running" = true ]; then
                 echo ""
-                echo -e "${BLUE}Stopping HAClaw container... / 正在停止 HAClaw 容器...${NC}"
+                echo -e "${BLUE}Stopping HAClaw-OS container... / 正在停止 HAClaw-OS 容器...${NC}"
                 $compose_run stop
                 echo -e "${GREEN}✓ Stopped / 已停止${NC}"
             else
                 echo ""
-                echo -e "${BLUE}Starting HAClaw container... / 正在启动 HAClaw 容器...${NC}"
+                echo -e "${BLUE}Starting HAClaw-OS container... / 正在启动 HAClaw-OS 容器...${NC}"
                 $compose_run up -d
                 sleep 2
                 echo -e "${GREEN}✓ Started / 已启动${NC}"
@@ -1134,7 +1225,7 @@ docker_management_menu() {
             ;;
         3)
             echo ""
-            echo -e "${BLUE}Restarting HAClaw container... / 正在重启 HAClaw 容器...${NC}"
+            echo -e "${BLUE}Restarting HAClaw-OS container... / 正在重启 HAClaw-OS 容器...${NC}"
             $compose_run restart
             echo -e "${GREEN}✓ Restarted / 已重启${NC}"
             ;;
@@ -1150,10 +1241,10 @@ docker_management_menu() {
             $compose_run ps
             echo ""
             if docker ps --filter "name=^${container_name}$" --filter "status=running" --format '{{.Names}}' 2>/dev/null | grep -q .; then
-                echo -e "${GREEN}✓ HAClaw is running / HAClaw 运行中${NC}"
+                echo -e "${GREEN}✓ HAClaw-OS is running / HAClaw-OS 运行中${NC}"
                 print_access_urls "$PORT"
             else
-                echo -e "${YELLOW}HAClaw is not running / HAClaw 未运行${NC}"
+                echo -e "${YELLOW}HAClaw-OS is not running / HAClaw-OS 未运行${NC}"
             fi
             ;;
         6)
@@ -1179,7 +1270,7 @@ LOGO
 echo -e "${NC}"
 
 # 获取最新版本号
-REPO="HAClaw/HAClaw"
+REPO="HAClaw-OS/HAClaw-OS"
 API_URL="https://api.github.com/repos/$REPO/releases/latest"
 
 # Primary: get version via 302 redirect (no API quota cost)
@@ -1202,7 +1293,7 @@ fi
 # Remove 'v' prefix for display and comparison
 LATEST_VERSION="${LATEST_VERSION_RAW#v}"
 
-echo -e "${CYAN}:: HAClaw Launcher - ${LATEST_VERSION} ::${NC}"
+echo -e "${CYAN}:: HAClaw-OS Launcher - ${LATEST_VERSION} ::${NC}"
 echo ""
 
 # Detect all existing installations simultaneously
@@ -1224,11 +1315,11 @@ if [ "$IS_CONTAINER" = false ] && check_docker && check_docker_compose; then
     # Scan for all compose files that reference our image
     for cf in docker-compose.yml docker-compose-*.yml; do
         [ -f "$cf" ] || continue
-        if grep -q "knowhunters/haclaw" "$cf" 2>/dev/null; then
+        if grep -q "knowhunters/haclawx" "$cf" 2>/dev/null; then
             DOCKER_INSTANCES+=("$cf")
             # Extract instance name from filename
             if [ "$cf" = "docker-compose.yml" ]; then
-                DOCKER_INSTANCE_NAMES+=("haclaw")
+                DOCKER_INSTANCE_NAMES+=("haclawx")
             else
                 local_name="${cf#docker-compose-}"
                 local_name="${local_name%.yml}"
@@ -1239,7 +1330,7 @@ if [ "$IS_CONTAINER" = false ] && check_docker && check_docker_compose; then
             DOCKER_INSTANCE_PORTS+=("${local_port:-$DEFAULT_PORT}")
             # Extract container name for version/status check
             local_container=$(grep -oP 'container_name:\s*\K\S+' "$cf" 2>/dev/null | head -1 || true)
-            local_container="${local_container:-haclaw}"
+            local_container="${local_container:-haclawx}"
             # Version
             local_ver=$(docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' "$local_container" 2>/dev/null || echo "unknown")
             [ "$local_ver" = "<no value>" ] && local_ver="unknown"
@@ -1265,11 +1356,11 @@ if check_installed; then
     get_config_port
 fi
 
-# Function to uninstall HAClaw
+# Function to uninstall HAClaw-OS
 uninstall() {
     echo ""
     echo -e "${YELLOW}═══════════════════════════════════════════════════════════${NC}"
-    echo -e "${YELLOW}  Uninstall HAClaw / 卸载 HAClaw${NC}"
+    echo -e "${YELLOW}  Uninstall HAClaw-OS / 卸载 HAClaw-OS${NC}"
     echo -e "${YELLOW}═══════════════════════════════════════════════════════════${NC}"
     echo ""
     
@@ -1299,11 +1390,11 @@ uninstall() {
             # Quick uninstall - remove everything
             echo ""
             echo -e "${CYAN}Quick uninstall will remove: / 快速卸载将删除：${NC}"
-            echo "  - $INSTALLED_LOCATION (HAClaw)"
+            echo "  - $INSTALLED_LOCATION (HAClaw-OS)"
             
             SYSTEMD_UNINSTALL=false
             if check_systemd_service; then
-                echo "  - haclaw.service (systemd service / systemd 服务)"
+                echo "  - haclawx.service (systemd service / systemd 服务)"
                 echo -e "    ${YELLOW}Note: Service will be stopped automatically / 注意：服务将自动停止${NC}"
                 SYSTEMD_UNINSTALL=true
             fi
@@ -1337,7 +1428,7 @@ uninstall() {
             SYSTEMD_UNINSTALL=false
             if check_systemd_service; then
                 echo -e "${YELLOW}⚠  Systemd service detected / 检测到 systemd 服务：${NC}"
-                echo "  - haclaw.service ($SYSTEMD_SERVICE_TYPE-level)"
+                echo "  - haclawx.service ($SYSTEMD_SERVICE_TYPE-level)"
                 echo -e "    ${CYAN}Service will be stopped automatically during uninstall / 卸载时将自动停止服务${NC}"
                 echo ""
                 echo -n "Also uninstall systemd service? / 同时卸载 systemd 服务？ [Y/n] "
@@ -1380,7 +1471,7 @@ uninstall() {
             
             echo ""
             echo -e "${YELLOW}Summary / 摘要：${NC}"
-            echo "  - HAClaw：${RED}will be removed / 将被删除${NC}"
+            echo "  - HAClaw-OS：${RED}will be removed / 将被删除${NC}"
             if [ "$SYSTEMD_UNINSTALL" = true ]; then
                 echo "  - Systemd service / systemd 服务：${RED}will be removed / 将被删除${NC}"
             fi
@@ -1404,7 +1495,7 @@ uninstall() {
             fi
         fi
     else
-        echo -e "${RED}HAClaw is not installed / HAClaw 未安装${NC}"
+        echo -e "${RED}HAClaw-OS is not installed / HAClaw-OS 未安装${NC}"
         exit 1
     fi
 }
@@ -1423,13 +1514,13 @@ perform_uninstall() {
         if [ "$SYSTEMD_SERVICE_TYPE" = "user" ]; then
             # Stop and disable user service
             echo -e "${YELLOW}Stopping user service... / 正在停止用户级服务...${NC}"
-            systemctl --user stop haclaw 2>/dev/null || true
+            systemctl --user stop haclawx 2>/dev/null || true
             echo -e "${YELLOW}Disabling service... / 正在禁用服务...${NC}"
-            systemctl --user disable haclaw 2>/dev/null || true
+            systemctl --user disable haclawx 2>/dev/null || true
             systemctl --user daemon-reload 2>/dev/null || true
             
             # Remove user unit file
-            USER_SERVICE_PATH="$HOME/.config/systemd/user/haclaw.service"
+            USER_SERVICE_PATH="$HOME/.config/systemd/user/haclawx.service"
             if [ -f "$USER_SERVICE_PATH" ]; then
                 rm -f "$USER_SERVICE_PATH"
                 echo -e "${GREEN}✓ Removed user systemd service / 已删除用户级 systemd 服务${NC}"
@@ -1437,13 +1528,13 @@ perform_uninstall() {
         else
             # Stop and disable system service
             echo -e "${YELLOW}Stopping system service... / 正在停止系统级服务...${NC}"
-            sudo systemctl stop haclaw 2>/dev/null || true
+            sudo systemctl stop haclawx 2>/dev/null || true
             echo -e "${YELLOW}Disabling service... / 正在禁用服务...${NC}"
-            sudo systemctl disable haclaw 2>/dev/null || true
+            sudo systemctl disable haclawx 2>/dev/null || true
             sudo systemctl daemon-reload 2>/dev/null || true
             
             # Remove system unit file
-            SYSTEM_SERVICE_PATH="/etc/systemd/system/haclaw.service"
+            SYSTEM_SERVICE_PATH="/etc/systemd/system/haclawx.service"
             if [ -f "$SYSTEM_SERVICE_PATH" ]; then
                 sudo rm -f "$SYSTEM_SERVICE_PATH"
                 echo -e "${GREEN}✓ Removed system systemd service / 已删除系统级 systemd 服务${NC}"
@@ -1451,13 +1542,16 @@ perform_uninstall() {
         fi
     fi
     
+    # Remove PATH registration (symlink + shell profile entries)
+    unregister_path
+    
     # Remove binary (handle relative path)
     if [[ "$INSTALLED_LOCATION" == ./* ]]; then
         rm -f "$INSTALLED_LOCATION"
     else
         rm -f "$INSTALLED_LOCATION"
     fi
-    echo -e "${GREEN}✓ Removed HAClaw / 已删除 HAClaw${NC}"
+    echo -e "${GREEN}✓ Removed HAClaw-OS / 已删除 HAClaw-OS${NC}"
     
     # Remove config if requested
     if [ "$REMOVE_CONFIG" = true ]; then
@@ -1478,7 +1572,7 @@ perform_uninstall() {
     exit 0
 }
 
-# Function to check if HAClaw is running
+# Function to check if HAClaw-OS is running
 check_process_running() {
     # Check if binary process is running
     if pgrep -f "$BINARY_NAME" > /dev/null 2>&1; then
@@ -1488,11 +1582,11 @@ check_process_running() {
     # Check if systemd service is running
     if check_systemd_service; then
         if [ "$SYSTEMD_SERVICE_TYPE" = "user" ]; then
-            if systemctl --user is-active --quiet haclaw 2>/dev/null; then
+            if systemctl --user is-active --quiet haclawx 2>/dev/null; then
                 return 0
             fi
         else
-            if systemctl is-active --quiet haclaw 2>/dev/null; then
+            if systemctl is-active --quiet haclawx 2>/dev/null; then
                 return 0
             fi
         fi
@@ -1519,10 +1613,10 @@ stop_port_process() {
     fi
 }
 
-# Function to stop HAClaw
-stop_haclaw() {
+# Function to stop HAClaw-OS
+stop_haclawx() {
     ensure_user_systemd_env
-    echo -e "${CYAN}Stopping HAClaw... / 正在停止 HAClaw...${NC}"
+    echo -e "${CYAN}Stopping HAClaw-OS... / 正在停止 HAClaw-OS...${NC}"
     
     # Try to stop systemd service first
     if check_systemd_service; then
@@ -1531,9 +1625,9 @@ stop_haclaw() {
         else
             echo -e "${BLUE}Stopping systemd service... / 正在停止 systemd 服务...${NC}"
             if [ "$SYSTEMD_SERVICE_TYPE" = "user" ]; then
-                systemctl --user stop haclaw > /dev/null 2>&1 || true
+                systemctl --user stop haclawx > /dev/null 2>&1 || true
             else
-                sudo systemctl stop haclaw > /dev/null 2>&1 || true
+                sudo systemctl stop haclawx > /dev/null 2>&1 || true
             fi
             sleep 2
         fi
@@ -1549,13 +1643,13 @@ stop_haclaw() {
     # Also kill any process holding the configured port (e.g. stale node from dev)
     stop_port_process $PORT
     
-    echo -e "${GREEN}✓ HAClaw stopped / HAClaw 已停止${NC}"
+    echo -e "${GREEN}✓ HAClaw-OS stopped / HAClaw-OS 已停止${NC}"
 }
 
-# Function to start HAClaw
-start_haclaw() {
+# Function to start HAClaw-OS
+start_haclawx() {
     ensure_user_systemd_env
-    echo -e "${CYAN}Starting HAClaw... / 正在启动 HAClaw...${NC}"
+    echo -e "${CYAN}Starting HAClaw-OS... / 正在启动 HAClaw-OS...${NC}"
     
     # Kill any stale process or port holder to avoid conflict
     if pgrep -f "$BINARY_NAME" > /dev/null 2>&1; then
@@ -1576,20 +1670,20 @@ start_haclaw() {
         else
             echo -e "${BLUE}Starting systemd service... / 正在启动 systemd 服务...${NC}"
             if [ "$SYSTEMD_SERVICE_TYPE" = "user" ]; then
-                systemctl --user start haclaw > /dev/null 2>&1
+                systemctl --user start haclawx > /dev/null 2>&1
             else
-                sudo systemctl start haclaw > /dev/null 2>&1
+                sudo systemctl start haclawx > /dev/null 2>&1
             fi
             sleep 2
             
             # Check if started successfully
             if [ "$SYSTEMD_SERVICE_TYPE" = "user" ]; then
-                if systemctl --user is-active --quiet haclaw 2>/dev/null; then
+                if systemctl --user is-active --quiet haclawx 2>/dev/null; then
                     echo -e "${GREEN}✓ Service started successfully / 服务启动成功${NC}"
                     return 0
                 fi
             else
-                if systemctl is-active --quiet haclaw 2>/dev/null; then
+                if systemctl is-active --quiet haclawx 2>/dev/null; then
                     echo -e "${GREEN}✓ Service started successfully / 服务启动成功${NC}"
                     return 0
                 fi
@@ -1598,8 +1692,8 @@ start_haclaw() {
     fi
     
     # Fallback: start binary directly
-    local err_file="/tmp/.haclaw-start-err.log"
-    echo -e "${BLUE}Starting HAClaw on port $PORT... / 正在启动 HAClaw (端口 $PORT)...${NC}"
+    local err_file="/tmp/.haclawx-start-err.log"
+    echo -e "${BLUE}Starting HAClaw-OS on port $PORT... / 正在启动 HAClaw-OS (端口 $PORT)...${NC}"
     if [ "$PORT" -ne "$DEFAULT_PORT" ]; then
         "$INSTALLED_LOCATION" --port "$PORT" > /dev/null 2>"$err_file" &
     else
@@ -1608,11 +1702,11 @@ start_haclaw() {
     sleep 2
     
     if pgrep -f "$BINARY_NAME" > /dev/null 2>&1; then
-        echo -e "${GREEN}✓ HAClaw started successfully / HAClaw 启动成功${NC}"
+        echo -e "${GREEN}✓ HAClaw-OS started successfully / HAClaw-OS 启动成功${NC}"
         rm -f "$err_file"
         return 0
     else
-        echo -e "${YELLOW}⚠ Failed to start HAClaw / 启动 HAClaw 失败${NC}"
+        echo -e "${YELLOW}⚠ Failed to start HAClaw-OS / 启动 HAClaw-OS 失败${NC}"
         if [ -s "$err_file" ]; then
             echo -e "${RED}  Error output / 错误输出:${NC}"
             echo -e "${RED}  $(cat "$err_file")${NC}"
@@ -1624,11 +1718,11 @@ start_haclaw() {
     fi
 }
 
-# Function to update HAClaw
+# Function to update HAClaw-OS
 update() {
     echo ""
     echo -e "${YELLOW}═══════════════════════════════════════════════════════════${NC}"
-    echo -e "${YELLOW}  Update HAClaw / 更新 HAClaw${NC}"
+    echo -e "${YELLOW}  Update HAClaw-OS / 更新 HAClaw-OS${NC}"
     echo -e "${YELLOW}═══════════════════════════════════════════════════════════${NC}"
     echo ""
     
@@ -1673,7 +1767,7 @@ update() {
     fi
 
     # Get download URL for update
-    ASSET_PATTERN="haclaw-${OS}-${ARCH}"
+    ASSET_PATTERN="haclawx-${OS}-${ARCH}"
     DOWNLOAD_URL=""
 
     # Primary: construct direct download URL (no API needed, no rate limit)
@@ -1722,13 +1816,13 @@ update() {
         fi
     fi
     
-    # Check if HAClaw is currently running
+    # Check if HAClaw-OS is currently running
     echo ""
     if check_process_running; then
-        echo -e "${YELLOW}⚠ HAClaw is currently running / HAClaw 正在运行${NC}"
+        echo -e "${YELLOW}⚠ HAClaw-OS is currently running / HAClaw-OS 正在运行${NC}"
         echo -e "${YELLOW}The program needs to be stopped before updating. / 更新前需要停止程序。${NC}"
         echo ""
-        echo -n "Stop HAClaw now and continue update? / 立即停止 HAClaw 并继续更新？ [Y/n] "
+        echo -n "Stop HAClaw-OS now and continue update? / 立即停止 HAClaw-OS 并继续更新？ [Y/n] "
         read -n 1 -r </dev/tty
         echo
         if [[ $REPLY =~ ^[Nn]$ ]]; then
@@ -1736,8 +1830,8 @@ update() {
             exit 0
         fi
         
-        # Stop HAClaw
-        stop_haclaw
+        # Stop HAClaw-OS
+        stop_haclawx
         
         # Wait a moment to ensure process is fully stopped
         sleep 2
@@ -1767,13 +1861,13 @@ update() {
     echo -e "${GREEN}═══════════════════════════════════════════════════════════${NC}"
     echo ""
     
-    # Ask if user wants to restart HAClaw
-    echo -n "Start HAClaw now? / 立即启动 HAClaw？ [Y/n] "
+    # Ask if user wants to restart HAClaw-OS
+    echo -n "Start HAClaw-OS now? / 立即启动 HAClaw-OS？ [Y/n] "
     read -n 1 -r </dev/tty
     echo
     
     if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-        start_haclaw
+        start_haclawx
         
         # Show access URL if running
         if check_process_running; then
@@ -1782,8 +1876,8 @@ update() {
             echo ""
             if check_systemd_service; then
                 echo -e "${YELLOW}Service management commands / 服务管理命令：${NC}"
-                echo -e "  ${GREEN}systemctl --user status haclaw${NC}   - Check status / 查看状态"
-                echo -e "  ${GREEN}systemctl --user stop haclaw${NC}     - Stop service / 停止服务"
+                echo -e "  ${GREEN}systemctl --user status haclawx${NC}   - Check status / 查看状态"
+                echo -e "  ${GREEN}systemctl --user stop haclawx${NC}     - Stop service / 停止服务"
             fi
         fi
     else
@@ -1792,9 +1886,9 @@ update() {
         if check_systemd_service; then
             echo ""
             echo -e "${CYAN}Service management commands / 服务管理命令：${NC}"
-            echo -e "  ${GREEN}systemctl --user start haclaw${NC}    - Start service / 启动服务"
-            echo -e "  ${GREEN}systemctl --user stop haclaw${NC}     - Stop service / 停止服务"
-            echo -e "  ${GREEN}systemctl --user status haclaw${NC}   - Check status / 查看状态"
+            echo -e "  ${GREEN}systemctl --user start haclawx${NC}    - Start service / 启动服务"
+            echo -e "  ${GREEN}systemctl --user stop haclawx${NC}     - Stop service / 停止服务"
+            echo -e "  ${GREEN}systemctl --user status haclawx${NC}   - Check status / 查看状态"
         fi
     fi
     
@@ -1818,7 +1912,7 @@ if [ "$HAS_DOCKER" = true ] || [ "$HAS_BINARY" = true ]; then
             local_name="${DOCKER_INSTANCE_NAMES[$i]}"
             local_running="${DOCKER_INSTANCE_RUNNING[$i]}"
             local_label="Docker"
-            if [ ${#DOCKER_INSTANCES[@]} -gt 1 ] || [ "$local_name" != "haclaw" ]; then
+            if [ ${#DOCKER_INSTANCES[@]} -gt 1 ] || [ "$local_name" != "haclawx" ]; then
                 local_label="Docker [$local_name]"
             fi
             if [ "$local_running" = "true" ]; then
@@ -1834,23 +1928,23 @@ if [ "$HAS_DOCKER" = true ] || [ "$HAS_BINARY" = true ]; then
         BINARY_SERVICE_STATUS=""
         if check_systemd_service; then
             if [ "$SYSTEMD_SERVICE_TYPE" = "user" ]; then
-                if systemctl --user is-active --quiet haclaw 2>/dev/null; then
+                if systemctl --user is-active --quiet haclawx 2>/dev/null; then
                     BINARY_SERVICE_RUNNING=true
                     BINARY_SERVICE_STATUS="${GREEN}Running / 运行中${NC}"
                 else
                     BINARY_SERVICE_STATUS="${YELLOW}Stopped / 已停止${NC}"
                 fi
             else
-                if systemctl is-active --quiet haclaw 2>/dev/null; then
+                if systemctl is-active --quiet haclawx 2>/dev/null; then
                     BINARY_SERVICE_RUNNING=true
                     BINARY_SERVICE_STATUS="${GREEN}Running / 运行中${NC}"
                 else
                     BINARY_SERVICE_STATUS="${YELLOW}Stopped / 已停止${NC}"
                 fi
             fi
-            echo -e "  📦 HAClaw: ${GREEN}v${CURRENT_VERSION}${NC} ($BINARY_SERVICE_STATUS) at $INSTALLED_LOCATION"
+            echo -e "  📦 HAClaw-OS: ${GREEN}v${CURRENT_VERSION}${NC} ($BINARY_SERVICE_STATUS) at $INSTALLED_LOCATION"
         else
-            echo -e "  📦 HAClaw: ${GREEN}v${CURRENT_VERSION}${NC} at $INSTALLED_LOCATION"
+            echo -e "  📦 HAClaw-OS: ${GREEN}v${CURRENT_VERSION}${NC} at $INSTALLED_LOCATION"
         fi
     fi
 
@@ -1867,7 +1961,7 @@ if [ "$HAS_DOCKER" = true ]; then
     for i in "${!DOCKER_INSTANCES[@]}"; do
         local_name="${DOCKER_INSTANCE_NAMES[$i]}"
         local_label="Manage Docker"
-        if [ ${#DOCKER_INSTANCES[@]} -gt 1 ] || [ "$local_name" != "haclaw" ]; then
+        if [ ${#DOCKER_INSTANCES[@]} -gt 1 ] || [ "$local_name" != "haclawx" ]; then
             local_label="Manage Docker [$local_name]"
         fi
         N=$((N + 1))
@@ -1878,12 +1972,12 @@ if [ "$HAS_DOCKER" = true ]; then
 fi
 
 if [ "$HAS_BINARY" = true ]; then
-    N=$((N + 1)); MENU_ITEMS+=("$N) Manage local HAClaw / 管理本机 HAClaw"); MENU_ACTIONS+=("manage_binary")
+    N=$((N + 1)); MENU_ITEMS+=("$N) Manage local HAClaw-OS / 管理本机 HAClaw-OS"); MENU_ACTIONS+=("manage_binary")
 fi
 
 if [ "$IS_CONTAINER" = false ]; then
     if [ "$HAS_BINARY" = false ]; then
-        N=$((N + 1)); MENU_ITEMS+=("$N) Install HAClaw locally / 在本机安装 HAClaw"); MENU_ACTIONS+=("install_binary")
+        N=$((N + 1)); MENU_ITEMS+=("$N) Install HAClaw-OS locally / 在本机安装 HAClaw-OS"); MENU_ACTIONS+=("install_binary")
     fi
     N=$((N + 1)); MENU_ITEMS+=("$N) New Docker deployment / 新建 Docker 部署"); MENU_ACTIONS+=("install_docker")
 fi
@@ -1920,7 +2014,7 @@ case "$SELECTED_ACTION" in
     manage_binary)
         # --- Binary management sub-menu ---
         echo ""
-        echo -e "${GREEN}✓ Local HAClaw / 本机 HAClaw${NC}"
+        echo -e "${GREEN}✓ Local HAClaw-OS / 本机 HAClaw-OS${NC}"
         echo -e "${CYAN}Location / 位置：${NC} $INSTALLED_LOCATION"
         echo -e "${CYAN}Current version / 当前版本：${NC} $CURRENT_VERSION"
         echo -e "${CYAN}Latest version / 最新版本：${NC} $LATEST_VERSION"
@@ -1971,19 +2065,19 @@ case "$SELECTED_ACTION" in
                     echo ""
                     echo -e "${BLUE}Starting systemd service... / 正在启动 systemd 服务...${NC}"
                     if [ "$SYSTEMD_SERVICE_TYPE" = "user" ]; then
-                        systemctl --user start haclaw
+                        systemctl --user start haclawx
                     else
-                        sudo systemctl start haclaw
+                        sudo systemctl start haclawx
                     fi
                     sleep 2
                     if [ "$SYSTEMD_SERVICE_TYPE" = "user" ]; then
-                        if systemctl --user is-active --quiet haclaw 2>/dev/null; then
+                        if systemctl --user is-active --quiet haclawx 2>/dev/null; then
                             echo -e "${GREEN}✓ Service started successfully / 服务启动成功${NC}"
                         else
                             echo -e "${YELLOW}⚠ Service failed to start / 服务启动失败${NC}"
                         fi
                     else
-                        if systemctl is-active --quiet haclaw 2>/dev/null; then
+                        if systemctl is-active --quiet haclawx 2>/dev/null; then
                             echo -e "${GREEN}✓ Service started successfully / 服务启动成功${NC}"
                         else
                             echo -e "${YELLOW}⚠ Service failed to start / 服务启动失败${NC}"
@@ -2049,7 +2143,7 @@ if [ "$(id -u)" = "0" ]; then
         echo -e "请执行以下命令切换用户并重新运行：${NC}"
         echo ""
         echo -e "  ${GREEN}su - openclaw${NC}"
-        echo -e "  ${GREEN}curl -fsSL https://raw.githubusercontent.com/HAClaw/HAClaw/main/install.sh | bash${NC}"
+        echo -e "  ${GREEN}curl -fsSL https://raw.githubusercontent.com/HAClaw-OS/HAClaw-OS/main/install.sh | bash${NC}"
         echo ""
         exit 0
     fi
@@ -2129,7 +2223,7 @@ if [ "$(id -u)" = "0" ]; then
         echo -e "请执行以下命令切换用户并重新运行：${NC}"
         echo ""
         echo -e "  ${GREEN}su - openclaw${NC}"
-        echo -e "  ${GREEN}curl -fsSL https://raw.githubusercontent.com/HAClaw/HAClaw/main/install.sh | bash${NC}"
+        echo -e "  ${GREEN}curl -fsSL https://raw.githubusercontent.com/HAClaw-OS/HAClaw-OS/main/install.sh | bash${NC}"
         echo ""
         echo -e "${YELLOW}⚠ Note: Use \"su - openclaw\" (with dash), not \"su openclaw\"."
         echo -e "  The dash ensures a full login session required for systemd services."
@@ -2185,14 +2279,14 @@ fi
 
 echo -e "${YELLOW}Fetching latest release info... (${LATEST_VERSION})${NC}"
 
-BINARY_NAME="haclaw"
-ASSET_PATTERN="haclaw-${OS}-${ARCH}"
+BINARY_NAME="haclawx"
+ASSET_PATTERN="haclawx-${OS}-${ARCH}"
 
 # Fallback for Windows (if run in git bash/wsl)
 if [[ "$OS" == *"mingw"* || "$OS" == *"cygwin"* ]]; then
     OS="windows"
-    ASSET_PATTERN="haclaw-windows-${ARCH}.exe"
-    BINARY_NAME="haclaw.exe"
+    ASSET_PATTERN="haclawx-windows-${ARCH}.exe"
+    BINARY_NAME="haclawx.exe"
 fi
 
 # Primary: construct direct download URL (no API needed, no rate limit)
@@ -2258,11 +2352,24 @@ echo -e "${GREEN}═════════════════════
 echo -e "${GREEN}✅ Installation complete! / 安装完成！${NC}"
 echo -e "${GREEN}═══════════════════════════════════════════════════════════${NC}"
 echo ""
-echo -e "${CYAN}HAClaw location / HAClaw 位置：${NC} $INSTALLED_BINARY"
+echo -e "${CYAN}HAClaw-OS location / HAClaw-OS 位置：${NC} $INSTALLED_BINARY"
 echo -e "${CYAN}Config & Data directory / 配置和数据目录：${NC} $(dirname "$INSTALLED_BINARY")/data"
 echo ""
 echo -e "${GREEN}✓ Installed in current directory / 已安装在当前目录${NC}"
 echo ""
+
+# Register in PATH so `haclawx` is available globally
+if ! command -v haclawx &>/dev/null || [ "$(command -v haclawx 2>/dev/null)" != "$INSTALLED_BINARY" ]; then
+    echo -e "${YELLOW}Would you like to add haclawx to PATH for global access?"
+    echo -e "是否将 haclawx 添加到 PATH 以便全局使用？${NC}"
+    echo -n "Register in PATH? / 注册到 PATH？ [Y/n] "
+    read -n 1 -r </dev/tty
+    echo
+    if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+        register_path "$INSTALLED_BINARY"
+    fi
+    echo ""
+fi
 
 # Smart port detection for binary install
 echo -e "${CYAN}Detecting available port... / 正在检测可用端口...${NC}"
@@ -2315,7 +2422,7 @@ if [ "$SERVICE_JUST_INSTALLED" = true ]; then
     echo ""
 fi
 
-echo -n "Start HAClaw now? / 立即启动 HAClaw？ [Y/n] "
+echo -n "Start HAClaw-OS now? / 立即启动 HAClaw-OS？ [Y/n] "
 read -n 1 -r </dev/tty
 echo
 
@@ -2326,15 +2433,15 @@ if [[ $REPLY =~ ^[Nn]$ ]]; then
     if check_systemd_service; then
         echo ""
         echo -e "${CYAN}Service management commands / 服务管理命令：${NC}"
-        echo -e "  ${GREEN}systemctl --user start haclaw${NC}    - Start service / 启动服务"
-        echo -e "  ${GREEN}systemctl --user stop haclaw${NC}     - Stop service / 停止服务"
-        echo -e "  ${GREEN}systemctl --user status haclaw${NC}   - Check status / 查看状态"
+        echo -e "  ${GREEN}systemctl --user start haclawx${NC}    - Start service / 启动服务"
+        echo -e "  ${GREEN}systemctl --user stop haclawx${NC}     - Stop service / 停止服务"
+        echo -e "  ${GREEN}systemctl --user status haclawx${NC}   - Check status / 查看状态"
     fi
     exit 0
 fi
 
 # 6. Run with arguments (include --port if non-default)
-echo -e "${BLUE}>> Starting HAClaw on port $PORT...${NC}"
+echo -e "${BLUE}>> Starting HAClaw-OS on port $PORT...${NC}"
 echo "----------------------------------------"
 if [ "$PORT" -ne "$DEFAULT_PORT" ]; then
     "$INSTALLED_BINARY" --port "$PORT" "$@"

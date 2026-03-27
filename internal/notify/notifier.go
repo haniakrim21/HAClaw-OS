@@ -8,9 +8,9 @@ import (
 	"strings"
 	"sync"
 
-	"HAClaw/internal/database"
-	"HAClaw/internal/i18n"
-	"HAClaw/internal/logger"
+	"HAClaw-OS/internal/database"
+	"HAClaw-OS/internal/i18n"
+	"HAClaw-OS/internal/logger"
 
 	nfy "github.com/nikoksr/notify"
 	nfydd "github.com/nikoksr/notify/service/dingding"
@@ -242,7 +242,7 @@ func (m *Manager) Send(text string) {
 	if n == nil {
 		return
 	}
-	if err := n.Send(context.Background(), "HAClaw", text); err != nil {
+	if err := n.Send(context.Background(), "HAClaw-OS", text); err != nil {
 		logger.Log.Warn().Err(err).Msg(i18n.T(i18n.MsgLogNotifySendFailed))
 	}
 }
@@ -276,7 +276,7 @@ func (m *Manager) SendToChannel(channel, text string) error {
 	if pc == nil {
 		return fmt.Errorf("channel %q not configured", channel)
 	}
-	if err := pc.Send(context.Background(), "HAClaw", text); err != nil {
+	if err := pc.Send(context.Background(), "HAClaw-OS", text); err != nil {
 		logger.Log.Warn().Err(err).Str("channel", channel).Msg("notify: send to channel failed")
 		return err
 	}

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"HAClaw/internal/logger"
+	"HAClaw-OS/internal/logger"
 )
 
 // Go launches fn in a new goroutine with panic recovery.

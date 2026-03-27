@@ -1,5 +1,5 @@
 # Stage 1: Build frontend
-FROM node:22-alpine AS frontend
+FROM node:24-alpine AS frontend
 WORKDIR /app/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
@@ -20,8 +20,8 @@ ARG VERSION=0.0.1
 ARG BUILD_NUMBER=0
 RUN COMPAT=$(grep -o '"openclawCompat"[[:space:]]*:[[:space:]]*"[^"]*"' web/package.json | cut -d'"' -f4) && \
     CGO_ENABLED=0 GOOS=linux go build \
-    -ldflags="-s -w -X HAClaw/internal/version.Version=${VERSION} -X HAClaw/internal/version.Build=${BUILD_NUMBER} -X 'HAClaw/internal/version.OpenClawCompat=${COMPAT}'" \
-    -o /haclaw ./cmd/haclaw
+    -ldflags="-s -w -X HAClaw-OS/internal/version.Version=${VERSION} -X HAClaw-OS/internal/version.Build=${BUILD_NUMBER} -X 'HAClaw-OS/internal/version.OpenClawCompat=${COMPAT}'" \
+    -o /haclawx ./cmd/haclawx
 
 # Stage 3: Install OpenClaw with native modules (build tools needed)
 FROM ubuntu:22.04 AS openclaw-builder
@@ -33,7 +33,7 @@ RUN apt-get update && \
     mkdir -p /etc/apt/keyrings && \
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
         | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main" \
         > /etc/apt/sources.list.d/nodesource.list && \
     apt-get update && \
     apt-get install -y --no-install-recommends nodejs && \
@@ -57,11 +57,11 @@ RUN apt-get update && \
     mkdir -p /etc/apt/keyrings && \
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
         | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main" \
         > /etc/apt/sources.list.d/nodesource.list && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-        nodejs python3 tzdata tini wget jq ripgrep procps lsof ffmpeg && \
+        nodejs python3 make tzdata tini wget jq ripgrep procps lsof ffmpeg golang && \
     rm -rf /var/lib/apt/lists/* && \
     # Install uv via official standalone installer (no pip needed)
     curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh
@@ -73,31 +73,30 @@ ARG OPENCLAW_VERSION=latest
 ARG BUILD_NUMBER=0
 ARG VERSION=0.0.1
 ARG OPENCLAW_COMPAT=unknown
-LABEL org.opencontainers.image.title="HAClaw" \
+LABEL org.opencontainers.image.title="HAClaw-OS" \
       org.opencontainers.image.description="Desktop management dashboard for OpenClaw AI gateway" \
       org.opencontainers.image.version="${BUILD_VERSION}" \
       org.opencontainers.image.revision="${BUILD_REVISION}" \
       org.opencontainers.image.created="${BUILD_DATE}" \
-      org.opencontainers.image.url="https://github.com/HAClaw/HAClaw" \
-      org.opencontainers.image.documentation="https://github.com/HAClaw/HAClaw#readme" \
-      org.opencontainers.image.source="https://github.com/HAClaw/HAClaw" \
+      org.opencontainers.image.url="https://github.com/HAClaw-OS/HAClaw-OS" \
+      org.opencontainers.image.documentation="https://github.com/HAClaw-OS/HAClaw-OS#readme" \
+      org.opencontainers.image.source="https://github.com/HAClaw-OS/HAClaw-OS" \
       org.opencontainers.image.licenses="MIT" \
-      ai.haclaw.openclaw.version="${OPENCLAW_VERSION}" \
-      ai.haclaw.openclaw.compat="${OPENCLAW_COMPAT}"
+      ai.haclawx.openclaw.version="${OPENCLAW_VERSION}" \
+      ai.haclawx.openclaw.compat="${OPENCLAW_COMPAT}"
 
 WORKDIR /app
 COPY --from=openclaw-builder /opt/openclaw /opt/openclaw
 COPY --from=openclaw-builder /usr/local/bin/openclaw /usr/local/bin/openclaw
-COPY --from=backend /haclaw ./haclaw
+COPY --from=backend /haclawx ./haclawx
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
-RUN mkdir -p /data/haclaw /data/openclaw/npm /data/openclaw/state /data/openclaw/logs /data/openclaw/bootstrap /data/runtime/haclaw /data/runtime/openclaw && \
-    chmod +x ./haclaw /app/docker-entrypoint.sh && \
-    ln -sf /app/haclaw /usr/local/bin/haclaw
+RUN mkdir -p /data/haclawx /data/openclaw/npm /data/openclaw/state /data/openclaw/logs /data/openclaw/bootstrap /data/runtime/haclawx /data/runtime/openclaw && \
+    chmod +x ./haclawx /app/docker-entrypoint.sh && \
+    ln -sf /app/haclawx /usr/local/bin/haclawx
 VOLUME ["/data"]
 EXPOSE 18788 18789
-ENV OCD_CONFIG=/data/haclaw/HAClaw.json \
-    OCD_DB_SQLITE_PATH=/data/haclaw/HAClaw.db \
-    OCD_LOG_FILE=/data/haclaw/HAClaw.log \
+ENV OCD_DB_SQLITE_PATH=/data/haclawx/HAClaw-OS.db \
+    OCD_LOG_FILE=/data/haclawx/HAClaw-OS.log \
     OPENCLAW_HOME=/data/openclaw/home \
     OPENCLAW_STATE_DIR=/data/openclaw/state \
     OPENCLAW_CONFIG_PATH=/data/openclaw/state/openclaw.json \

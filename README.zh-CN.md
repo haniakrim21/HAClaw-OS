@@ -1,14 +1,14 @@
 <div align="center">
 
-# HAClaw
+# HAClaw-OS
 
 **Complexity within, simplicity without.**<br>
 **繁于内，简于形。**
 
 [English](README.md) | **简体中文**
 
-[![Release](https://img.shields.io/github/v/release/HAClaw/HAClaw?style=for-the-badge&logo=rocket)](https://github.com/HAClaw/HAClaw/releases)
-[![Build](https://img.shields.io/badge/Build-Passing-success?style=for-the-badge&logo=github-actions)](https://github.com/HAClaw/HAClaw/actions)
+[![Release](https://img.shields.io/github/v/release/HAClaw-OS/HAClaw-OS?style=for-the-badge&logo=rocket)](https://github.com/HAClaw-OS/HAClaw-OS/releases)
+[![Build](https://img.shields.io/badge/Build-Passing-success?style=for-the-badge&logo=github-actions)](https://github.com/HAClaw-OS/HAClaw-OS/actions)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 
@@ -16,7 +16,7 @@
 
 ---
 
-**HAClaw** 是专为 [OpenClaw](https://github.com/openclaw/openclaw) 打造的开源 Web 可视化管理平台，专注于降低使用门槛，让安装、配置、观测与优化更加简单高效，为全球用户，尤其是新手用户，提供更友好的上手体验。
+**HAClaw-OS** 是专为 [OpenClaw](https://github.com/openclaw/openclaw) 打造的开源 Web 可视化管理平台，专注于降低使用门槛，让安装、配置、观测与优化更加简单高效，为全球用户，尤其是新手用户，提供更友好的上手体验。
 
 > [!CAUTION]
 > **Beta 预览版** — 当前为初始预览版本，尚未进行深度完整的覆盖测试，**请勿用于生产环境。**
@@ -24,7 +24,7 @@
 ## 快速导航
 
 - [界面预览](#-界面预览)
-- [为什么选择 HAClaw？](#-为什么选择-haclaw)
+- [为什么选择 HAClaw-OS？](#-为什么选择-haclawx)
 - [快速开始](#-快速开始)
 - [Docker 安装](#docker-安装)
 - [功能特性](#-功能特性)
@@ -55,7 +55,7 @@
   <p><sub>配置中心 &amp; 技能中心</sub></p>
 </div>
 
-## ✨ 为什么选择 HAClaw？
+## ✨ 为什么选择 HAClaw-OS？
 
 ### macOS 级视觉体验
 
@@ -95,20 +95,20 @@
 
 #### 1. 本地部署（推荐）
 
-在 OpenClaw 所在的服务器上安装 HAClaw，享受完整功能支持和直接命令执行能力。
+在 OpenClaw 所在的服务器上安装 HAClaw-OS，享受完整功能支持和直接命令执行能力。
 
 **优势：**
 - 完整功能支持，包括直接执行 OpenClaw 命令
 - 更低延迟，响应更快
-- HAClaw 与 OpenClaw 之间无网络依赖
+- HAClaw-OS 与 OpenClaw 之间无网络依赖
 
 #### 2. 远程网关
 
-在本机安装 HAClaw，通过 WebSocket 连接远程 OpenClaw 实例。
+在本机安装 HAClaw-OS，通过 WebSocket 连接远程 OpenClaw 实例。
 
 **限制：**
 - 部分需要直接调用 OpenClaw 命令的功能不可用
-- 依赖 HAClaw 与 OpenClaw Gateway 之间的稳定网络连接
+- 依赖 HAClaw-OS 与 OpenClaw Gateway 之间的稳定网络连接
 - 操作延迟略高
 
 ### 一键安装 / 卸载 / 维护
@@ -118,24 +118,24 @@
 **macOS / Linux**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/HAClaw/HAClaw/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/HAClaw-OS/HAClaw-OS/main/install.sh | bash
 ```
 
 **Windows (PowerShell)**
 
 ```powershell
-irm https://raw.githubusercontent.com/HAClaw/HAClaw/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/HAClaw-OS/HAClaw-OS/main/install.ps1 | iex
 ```
 
 ### 手动下载
 
-从 [Releases](https://github.com/HAClaw/HAClaw/releases) 下载二进制文件，零依赖，直接运行。
+从 [Releases](https://github.com/HAClaw-OS/HAClaw-OS/releases) 下载二进制文件，零依赖，直接运行。
 
 ```bash
-./HAClaw
-./HAClaw --port 18788 --bind 0.0.0.0
-./HAClaw --user admin --pass your_password
-./HAClaw --bind 0.0.0.0 --port 18788 --user admin --pass your_password
+./HAClaw-OS
+./HAClaw-OS --port 18788 --bind 0.0.0.0
+./HAClaw-OS --user admin --pass your_password
+./HAClaw-OS --bind 0.0.0.0 --port 18788 --user admin --pass your_password
 ```
 
 | 参数 | 简写 | 说明 |
@@ -150,17 +150,17 @@ irm https://raw.githubusercontent.com/HAClaw/HAClaw/main/install.ps1 | iex
 
 | 命令 | 用法 | 说明 |
 | :--- | :--- | :--- |
-| `reset-password` | `HAClaw reset-password <user> <pass>` | 重置用户密码 |
-| `reset-username` | `HAClaw reset-username <old> <new>` | 修改用户名 |
-| `list-users` | `HAClaw list-users` | 列出所有已注册用户 |
-| `unlock` | `HAClaw unlock <user>` | 解锁被锁定的用户账户 |
+| `reset-password` | `HAClaw-OS reset-password <user> <pass>` | 重置用户密码 |
+| `reset-username` | `HAClaw-OS reset-username <old> <new>` | 修改用户名 |
+| `list-users` | `HAClaw-OS list-users` | 列出所有已注册用户 |
+| `unlock` | `HAClaw-OS unlock <user>` | 解锁被锁定的用户账户 |
 
 > [!TIP]
-> 忘记登录凭据时，可运行 `HAClaw list-users` 查看用户名，然后使用 `HAClaw reset-password <用户名> <新密码>` 重置密码。
-> 若密码含特殊符号（如 `!`, `$`, `#`, `&` 等），请用**单引号**包裹以避免被 shell 解释，例如：`HAClaw reset-password admin 'P@ss!w0rd#$'`。
+> 忘记登录凭据时，可运行 `HAClaw-OS list-users` 查看用户名，然后使用 `HAClaw-OS reset-password <用户名> <新密码>` 重置密码。
+> 若密码含特殊符号（如 `!`, `$`, `#`, `&` 等），请用**单引号**包裹以避免被 shell 解释，例如：`HAClaw-OS reset-password admin 'P@ss!w0rd#$'`。
 
 > [!WARNING]
-> 连续输错密码 **5 次**，账户将被自动锁定 **15 分钟**。锁定期间即使输入正确密码也无法登录。如需立即解锁，可运行 `HAClaw unlock <用户名>`。
+> 连续输错密码 **5 次**，账户将被自动锁定 **15 分钟**。锁定期间即使输入正确密码也无法登录。如需立即解锁，可运行 `HAClaw-OS unlock <用户名>`。
 
 > [!IMPORTANT]
 > 首次运行时，若未指定 `--user` 和 `--pass`，系统会自动生成管理员账户，凭据将打印到控制台。请在登录后立即前往系统设置或账户安全页面修改用户名和密码。
@@ -172,7 +172,7 @@ irm https://raw.githubusercontent.com/HAClaw/HAClaw/main/install.ps1 | iex
 **手动安装：**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/HAClaw/HAClaw/main/docker-compose.yml -o docker-compose.yml
+curl -fsSL https://raw.githubusercontent.com/HAClaw-OS/HAClaw-OS/main/docker-compose.yml -o docker-compose.yml
 docker compose up -d
 ```
 
@@ -184,14 +184,14 @@ docker compose up -d --force-recreate
 
 浏览器打开 `http://localhost:18700`（Docker）或 `http://localhost:18788`（本机安装），首次启动会自动生成管理员账户，凭据将显示在容器日志中。
 
-HAClaw 与 OpenClaw 运行在同一个容器中。官方 Docker 镜像已预装 OpenClaw，版本与兼容性已锁定。容器启动时，入口脚本会在配置文件存在时自动启动 OpenClaw Gateway。如果尚未配置，请在 Web 界面中完成安装向导即可，无需手动安装。
+HAClaw-OS 与 OpenClaw 运行在同一个容器中。官方 Docker 镜像已预装 OpenClaw，版本与兼容性已锁定。容器启动时，入口脚本会在配置文件存在时自动启动 OpenClaw Gateway。如果尚未配置，请在 Web 界面中完成安装向导即可，无需手动安装。
 
 官方 Docker 镜像还预装了常见技能/运行时依赖，包括 `go`、`python3`、`uv`、`ffmpeg`、`jq`、`ripgrep`、`wget` 与 `make`，因此许多 OpenClaw 技能在首次启动后即可直接使用，无需额外安装系统包。
 
-默认情况下，镜像内的 HAClaw 服务会连接容器内本地 Gateway：`127.0.0.1:18789`。如果你需要改为连接宿主机或外部 Gateway，请在 `docker-compose.yml` 中覆盖 `OCD_OPENCLAW_GATEWAY_HOST` 与 `OCD_OPENCLAW_GATEWAY_PORT`。
+默认情况下，镜像内的 HAClaw-OS 服务会连接容器内本地 Gateway：`127.0.0.1:18789`。如果你需要改为连接宿主机或外部 Gateway，请在 `docker-compose.yml` 中覆盖 `OCD_OPENCLAW_GATEWAY_HOST` 与 `OCD_OPENCLAW_GATEWAY_PORT`。
 
 ```bash
-docker logs haclaw
+docker logs haclawx
 ```
 
 #### Docker 配置说明
@@ -200,7 +200,7 @@ docker logs haclaw
 
 | 端口 | 服务 | 说明 |
 | :--- | :--- | :--- |
-| `18700` → `18788` | HAClaw Web UI | 主界面（宿主机 18700 → 容器内 18788） |
+| `18700` → `18788` | HAClaw-OS Web UI | 主界面（宿主机 18700 → 容器内 18788） |
 | `18789` | OpenClaw Gateway | 可选：映射后可从容器外调试 Gateway |
 
 如需从容器外访问 Gateway，在 `docker-compose.yml` 的 `ports` 中添加 `- "18789:18789"`。
@@ -215,16 +215,16 @@ docker logs haclaw
 | `OPENCLAW_STATE_DIR` | `/data/openclaw/state` | OpenClaw 状态目录 |
 | `OPENCLAW_CONFIG_PATH` | `/data/openclaw/state/openclaw.json` | OpenClaw 配置文件路径 |
 | `NPM_CONFIG_PREFIX` | `/data/openclaw/npm` | 持久化 npm 前缀（用于用户自行升级安装） |
-| `OCD_DB_SQLITE_PATH` | `/data/haclaw/HAClaw.db` | HAClaw SQLite 数据库路径 |
-| `OCD_LOG_FILE` | `/data/haclaw/HAClaw.log` | HAClaw 服务日志路径 |
+| `OCD_DB_SQLITE_PATH` | `/data/haclawx/HAClaw-OS.db` | HAClaw-OS SQLite 数据库路径 |
+| `OCD_LOG_FILE` | `/data/haclawx/HAClaw-OS.log` | HAClaw-OS 服务日志路径 |
 | `OCD_GATEWAY_LOG` | `/data/openclaw/logs/gateway.log` | 持久化 OpenClaw Gateway 日志 |
 | `OCD_SETUP_INSTALL_LOG` | `/data/openclaw/logs/install.log` | 安装向导日志路径 |
 | `OCD_SETUP_DOCTOR_LOG` | `/data/openclaw/logs/doctor.log` | 诊断日志路径 |
 | `OCD_OPENCLAW_GATEWAY_HOST` | `127.0.0.1` | Gateway 地址 |
 | `OCD_OPENCLAW_GATEWAY_PORT` | `18789` | Gateway 端口 |
 | `OCD_OPENCLAW_GATEWAY_TOKEN` | *(empty)* | Gateway 认证令牌 |
-| `OCD_PORT` | `18788` | HAClaw 监听端口（容器内部） |
-| `OCD_BIND` | `0.0.0.0` | HAClaw 绑定地址 |
+| `OCD_PORT` | `18788` | HAClaw-OS 监听端口（容器内部） |
+| `OCD_BIND` | `0.0.0.0` | HAClaw-OS 绑定地址 |
 | `TZ` | `UTC` | 容器时区（如 `Asia/Shanghai`） |
 
 **预装运行时工具：**
@@ -245,8 +245,8 @@ docker logs haclaw
 
 | 卷名 | 挂载点 | 说明 |
 | :--- | :--- | :--- |
-| `haclaw-data` | `/data/haclaw` | HAClaw 数据库与应用日志 |
-| `haclaw-openclaw-data` | `/data/openclaw` | OpenClaw 配置、状态、日志与用户升级安装数据 |
+| `haclawx-data` | `/data/haclawx` | HAClaw-OS 数据库与应用日志 |
+| `haclawx-openclaw-data` | `/data/openclaw` | OpenClaw 配置、状态、日志与用户升级安装数据 |
 
 > [!TIP]
 > OpenClaw 已内置在镜像中，配置通过 Docker 卷持久化。执行 `docker pull` 并重建容器后，OpenClaw 仍然可用，配置也会保留。
@@ -263,9 +263,9 @@ docker logs haclaw
 | `/data/openclaw/logs/doctor.log` | 诊断日志 |
 | `/data/openclaw/bootstrap/gateway-bootstrap.json` | 入口脚本启动状态文件 |
 
-如果尚未配置 OpenClaw，HAClaw 会引导你通过安装向导完成初始配置。
+如果尚未配置 OpenClaw，HAClaw-OS 会引导你通过安装向导完成初始配置。
 
-容器健康检查使用 `/api/v1/health` 作为存活探测。排障时可调用 `/api/v1/health?detailed=true`，同时查看 HAClaw、OpenClaw、Gateway 与启动状态文件的信息。
+容器健康检查使用 `/api/v1/health` 作为存活探测。排障时可调用 `/api/v1/health?detailed=true`，同时查看 HAClaw-OS、OpenClaw、Gateway 与启动状态文件的信息。
 
 **资源限制：**
 
@@ -302,7 +302,7 @@ docker logs haclaw
 
 ## 💬 作者寄语
 
-这是我的第一个开源项目，也希望它能在大家的参与下变得越来越好。如果你发现问题，或有任何改进想法，欢迎提交 [Issue](https://github.com/HAClaw/HAClaw/issues) 或 [Pull Request](https://github.com/HAClaw/HAClaw/pulls)。感谢你的关注和支持，每一次反馈，都是这个项目成长的一部分。
+这是我的第一个开源项目，也希望它能在大家的参与下变得越来越好。如果你发现问题，或有任何改进想法，欢迎提交 [Issue](https://github.com/HAClaw-OS/HAClaw-OS/issues) 或 [Pull Request](https://github.com/HAClaw-OS/HAClaw-OS/pulls)。感谢你的关注和支持，每一次反馈，都是这个项目成长的一部分。
 
 > *某 AI 曾预言本项目会大火——不过众所周知，AI 这东西，是会产生幻觉的😅。*
 
@@ -312,8 +312,8 @@ docker logs haclaw
 
 ## ⭐ Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=HAClaw/HAClaw&type=Date)](https://star-history.com/#HAClaw/HAClaw&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=HAClaw-OS/HAClaw-OS&type=Date)](https://star-history.com/#HAClaw-OS/HAClaw-OS&Date)
 
 <div align="center">
-  <sub>Designed with ❤️ by HAClaw</sub>
+  <sub>Designed with ❤️ by HAClaw-OS</sub>
 </div>

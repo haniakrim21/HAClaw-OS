@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"HAClaw/internal/logger"
-	"HAClaw/internal/safego"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/safego"
 )
 
 type statusWriter struct {

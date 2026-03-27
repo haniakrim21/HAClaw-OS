@@ -10,7 +10,7 @@
     "icon": "show_chart",
     "color": "from-blue-500 to-cyan-500",
     "tags": ["investment", "stocks", "portfolio", "finance"],
-    "author": "HAClaw Team",
+    "author": "HAClaw-OS Team",
     "newbie": false,
     "costTier": "low"
   },

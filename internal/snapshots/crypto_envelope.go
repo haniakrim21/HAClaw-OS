@@ -151,6 +151,6 @@ func DecryptSchedulePassword(encoded string, deviceID string) (string, error) {
 }
 
 func deriveScheduleKey(deviceID string) []byte {
-	h := sha256.Sum256([]byte("haclaw-schedule-key:" + deviceID))
+	h := sha256.Sum256([]byte("haclawx-schedule-key:" + deviceID))
 	return h[:]
 }

@@ -1,29 +1,28 @@
 services:
-  haclaw:
-    build: .
-    image: haclaw-local:latest
-    container_name: haclaw
+  haclawx:
+    image: knowhunters/haclawx:latest
+    container_name: haclawx
     init: true
     restart: unless-stopped
     ports:
-      - "127.0.0.1:18701:18788"
+      - "18700:18788"
     volumes:
-      - haclaw-data:/data/haclaw
+      - haclawx-data:/data/haclawx
       # Persist OpenClaw config, state, and logs across container updates
       # OpenClaw is preinstalled in the image; this volume keeps config and runtime data
       # 持久化 OpenClaw 配置、状态与日志，OpenClaw 已预装在镜像中
-      - haclaw-openclaw-data:/data/openclaw
-      # Persist runtime overlay binaries (HAClaw/OpenClaw updates) across container recreations
+      - haclawx-openclaw-data:/data/openclaw
+      # Persist runtime overlay binaries (HAClaw-OS/OpenClaw updates) across container recreations
       # 持久化运行时覆盖二进制文件，容器重建后保留更新
-      - haclaw-runtime:/data/runtime
+      - haclawx-runtime:/data/runtime
     environment:
-      OCD_CONFIG: /data/haclaw/HAClaw.json
+      OCD_CONFIG: /data/haclawx/HAClaw-OS.json
       OPENCLAW_HOME: /data/openclaw/home
       OPENCLAW_STATE_DIR: /data/openclaw/state
       OPENCLAW_CONFIG_PATH: /data/openclaw/state/openclaw.json
       NPM_CONFIG_PREFIX: /data/openclaw/npm
-      OCD_DB_SQLITE_PATH: /data/haclaw/HAClaw.db
-      OCD_LOG_FILE: /data/haclaw/HAClaw.log
+      OCD_DB_SQLITE_PATH: /data/haclawx/HAClaw-OS.db
+      OCD_LOG_FILE: /data/haclawx/HAClaw-OS.log
       OCD_GATEWAY_LOG: /data/openclaw/logs/gateway.log
       OCD_SETUP_INSTALL_LOG: /data/openclaw/logs/install.log
       OCD_SETUP_DOCTOR_LOG: /data/openclaw/logs/doctor.log
@@ -52,17 +51,17 @@ services:
         max-size: "20m"
         max-file: "3"
     networks:
-      - haclaw-net
+      - haclawx-net
 
 networks:
-  haclaw-net:
-    name: haclaw-net
+  haclawx-net:
+    name: haclawx-net
     driver: bridge
 
 volumes:
-  haclaw-data:
-    name: haclaw-data
-  haclaw-openclaw-data:
+  haclawx-data:
+    name: haclawx-data
+  haclawx-openclaw-data:
     name: openclaw-data
-  haclaw-runtime:
-    name: haclaw-runtime
+  haclawx-runtime:
+    name: haclawx-runtime

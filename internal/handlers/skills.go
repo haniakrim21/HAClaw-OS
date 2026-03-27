@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"HAClaw/internal/logger"
-	"HAClaw/internal/openclaw"
-	"HAClaw/internal/web"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/openclaw"
+	"HAClaw-OS/internal/web"
 )
 
 // SkillsHandler manages skill auditing via Gateway RPC.

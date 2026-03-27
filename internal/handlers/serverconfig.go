@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"strings"
 
-	"HAClaw/internal/i18n"
-	"HAClaw/internal/logger"
-	"HAClaw/internal/web"
-	"HAClaw/internal/webconfig"
+	"HAClaw-OS/internal/i18n"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/web"
+	"HAClaw-OS/internal/webconfig"
 )
 
 // ServerConfigHandler handles GET/PUT for the server's own network config (bind, port, CORS).

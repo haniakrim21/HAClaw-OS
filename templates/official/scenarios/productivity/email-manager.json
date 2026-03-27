@@ -10,7 +10,7 @@
     "icon": "mail",
     "color": "from-indigo-500 to-purple-500",
     "tags": ["email", "productivity", "automation"],
-    "author": "HAClaw Team",
+    "author": "HAClaw-OS Team",
     "newbie": false,
     "costTier": "low"
   },

@@ -2,12 +2,12 @@
   "name": "Sicherung und Wiederherstellung",
   "description": "OpenClaw-Konfiguration, Gedächtnis und Gesprächsverlauf sichern, mit Unterstützung für Migration auf neue Geräte",
   "content": {
-    "body": "## Was sichern?\n\n| Element | Pfad | Wichtigkeit |\n|---------|------|------------|\n| Konfiguration | `~/.haclaw/config.yaml` | Essentiell |\n| Agenten-Konfig | `~/.haclaw/agents/` | Essentiell |\n| Gedächtnisdateien | `~/.haclaw/memory/` | Wichtig |\n| Sitzungsverlauf | `~/.haclaw/sessions/` | Optional |\n| Zugangsdaten | `~/.haclaw/credentials/` | Wichtig |\n\n## Sicherungsmethoden\n\n### Methode 1: Manuell\n```bash\ncp -r ~/.haclaw ~/haclaw-backup-$(date +%Y%m%d)\n```\n\n### Methode 2: CLI\n```bash\nopenclaw config export > meine-sicherung.yaml\n```\n\n### Methode 3: HAClaw UI\n« Konfiguration exportieren » am unteren Rand des Einstellungszentrums.\n\n## Wiederherstellen\n\n1. OpenClaw installieren\n2. Dateien nach `~/.haclaw/` kopieren\n3. Gateway starten\n\n## Konfigurationsfelder\n\nPfad: `~/.haclaw/`",
+    "body": "## Was sichern?\n\n| Element | Pfad | Wichtigkeit |\n|---------|------|------------|\n| Konfiguration | `~/.haclawx/config.yaml` | Essentiell |\n| Agenten-Konfig | `~/.haclawx/agents/` | Essentiell |\n| Gedächtnisdateien | `~/.haclawx/memory/` | Wichtig |\n| Sitzungsverlauf | `~/.haclawx/sessions/` | Optional |\n| Zugangsdaten | `~/.haclawx/credentials/` | Wichtig |\n\n## Sicherungsmethoden\n\n### Methode 1: Manuell\n```bash\ncp -r ~/.haclawx ~/haclawx-backup-$(date +%Y%m%d)\n```\n\n### Methode 2: CLI\n```bash\nopenclaw config export > meine-sicherung.yaml\n```\n\n### Methode 3: HAClaw-OS UI\n« Konfiguration exportieren » am unteren Rand des Einstellungszentrums.\n\n## Wiederherstellen\n\n1. OpenClaw installieren\n2. Dateien nach `~/.haclawx/` kopieren\n3. Gateway starten\n\n## Konfigurationsfelder\n\nPfad: `~/.haclawx/`",
     "steps": [
       "Sicherungsumfang bestimmen",
       "Sicherung durchführen",
       "Sicher aufbewahren",
-      "Zur Wiederherstellung nach ~/.haclaw/ kopieren"
+      "Zur Wiederherstellung nach ~/.haclawx/ kopieren"
     ]
   }
 }

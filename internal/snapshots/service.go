@@ -14,10 +14,10 @@ import (
 	"sync"
 	"time"
 
-	"HAClaw/internal/constants"
-	"HAClaw/internal/database"
-	"HAClaw/internal/logger"
-	"HAClaw/internal/openclaw"
+	"HAClaw-OS/internal/constants"
+	"HAClaw-OS/internal/database"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/openclaw"
 )
 
 type unlockedBundle struct {

@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"HAClaw/internal/logger"
+	"HAClaw-OS/internal/logger"
 )
 
 // MirrorSource represents a mirror endpoint with metadata

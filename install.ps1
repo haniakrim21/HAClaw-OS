@@ -1,12 +1,12 @@
 ﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
-    HAClaw - One-Click Launcher for Windows
+    HAClaw-OS - One-Click Launcher for Windows
 .DESCRIPTION
-    Install, update, uninstall, and manage HAClaw on Windows.
+    Install, update, uninstall, and manage HAClaw-OS on Windows.
     Equivalent functionality to install.sh for Linux/macOS.
 .NOTES
-    Run in PowerShell: irm https://raw.githubusercontent.com/HAClaw/HAClaw/main/install.ps1 | iex
+    Run in PowerShell: irm https://raw.githubusercontent.com/HAClaw-OS/HAClaw-OS/main/install.ps1 | iex
     Or: .\install.ps1
 #>
 
@@ -15,12 +15,12 @@ $ErrorActionPreference = "Stop"
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
 # ==============================================================================
-# HAClaw - One-Click Launcher (Windows)
+# HAClaw-OS - One-Click Launcher (Windows)
 # ==============================================================================
 
 # Constants
-$BINARY_NAME = "haclaw.exe"
-$TASK_NAME = "HAClaw"
+$BINARY_NAME = "haclawx.exe"
+$TASK_NAME = "HAClaw-OS"
 $DEFAULT_PORT = 18788
 $INTERNAL_PORT = 18788
 $DEFAULT_HOST_PORT = 18700
@@ -43,7 +43,7 @@ function Write-C {
 
 function Print-AccessUrls {
     param([int]$Port = $script:PORT)
-    Write-C "Access HAClaw at / 访问 HAClaw：" Cyan
+    Write-C "Access HAClaw-OS at / 访问 HAClaw-OS：" Cyan
     Write-C "  http://localhost:${Port}" Green
     # LAN IPs
     try {
@@ -131,7 +131,7 @@ function Test-IsAdmin {
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
-# -- Check if HAClaw is installed ------------------------------------------
+# -- Check if HAClaw-OS is installed ------------------------------------------
 function Test-Installed {
     $localBinary = Join-Path $PWD $BINARY_NAME
     if (Test-Path $localBinary) {
@@ -155,7 +155,7 @@ function Test-Installed {
 }
 
 # -- Scheduled Task management -------------------------------------------------
-# NOTE: HAClaw is a regular console app, not a native Windows service.
+# NOTE: HAClaw-OS is a regular console app, not a native Windows service.
 # We use Scheduled Tasks which work with any EXE and don't require admin.
 
 function Test-AutoStartInstalled {
@@ -180,8 +180,8 @@ function Install-AutoStart {
 
     Write-C "Installing Scheduled Task for auto-start on user logon..." Cyan
     Write-C "正在安装计划任务，用户登录时自动启动..." Cyan
-    Write-C "Note: HAClaw will start automatically when you log in" Yellow
-    Write-C "说明：HAClaw 将在您登录时自动运行" Yellow
+    Write-C "Note: HAClaw-OS will start automatically when you log in" Yellow
+    Write-C "说明：HAClaw-OS 将在您登录时自动运行" Yellow
     Write-Host ""
     Install-ScheduledTask $binaryPath
 }
@@ -200,7 +200,7 @@ function Install-ScheduledTask {
     $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero)
 
     try {
-        Register-ScheduledTask -TaskName $TASK_NAME -Action $action -Trigger $trigger -Settings $settings -Description "HAClaw - AI Gateway Management Service" -Force | Out-Null
+        Register-ScheduledTask -TaskName $TASK_NAME -Action $action -Trigger $trigger -Settings $settings -Description "HAClaw-OS - AI Gateway Management Service" -Force | Out-Null
         Write-C "✓ Scheduled Task created / 计划任务已创建" Green
         Write-C "✓ Task will start automatically on user logon / 任务将在用户登录时自动启动" Green
         Write-C "⚠ Task is NOT started yet / 任务尚未启动" Yellow
@@ -209,18 +209,18 @@ function Install-ScheduledTask {
     }
 }
 
-function Stop-HAClawService {
-    Write-Section "Stop HAClaw / 停止 HAClaw"
-    Stop-HAClawProcess
+function Stop-HAClaw-OSService {
+    Write-Section "Stop HAClaw-OS / 停止 HAClaw-OS"
+    Stop-HAClaw-OSProcess
     Write-Host ""
-    Write-C "You can now start HAClaw manually with: / 现在可以手动启动 HAClaw：" Cyan
+    Write-C "You can now start HAClaw-OS manually with: / 现在可以手动启动 HAClaw-OS：" Cyan
     Write-C "  .\$BINARY_NAME" Green
 }
 
-function Stop-HAClawProcess {
-    $procs = Get-Process -Name "haclaw" -ErrorAction SilentlyContinue
+function Stop-HAClaw-OSProcess {
+    $procs = Get-Process -Name "haclawx" -ErrorAction SilentlyContinue
     if ($procs) {
-        Write-C "Killing haclaw process... / 正在终止 haclaw 进程..." Blue
+        Write-C "Killing haclawx process... / 正在终止 haclawx 进程..." Blue
         $procs | Stop-Process -Force -ErrorAction SilentlyContinue
         Start-Sleep -Seconds 1
     }
@@ -249,8 +249,8 @@ function Stop-PortProcess {
     }
 }
 
-function Start-HAClawService {
-    Write-C "Starting HAClaw... / 正在启动 HAClaw..." Cyan
+function Start-HAClaw-OSService {
+    Write-C "Starting HAClaw-OS... / 正在启动 HAClaw-OS..." Cyan
 
     $binaryPath = $script:INSTALLED_LOCATION
     if (-not $binaryPath) { $binaryPath = $script:INSTALLED_BINARY }
@@ -258,7 +258,7 @@ function Start-HAClawService {
     # Kill any stale process or port holder to avoid conflict
     if (Test-ProcessRunning) {
         Write-C "Stopping existing instance... / 正在停止已有实例..." Yellow
-        Stop-HAClawProcess
+        Stop-HAClaw-OSProcess
         Start-Sleep -Seconds 1
     } else {
         # Process name not found, but port might be held by another process
@@ -268,15 +268,15 @@ function Start-HAClawService {
     Write-C "Launching process... / 正在启动进程..." Blue
     try {
         $workDir = Split-Path $binaryPath -Parent
-        $errFile = Join-Path $workDir ".haclaw-start-err.log"
+        $errFile = Join-Path $workDir ".haclawx-start-err.log"
         $proc = Start-Process -FilePath $binaryPath -WorkingDirectory $workDir -WindowStyle Hidden -RedirectStandardError $errFile -PassThru
         Start-Sleep -Seconds 3
         if (-not $proc.HasExited -and (Test-ProcessRunning)) {
-            Write-C "✓ HAClaw started successfully / HAClaw 启动成功" Green
+            Write-C "✓ HAClaw-OS started successfully / HAClaw-OS 启动成功" Green
             Remove-Item $errFile -Force -ErrorAction SilentlyContinue
             return $true
         } else {
-            Write-C "⚠ Failed to start HAClaw / 启动 HAClaw 失败" Yellow
+            Write-C "⚠ Failed to start HAClaw-OS / 启动 HAClaw-OS 失败" Yellow
             if (Test-Path $errFile) {
                 $errMsg = Get-Content $errFile -Raw -ErrorAction SilentlyContinue
                 if ($errMsg) {
@@ -290,27 +290,27 @@ function Start-HAClawService {
             return $false
         }
     } catch {
-        Write-C "⚠ Failed to start HAClaw / 启动 HAClaw 失败: $_" Yellow
+        Write-C "⚠ Failed to start HAClaw-OS / 启动 HAClaw-OS 失败: $_" Yellow
         return $false
     }
 }
 
 function Test-ProcessRunning {
-    $procs = Get-Process -Name "haclaw" -ErrorAction SilentlyContinue
+    $procs = Get-Process -Name "haclawx" -ErrorAction SilentlyContinue
     return ($null -ne $procs)
 }
 
-function Stop-AllHAClaw {
-    Write-C "Stopping HAClaw... / 正在停止 HAClaw..." Cyan
-    Stop-HAClawProcess
-    Write-C "✓ HAClaw stopped / HAClaw 已停止" Green
+function Stop-AllHAClaw-OS {
+    Write-C "Stopping HAClaw-OS... / 正在停止 HAClaw-OS..." Cyan
+    Stop-HAClaw-OSProcess
+    Write-C "✓ HAClaw-OS stopped / HAClaw-OS 已停止" Green
 }
 
 # -- Update --------------------------------------------------------------------
-function Update-HAClaw {
+function Update-HAClaw-OS {
     param([string]$LatestVersion, [string]$Repo)
 
-    Write-Section "Update HAClaw / 更新 HAClaw"
+    Write-Section "Update HAClaw-OS / 更新 HAClaw-OS"
 
     Write-C "Current version / 当前版本： $($script:CURRENT_VERSION)" Cyan
     Write-C "Latest version  / 最新版本： $LatestVersion" Cyan
@@ -319,7 +319,7 @@ function Update-HAClaw {
     $arch = Get-Architecture
 
     $apiUrl = "https://api.github.com/repos/$Repo/releases/latest"
-    $assetPattern = "haclaw-windows-${arch}.exe"
+    $assetPattern = "haclawx-windows-${arch}.exe"
     $downloadUrl = Get-DownloadUrl $Repo $script:LATEST_TAG $assetPattern $apiUrl
 
     if (-not $downloadUrl) {
@@ -343,14 +343,14 @@ function Update-HAClaw {
 
     Write-Host ""
     if (Test-ProcessRunning) {
-        Write-C "⚠ HAClaw is currently running / HAClaw 正在运行" Yellow
+        Write-C "⚠ HAClaw-OS is currently running / HAClaw-OS 正在运行" Yellow
         Write-C "The program needs to be stopped before updating. / 更新前需要停止程序。" Yellow
         Write-Host ""
-        if (-not (Read-YesNo "Stop HAClaw now and continue? / 立即停止并继续更新?" $true)) {
+        if (-not (Read-YesNo "Stop HAClaw-OS now and continue? / 立即停止并继续更新?" $true)) {
             Write-C "Update cancelled. / 更新已取消" Yellow
             return
         }
-        Stop-AllHAClaw
+        Stop-AllHAClaw-OS
         Start-Sleep -Seconds 2
     }
 
@@ -372,8 +372,8 @@ function Update-HAClaw {
     Write-Host "=======================================================" -ForegroundColor Green
     Write-Host ""
 
-    if (Read-YesNo "Start HAClaw now? / 立即启动 HAClaw?" $true) {
-        $started = Start-HAClawService
+    if (Read-YesNo "Start HAClaw-OS now? / 立即启动 HAClaw-OS?" $true) {
+        $started = Start-HAClaw-OSService
         if ($started -and (Test-ProcessRunning)) {
             Write-Host ""
             Print-AccessUrls
@@ -389,11 +389,11 @@ function Update-HAClaw {
 }
 
 # -- Uninstall -----------------------------------------------------------------
-function Uninstall-HAClaw {
-    Write-Section "Uninstall HAClaw / 卸载 HAClaw"
+function Uninstall-HAClaw-OS {
+    Write-Section "Uninstall HAClaw-OS / 卸载 HAClaw-OS"
 
     if (-not $script:INSTALLED_LOCATION) {
-        Write-C "HAClaw is not installed / HAClaw 未安装" Red
+        Write-C "HAClaw-OS is not installed / HAClaw-OS 未安装" Red
         return
     }
 
@@ -410,11 +410,11 @@ function Uninstall-HAClaw {
     if ($mode -eq 1) {
         Write-Host ""
         Write-C "Quick uninstall will remove: / 快速卸载将删除：" Cyan
-        Write-Host "  - $($script:INSTALLED_LOCATION) (HAClaw)"
+        Write-Host "  - $($script:INSTALLED_LOCATION) (HAClaw-OS)"
 
         $removeService = $false
         if (Test-AutoStartInstalled) {
-            Write-Host "  - HAClaw (计划任务)"
+            Write-Host "  - HAClaw-OS (计划任务)"
             Write-C "    Note: Task will be removed automatically / 说明：任务将自动删除" Yellow
             $removeService = $true
         }
@@ -439,7 +439,7 @@ function Uninstall-HAClaw {
 
         $removeService = $false
         if (Test-AutoStartInstalled) {
-            Write-C "Scheduled Task detected / 检测到计划任务: HAClaw" Yellow
+            Write-C "Scheduled Task detected / 检测到计划任务: HAClaw-OS" Yellow
             Write-C "  Task will be removed during uninstall / 卸载时将删除任务" Cyan
             Write-Host ""
             $removeService = Read-YesNo "Also remove Scheduled Task? / 同时删除计划任务?" $true
@@ -461,7 +461,7 @@ function Uninstall-HAClaw {
 
         Write-Host ""
         Write-C "Summary: / 摘要：" Yellow
-        Write-Host "  - HAClaw: " -NoNewline; Write-C "will be removed / 将被删除" Red
+        Write-Host "  - HAClaw-OS: " -NoNewline; Write-C "will be removed / 将被删除" Red
         if ($removeService) {
             Write-Host "  - Scheduled Task / 计划任务: " -NoNewline; Write-C "will be removed / 将被删除" Red
         }
@@ -494,11 +494,14 @@ function Invoke-Uninstall {
         Write-C "✓ Removed Scheduled Task / 计划任务已删除" Green
     }
 
-    Stop-HAClawProcess
+    Stop-HAClaw-OSProcess
+
+    # Remove PATH registration
+    Unregister-Path
 
     if (Test-Path $script:INSTALLED_LOCATION) {
         Remove-Item -Path $script:INSTALLED_LOCATION -Force
-        Write-C "✓ Removed HAClaw / 已删除 HAClaw" Green
+        Write-C "✓ Removed HAClaw-OS / 已删除 HAClaw-OS" Green
     }
 
     if ($RemoveConfig -and $script:CONFIG_DIR -and (Test-Path $script:CONFIG_DIR)) {
@@ -517,9 +520,88 @@ function Invoke-Uninstall {
     Write-Host "=======================================================" -ForegroundColor Green
 }
 
+# -- PATH Registration ---------------------------------------------------------
+function Register-Path {
+    param([string]$BinaryPath)
+    $installDir = Split-Path $BinaryPath -Parent
+    # Resolve to absolute path
+    if (-not [System.IO.Path]::IsPathRooted($installDir)) {
+        $installDir = (Resolve-Path $installDir).Path
+    }
+
+    # Check if already in User PATH
+    $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+    $entries = $userPath -split ';' | Where-Object { $_ -ne '' }
+    foreach ($entry in $entries) {
+        try {
+            if ((Resolve-Path $entry -ErrorAction SilentlyContinue).Path -eq $installDir) {
+                Write-C "✓ $installDir is already in PATH" Green
+                return
+            }
+        } catch { $null = $_ }
+        if ($entry -eq $installDir) {
+            Write-C "✓ $installDir is already in PATH" Green
+            return
+        }
+    }
+
+    # Add to User PATH (persistent, no admin required)
+    $newPath = "$installDir;$userPath".TrimEnd(';')
+    [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
+
+    # Also update current session so it takes effect immediately
+    $env:Path = "$installDir;$env:Path"
+
+    Write-C "✓ Added $installDir to User PATH / 已添加到用户 PATH" Green
+    Write-C "  New terminal sessions will have haclawx available globally" Cyan
+    Write-C "  新终端窗口中可直接使用 haclawx 命令" Cyan
+}
+
+function Unregister-Path {
+    $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+    if (-not $userPath) { return }
+
+    $installDir = ""
+    if ($script:INSTALLED_LOCATION) {
+        $installDir = Split-Path $script:INSTALLED_LOCATION -Parent
+    } elseif ($script:INSTALLED_BINARY) {
+        $installDir = Split-Path $script:INSTALLED_BINARY -Parent
+    }
+    if (-not $installDir) { return }
+
+    # Resolve to absolute
+    if (-not [System.IO.Path]::IsPathRooted($installDir)) {
+        try { $installDir = (Resolve-Path $installDir -ErrorAction SilentlyContinue).Path } catch { return }
+    }
+
+    $entries = $userPath -split ';' | Where-Object { $_ -ne '' }
+    $filtered = @()
+    $removed = $false
+    foreach ($entry in $entries) {
+        $match = $false
+        try {
+            $resolved = (Resolve-Path $entry -ErrorAction SilentlyContinue).Path
+            if ($resolved -eq $installDir) { $match = $true }
+        } catch { $null = $_ }
+        if ($entry -eq $installDir) { $match = $true }
+
+        if ($match) {
+            $removed = $true
+        } else {
+            $filtered += $entry
+        }
+    }
+
+    if ($removed) {
+        $newPath = ($filtered -join ';')
+        [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
+        Write-C "✓ Removed $installDir from User PATH / 已从用户 PATH 移除" Green
+    }
+}
+
 # -- Helpers -------------------------------------------------------------------
 function Get-ConfigPort {
-    # Priority: OCD_PORT env > data/HAClaw.json server.port > DEFAULT_PORT
+    # Priority: OCD_PORT env > data/HAClaw-OS.json server.port > DEFAULT_PORT
     if ($env:OCD_PORT) {
         try {
             $p = [int]$env:OCD_PORT
@@ -530,11 +612,11 @@ function Get-ConfigPort {
     # Try to read from config file
     $configFile = $null
     if ($script:INSTALLED_LOCATION) {
-        $configFile = Join-Path (Split-Path $script:INSTALLED_LOCATION -Parent) "data\HAClaw.json"
+        $configFile = Join-Path (Split-Path $script:INSTALLED_LOCATION -Parent) "data\HAClaw-OS.json"
     } elseif ($script:INSTALLED_BINARY) {
-        $configFile = Join-Path (Split-Path $script:INSTALLED_BINARY -Parent) "data\HAClaw.json"
+        $configFile = Join-Path (Split-Path $script:INSTALLED_BINARY -Parent) "data\HAClaw-OS.json"
     } else {
-        $configFile = Join-Path $PWD "data\HAClaw.json"
+        $configFile = Join-Path $PWD "data\HAClaw-OS.json"
     }
 
     if ($configFile -and (Test-Path $configFile)) {
@@ -655,19 +737,19 @@ function Show-ServiceCommands {
     Write-Host ""
     Write-C "Management commands / 管理命令：" Yellow
     Write-C "  .\$BINARY_NAME                                      - Start manually / 手动启动" Green
-    Write-C "  Get-Process haclaw                               - Check if running / 检查运行状态" Green
-    Write-C "  Stop-Process -Name haclaw -Force                 - Stop / 停止" Green
-    Write-C "  Get-ScheduledTask -TaskName HAClaw               - Check auto-start / 检查自动启动" Green
-    Write-C "  Unregister-ScheduledTask -TaskName HAClaw        - Remove auto-start / 删除自动启动" Green
+    Write-C "  Get-Process haclawx                               - Check if running / 检查运行状态" Green
+    Write-C "  Stop-Process -Name haclawx -Force                 - Stop / 停止" Green
+    Write-C "  Get-ScheduledTask -TaskName HAClaw-OS               - Check auto-start / 检查自动启动" Green
+    Write-C "  Unregister-ScheduledTask -TaskName HAClaw-OS        - Remove auto-start / 删除自动启动" Green
 }
 
 # ==============================================================================
 # Docker Mode Functions
 # ==============================================================================
 
-$DOCKER_COMPOSE_URL = "https://raw.githubusercontent.com/HAClaw/HAClaw/main/docker-compose.yml"
-$DOCKER_COMPOSE_URL_CN = "https://ghfast.top/https://raw.githubusercontent.com/HAClaw/HAClaw/main/docker-compose.yml"
-$DOCKER_IMAGE = "knowhunters/haclaw:latest"
+$DOCKER_COMPOSE_URL = "https://raw.githubusercontent.com/HAClaw-OS/HAClaw-OS/main/docker-compose.yml"
+$DOCKER_COMPOSE_URL_CN = "https://ghfast.top/https://raw.githubusercontent.com/HAClaw-OS/HAClaw-OS/main/docker-compose.yml"
+$DOCKER_IMAGE = "knowhunters/haclawx:latest"
 $DOCKER_COMPOSE_FILE = "docker-compose.yml"
 $script:NEED_MIRROR = $false
 $script:DOCKER_MIRROR = ""
@@ -759,7 +841,7 @@ function Set-ImageMirror {
     param([string]$ComposeFile)
     if (-not $script:NEED_MIRROR -or -not $script:DOCKER_MIRROR) { return }
     $mirrorHost = $script:DOCKER_MIRROR -replace 'https?://', ''
-    $originalImage = "knowhunters/haclaw"
+    $originalImage = "knowhunters/haclawx"
     $mirroredImage = "$mirrorHost/$originalImage"
     $content = Get-Content $ComposeFile -Raw
     if ($content -match [regex]::Escape($mirroredImage)) { return }
@@ -772,7 +854,7 @@ function Undo-ImageMirror {
     param([string]$ComposeFile)
     if (-not $script:DOCKER_MIRROR) { return }
     $mirrorHost = $script:DOCKER_MIRROR -replace 'https?://', ''
-    $originalImage = "knowhunters/haclaw"
+    $originalImage = "knowhunters/haclawx"
     $mirroredImage = "$mirrorHost/$originalImage"
     $content = Get-Content $ComposeFile -Raw
     if ($content -match [regex]::Escape($mirroredImage)) {
@@ -811,14 +893,14 @@ function Test-DockerCompose {
 function Test-DockerDeployed {
     if ((Test-Path $DOCKER_COMPOSE_FILE) -and (Test-DockerInstalled) -and (Test-DockerCompose)) {
         $content = Get-Content $DOCKER_COMPOSE_FILE -Raw -ErrorAction SilentlyContinue
-        if ($content -match "knowhunters/haclaw") { return $true }
+        if ($content -match "knowhunters/haclawx") { return $true }
     }
     return $false
 }
 
 function Get-DockerVersion {
     try {
-        $ver = & docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' haclaw 2>$null
+        $ver = & docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' haclawx 2>$null
         if ($ver -and $ver -ne "<no value>") { return $ver }
     } catch { $null = $_ }
     return "unknown"
@@ -826,8 +908,8 @@ function Get-DockerVersion {
 
 function Test-DockerRunning {
     try {
-        $out = & docker ps --filter "name=haclaw" --filter "status=running" --format '{{.Names}}' 2>$null
-        return ($out -match "haclaw")
+        $out = & docker ps --filter "name=haclawx" --filter "status=running" --format '{{.Names}}' 2>$null
+        return ($out -match "haclawx")
     } catch { return $false }
 }
 
@@ -879,13 +961,13 @@ function Install-Docker {
     return $false
 }
 
-function Install-DockerHAClawNew {
+function Install-DockerHAClaw-OSNew {
     # Auto-detect next available instance name
-    $defaultName = "haclaw"
-    if ((Test-Path "docker-compose.yml") -and ((Get-Content "docker-compose.yml" -Raw -EA SilentlyContinue) -match "knowhunters/haclaw")) {
+    $defaultName = "haclawx"
+    if ((Test-Path "docker-compose.yml") -and ((Get-Content "docker-compose.yml" -Raw -EA SilentlyContinue) -match "knowhunters/haclawx")) {
         $n = 2
-        while (Test-Path "docker-compose-haclaw-${n}.yml") { $n++ }
-        $defaultName = "haclaw-$n"
+        while (Test-Path "docker-compose-haclawx-${n}.yml") { $n++ }
+        $defaultName = "haclawx-$n"
     }
 
     Write-Host ""
@@ -893,26 +975,26 @@ function Install-DockerHAClawNew {
     Write-C "每个 Docker 部署需要一个唯一的实例名称。" Cyan
     Write-Host ""
     Write-C "Suggested instance name: $defaultName" Green
-    Write-Host "Examples: haclaw-2, haclaw-dev, haclaw-test"
+    Write-Host "Examples: haclawx-2, haclawx-dev, haclawx-test"
     Write-Host ""
     $instanceName = Read-Host "Enter instance name (or press Enter for '$defaultName') / 输入实例名称（回车使用 '$defaultName'）"
     if ([string]::IsNullOrWhiteSpace($instanceName)) { $instanceName = $defaultName }
     $instanceName = $instanceName.ToLower().Replace(" ", "-") -replace '[^a-z0-9_-]', ''
     if ([string]::IsNullOrWhiteSpace($instanceName)) { $instanceName = $defaultName }
 
-    $checkFile = if ($instanceName -eq "haclaw") { "docker-compose.yml" } else { "docker-compose-$instanceName.yml" }
+    $checkFile = if ($instanceName -eq "haclawx") { "docker-compose.yml" } else { "docker-compose-$instanceName.yml" }
     if (Test-Path $checkFile) {
         Write-C "⚠ Instance '$instanceName' already exists ($checkFile)." Yellow
         if (-not (Read-YesNo "Continue anyway? / 继续？" $false)) { return }
     }
-    Install-DockerHAClaw -InstanceName $instanceName
+    Install-DockerHAClaw-OS -InstanceName $instanceName
 }
 
-function Install-DockerHAClaw {
-    param([string]$InstanceName = "haclaw")
-    $composeFile = if ($InstanceName -eq "haclaw") { "docker-compose.yml" } else { "docker-compose-$InstanceName.yml" }
-    $titleExtra = if ($InstanceName -ne "haclaw") { " [$InstanceName]" } else { "" }
-    Write-Section "Install HAClaw (Docker)$titleExtra / 安装 HAClaw (Docker)$titleExtra"
+function Install-DockerHAClaw-OS {
+    param([string]$InstanceName = "haclawx")
+    $composeFile = if ($InstanceName -eq "haclawx") { "docker-compose.yml" } else { "docker-compose-$InstanceName.yml" }
+    $titleExtra = if ($InstanceName -ne "haclawx") { " [$InstanceName]" } else { "" }
+    Write-Section "Install HAClaw-OS (Docker)$titleExtra / 安装 HAClaw-OS (Docker)$titleExtra"
 
     # Step 0: Detect network early (needed for Docker Desktop guidance + image pull mirror)
     Write-C "Checking network connectivity... / 正在检测网络连通性..." Cyan
@@ -970,14 +1052,14 @@ function Install-DockerHAClaw {
     Write-C "✓ Downloaded / 已下载" Green
 
     # Step 3.5: Customize compose file for non-default instance
-    if ($InstanceName -ne "haclaw") {
+    if ($InstanceName -ne "haclawx") {
         Write-C "Customizing for instance '$InstanceName'... / 正在为实例 '$InstanceName' 定制配置..." Cyan
         $content = Get-Content $composeFile -Raw
-        $content = $content -replace 'container_name: haclaw', "container_name: $InstanceName"
-        $content = $content -replace 'name: haclaw-data', "name: $InstanceName-data"
+        $content = $content -replace 'container_name: haclawx', "container_name: $InstanceName"
+        $content = $content -replace 'name: haclawx-data', "name: $InstanceName-data"
         $content = $content -replace 'name: openclaw-data', "name: $InstanceName-openclaw-data"
-        $content = $content -replace 'name: haclaw-runtime', "name: $InstanceName-runtime"
-        $content = $content -replace 'name: haclaw-net', "name: $InstanceName-net"
+        $content = $content -replace 'name: haclawx-runtime', "name: $InstanceName-runtime"
+        $content = $content -replace 'name: haclawx-net', "name: $InstanceName-net"
         Set-Content -Path $composeFile -Value $content -NoNewline
         Write-C "✓ Configured for instance: $InstanceName" Green
     }
@@ -1051,15 +1133,15 @@ function Install-DockerHAClaw {
     }
 
     Write-Host ""
-    Write-C "Starting HAClaw container... / 正在启动 HAClaw 容器..." Blue
+    Write-C "Starting HAClaw-OS container... / 正在启动 HAClaw-OS 容器..." Blue
     Invoke-ComposeCmd @("up", "-d") -ComposeFile $composeFile -ProjectName $InstanceName
 
     # Step 6: Wait for health check
     # The entrypoint waits up to 120s for the gateway on first boot, then starts
-    # HAClaw. We need to wait longer than 120s to allow the full startup chain.
+    # HAClaw-OS. We need to wait longer than 120s to allow the full startup chain.
     Write-Host ""
-    Write-C "Waiting for HAClaw to become ready (first boot may take ~2 min)..." Cyan
-    Write-C "等待 HAClaw 就绪（首次启动可能需要约 2 分钟）..." Cyan
+    Write-C "Waiting for HAClaw-OS to become ready (first boot may take ~2 min)..." Cyan
+    Write-C "等待 HAClaw-OS 就绪（首次启动可能需要约 2 分钟）..." Cyan
     $maxWait = 150
     $waited = 0
     while ($waited -lt $maxWait) {
@@ -1077,9 +1159,9 @@ function Install-DockerHAClaw {
     Write-Host ""
 
     if ($waited -ge $maxWait) {
-        Write-C "⚠ HAClaw is still starting. Check with: docker compose ps" Yellow
+        Write-C "⚠ HAClaw-OS is still starting. Check with: docker compose ps" Yellow
     } else {
-        Write-C "✓ HAClaw is ready! / HAClaw 已就绪！" Green
+        Write-C "✓ HAClaw-OS is ready! / HAClaw-OS 已就绪！" Green
     }
 
     Write-Host ""
@@ -1095,13 +1177,13 @@ function Install-DockerHAClaw {
     $volRuntime = "$InstanceName-runtime"
     try {
         $cf = Get-Content $ComposeFile -Raw
-        if ($cf -match 'haclaw-data:\s*\n\s*name:\s*(\S+)') { $volData = $Matches[1] }
-        if ($cf -match 'haclaw-openclaw-data:\s*\n\s*name:\s*(\S+)') { $volOpenclaw = $Matches[1] }
-        if ($cf -match 'haclaw-runtime:\s*\n\s*name:\s*(\S+)') { $volRuntime = $Matches[1] }
+        if ($cf -match 'haclawx-data:\s*\n\s*name:\s*(\S+)') { $volData = $Matches[1] }
+        if ($cf -match 'haclawx-openclaw-data:\s*\n\s*name:\s*(\S+)') { $volOpenclaw = $Matches[1] }
+        if ($cf -match 'haclawx-runtime:\s*\n\s*name:\s*(\S+)') { $volRuntime = $Matches[1] }
     } catch { }
     $volBase = "/var/lib/docker/volumes"
     Write-C "📂 Data volumes (host path) / 数据卷（宿主机路径）：" Cyan
-    Write-Host "  HAClaw:  $volBase/$volData/_data" -ForegroundColor Green
+    Write-Host "  HAClaw-OS:  $volBase/$volData/_data" -ForegroundColor Green
     Write-Host "  OpenClaw:   $volBase/$volOpenclaw/_data" -ForegroundColor Green
     Write-Host "  Runtime:    $volBase/$volRuntime/_data" -ForegroundColor Green
     Write-Host ""
@@ -1116,13 +1198,13 @@ function Install-DockerHAClaw {
     Show-DockerCommands -ComposeFile $composeFile -ProjectName $InstanceName
 }
 
-function Update-DockerHAClaw {
+function Update-DockerHAClaw-OS {
     param(
         [string]$ComposeFile = $DOCKER_COMPOSE_FILE,
-        [string]$InstanceName = "haclaw"
+        [string]$InstanceName = "haclawx"
     )
-    $titleExtra = if ($InstanceName -ne "haclaw") { " [$InstanceName]" } else { "" }
-    Write-Section "Update HAClaw (Docker)$titleExtra / 更新 HAClaw (Docker)$titleExtra"
+    $titleExtra = if ($InstanceName -ne "haclawx") { " [$InstanceName]" } else { "" }
+    Write-Section "Update HAClaw-OS (Docker)$titleExtra / 更新 HAClaw-OS (Docker)$titleExtra"
 
     $containerName = $InstanceName
     $cnMatch = Select-String -Path $ComposeFile -Pattern 'container_name:\s*(\S+)' -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -1180,7 +1262,7 @@ function Update-DockerHAClaw {
     Invoke-ComposeCmd @("up", "-d") -ComposeFile $ComposeFile -ProjectName $InstanceName
 
     Write-Host ""
-    Write-C "Waiting for HAClaw to become ready... / 等待 HAClaw 就绪..." Cyan
+    Write-C "Waiting for HAClaw-OS to become ready... / 等待 HAClaw-OS 就绪..." Cyan
     $maxWait = 150
     $waited = 0
     while ($waited -lt $maxWait) {
@@ -1210,15 +1292,15 @@ function Update-DockerHAClaw {
     Print-AccessUrls
 }
 
-function Uninstall-DockerHAClaw {
+function Uninstall-DockerHAClaw-OS {
     param(
         [string]$ComposeFile = $DOCKER_COMPOSE_FILE,
-        [string]$InstanceName = "haclaw"
+        [string]$InstanceName = "haclawx"
     )
-    Write-Section "Uninstall HAClaw (Docker: $InstanceName) / 卸载 HAClaw (Docker: $InstanceName)"
+    Write-Section "Uninstall HAClaw-OS (Docker: $InstanceName) / 卸载 HAClaw-OS (Docker: $InstanceName)"
 
     Write-C "This will: / 将执行：" Cyan
-    Write-Host "  - Stop and remove the HAClaw container ($InstanceName) / 停止并删除 HAClaw 容器 ($InstanceName)"
+    Write-Host "  - Stop and remove the HAClaw-OS container ($InstanceName) / 停止并删除 HAClaw-OS 容器 ($InstanceName)"
     Write-Host ""
 
     $removeVolumes = Read-YesNo "Also remove data volumes? / 同时删除数据卷？" $false
@@ -1246,7 +1328,7 @@ function Uninstall-DockerHAClaw {
         & docker rmi $DOCKER_IMAGE 2>$null
         foreach ($m in $DOCKER_MIRRORS) {
             $mhost = $m -replace 'https?://', ''
-            & docker rmi "${mhost}/knowhunters/haclaw:latest" 2>$null
+            & docker rmi "${mhost}/knowhunters/haclawx:latest" 2>$null
         }
         Write-C "✓ Image removed / 镜像已删除" Green
     }
@@ -1279,7 +1361,7 @@ function Show-DockerCommands {
 }
 
 function Show-DockerManagementMenu {
-    param([string]$ComposeFile = $DOCKER_COMPOSE_FILE, [string]$InstanceName = "haclaw")
+    param([string]$ComposeFile = $DOCKER_COMPOSE_FILE, [string]$InstanceName = "haclawx")
 
     if (-not (Test-DockerCompose)) { Write-C "docker compose not available" Red; return }
 
@@ -1325,16 +1407,16 @@ function Show-DockerManagementMenu {
     $choice = Read-Choice "Enter your choice / 输入选择 [1-7]:" 1 7
 
     switch ($choice) {
-        1 { Update-DockerHAClaw -ComposeFile $ComposeFile -InstanceName $InstanceName }
+        1 { Update-DockerHAClaw-OS -ComposeFile $ComposeFile -InstanceName $InstanceName }
         2 {
             if ($isRunning) {
                 Write-Host ""
-                Write-C "Stopping HAClaw container... / 正在停止 HAClaw 容器..." Blue
+                Write-C "Stopping HAClaw-OS container... / 正在停止 HAClaw-OS 容器..." Blue
                 Invoke-ComposeCmd @("stop") -ComposeFile $ComposeFile -ProjectName $InstanceName
                 Write-C "✓ Stopped / 已停止" Green
             } else {
                 Write-Host ""
-                Write-C "Starting HAClaw container... / 正在启动 HAClaw 容器..." Blue
+                Write-C "Starting HAClaw-OS container... / 正在启动 HAClaw-OS 容器..." Blue
                 Invoke-ComposeCmd @("up", "-d") -ComposeFile $ComposeFile -ProjectName $InstanceName
                 Start-Sleep -Seconds 2
                 Write-C "✓ Started / 已启动" Green
@@ -1343,7 +1425,7 @@ function Show-DockerManagementMenu {
         }
         3 {
             Write-Host ""
-            Write-C "Restarting HAClaw container... / 正在重启 HAClaw 容器..." Blue
+            Write-C "Restarting HAClaw-OS container... / 正在重启 HAClaw-OS 容器..." Blue
             Invoke-ComposeCmd @("restart") -ComposeFile $ComposeFile -ProjectName $InstanceName
             Write-C "✓ Restarted / 已重启" Green
         }
@@ -1360,13 +1442,13 @@ function Show-DockerManagementMenu {
             Write-Host ""
             $statusCheck = & docker ps --filter "name=^${containerName}$" --filter "status=running" --format '{{.Names}}' 2>$null
             if ($statusCheck) {
-                Write-C "✓ HAClaw is running / HAClaw 运行中" Green
+                Write-C "✓ HAClaw-OS is running / HAClaw-OS 运行中" Green
                 Print-AccessUrls
             } else {
-                Write-C "HAClaw is not running / HAClaw 未运行" Yellow
+                Write-C "HAClaw-OS is not running / HAClaw-OS 未运行" Yellow
             }
         }
-        6 { Uninstall-DockerHAClaw -ComposeFile $ComposeFile -InstanceName $InstanceName }
+        6 { Uninstall-DockerHAClaw-OS -ComposeFile $ComposeFile -InstanceName $InstanceName }
         default { Write-C "Exiting / 退出" Yellow }
     }
 }
@@ -1377,10 +1459,10 @@ function Show-DockerManagementMenu {
 
 Write-Banner
 
-$REPO = "HAClaw/HAClaw"
+$REPO = "HAClaw-OS/HAClaw-OS"
 $LATEST_VERSION = Get-LatestVersion $REPO
 
-Write-C ":: HAClaw Launcher - $LATEST_VERSION ::" Cyan
+Write-C ":: HAClaw-OS Launcher - $LATEST_VERSION ::" Cyan
 Write-Host ""
 
 # ==============================================================================
@@ -1401,11 +1483,11 @@ if ((Test-DockerInstalled) -and (Test-DockerCompose)) {
 
     foreach ($cf in $composeFiles) {
         $content = Get-Content $cf -Raw -ErrorAction SilentlyContinue
-        if ($content -match "knowhunters/haclaw") {
+        if ($content -match "knowhunters/haclawx") {
             $DOCKER_INSTANCES += $cf
             # Extract instance name from filename
             if ($cf -eq "docker-compose.yml") {
-                $DOCKER_INSTANCE_NAMES += "haclaw"
+                $DOCKER_INSTANCE_NAMES += "haclawx"
             } else {
                 $iname = $cf -replace '^docker-compose-', '' -replace '\.yml$', ''
                 $DOCKER_INSTANCE_NAMES += $iname
@@ -1415,7 +1497,7 @@ if ((Test-DockerInstalled) -and (Test-DockerCompose)) {
             if ($content -match '"(\d+):18788"') { $iport = [int]$Matches[1] }
             $DOCKER_INSTANCE_PORTS += $iport
             # Extract container name for version/status check
-            $icn = "haclaw"
+            $icn = "haclawx"
             if ($content -match 'container_name:\s*(\S+)') { $icn = $Matches[1] }
             # Version
             $iver = try { (& docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' $icn 2>$null) } catch { "unknown" }
@@ -1445,7 +1527,7 @@ if ($HAS_DOCKER -or $HAS_BINARY) {
             $dPort = $DOCKER_INSTANCE_PORTS[$i]
             $dRun = $DOCKER_INSTANCE_RUNNING[$i]
             $dLabel = "Docker"
-            if ($DOCKER_INSTANCES.Count -gt 1 -or $dName -ne "haclaw") { $dLabel = "Docker [$dName]" }
+            if ($DOCKER_INSTANCES.Count -gt 1 -or $dName -ne "haclawx") { $dLabel = "Docker [$dName]" }
             if ($dRun) {
                 Write-Host "  🐳 ${dLabel}: " -NoNewline; Write-Host "v$dVer" -ForegroundColor Green -NoNewline; Write-Host " (" -NoNewline; Write-Host "Running / 运行中" -ForegroundColor Green -NoNewline; Write-Host ") on port $dPort"
             } else {
@@ -1461,13 +1543,13 @@ if ($HAS_DOCKER -or $HAS_BINARY) {
             if (Test-ProcessRunning) {
                 $binaryServiceRunning = $true
                 $binaryStatus = "Running / 运行中"
-                Write-Host "  📦 HAClaw: " -NoNewline; Write-Host "v$($script:CURRENT_VERSION)" -ForegroundColor Green -NoNewline; Write-Host " (" -NoNewline; Write-Host $binaryStatus -ForegroundColor Green -NoNewline; Write-Host ") at $($script:INSTALLED_LOCATION)"
+                Write-Host "  📦 HAClaw-OS: " -NoNewline; Write-Host "v$($script:CURRENT_VERSION)" -ForegroundColor Green -NoNewline; Write-Host " (" -NoNewline; Write-Host $binaryStatus -ForegroundColor Green -NoNewline; Write-Host ") at $($script:INSTALLED_LOCATION)"
             } else {
                 $binaryStatus = "Stopped / 已停止"
-                Write-Host "  📦 HAClaw: " -NoNewline; Write-Host "v$($script:CURRENT_VERSION)" -ForegroundColor Green -NoNewline; Write-Host " (" -NoNewline; Write-Host $binaryStatus -ForegroundColor Yellow -NoNewline; Write-Host ") at $($script:INSTALLED_LOCATION)"
+                Write-Host "  📦 HAClaw-OS: " -NoNewline; Write-Host "v$($script:CURRENT_VERSION)" -ForegroundColor Green -NoNewline; Write-Host " (" -NoNewline; Write-Host $binaryStatus -ForegroundColor Yellow -NoNewline; Write-Host ") at $($script:INSTALLED_LOCATION)"
             }
         } else {
-            Write-Host "  📦 HAClaw: " -NoNewline; Write-Host "v$($script:CURRENT_VERSION)" -ForegroundColor Green -NoNewline; Write-Host " at $($script:INSTALLED_LOCATION)"
+            Write-Host "  📦 HAClaw-OS: " -NoNewline; Write-Host "v$($script:CURRENT_VERSION)" -ForegroundColor Green -NoNewline; Write-Host " at $($script:INSTALLED_LOCATION)"
         }
     }
 
@@ -1484,15 +1566,15 @@ if ($HAS_DOCKER) {
     for ($i = 0; $i -lt $DOCKER_INSTANCES.Count; $i++) {
         $dName = $DOCKER_INSTANCE_NAMES[$i]
         $dLabel = "Manage Docker"
-        if ($DOCKER_INSTANCES.Count -gt 1 -or $dName -ne "haclaw") { $dLabel = "Manage Docker [$dName]" }
+        if ($DOCKER_INSTANCES.Count -gt 1 -or $dName -ne "haclawx") { $dLabel = "Manage Docker [$dName]" }
         $n++; $menuItems += "$n) $dLabel / 管理 Docker $dName"; $menuActions += "manage_docker"; $menuDockerIndex += $i
     }
 }
 if ($HAS_BINARY) {
-    $n++; $menuItems += "$n) Manage local HAClaw / 管理本机 HAClaw"; $menuActions += "manage_binary"; $menuDockerIndex += -1
+    $n++; $menuItems += "$n) Manage local HAClaw-OS / 管理本机 HAClaw-OS"; $menuActions += "manage_binary"; $menuDockerIndex += -1
 }
 if (-not $HAS_BINARY) {
-    $n++; $menuItems += "$n) Install HAClaw locally / 在本机安装 HAClaw"; $menuActions += "install_binary"; $menuDockerIndex += -1
+    $n++; $menuItems += "$n) Install HAClaw-OS locally / 在本机安装 HAClaw-OS"; $menuActions += "install_binary"; $menuDockerIndex += -1
 }
 $n++; $menuItems += "$n) New Docker deployment / 新建 Docker 部署"; $menuActions += "install_docker"; $menuDockerIndex += -1
 $n++; $menuItems += "$n) Exit / 退出"; $menuActions += "exit"; $menuDockerIndex += -1
@@ -1517,7 +1599,7 @@ switch ($selectedAction) {
     "manage_binary" {
         # --- Binary management sub-menu ---
         Write-Host ""
-        Write-C "✓ Local HAClaw / 本机 HAClaw" Green
+        Write-C "✓ Local HAClaw-OS / 本机 HAClaw-OS" Green
         Write-C "Location / 位置：        $($script:INSTALLED_LOCATION)" Cyan
         Write-C "Current version / 当前版本： $($script:CURRENT_VERSION)" Cyan
         Write-C "Latest version / 最新版本：  $LATEST_VERSION" Cyan
@@ -1560,16 +1642,16 @@ switch ($selectedAction) {
 
         switch ($bChoice) {
             1 {
-                Update-HAClaw -LatestVersion $LATEST_VERSION -Repo $REPO
+                Update-HAClaw-OS -LatestVersion $LATEST_VERSION -Repo $REPO
                 return
             }
             2 {
                 if ($script:SERVICE_RUNNING) {
-                    Stop-HAClawService
+                    Stop-HAClaw-OSService
                     return
                 } elseif ($hasAutoStart) {
                     Write-Host ""
-                    $null = Start-HAClawService
+                    $null = Start-HAClaw-OSService
                     if (Test-ProcessRunning) {
                         Write-Host ""
                         Print-AccessUrls
@@ -1582,7 +1664,7 @@ switch ($selectedAction) {
                 }
             }
             3 {
-                Uninstall-HAClaw
+                Uninstall-HAClaw-OS
                 return
             }
             default {
@@ -1594,7 +1676,7 @@ switch ($selectedAction) {
         return
     }
     "install_docker" {
-        Install-DockerHAClawNew
+        Install-DockerHAClaw-OSNew
         return
     }
     "install_binary" {
@@ -1614,7 +1696,7 @@ Write-C "✓ Detected System / 检测到系统: windows/$arch" Green
 Write-C "Fetching latest release info... / 正在获取最新版本信息... ($LATEST_VERSION)" Yellow
 
 $apiUrl = "https://api.github.com/repos/$REPO/releases/latest"
-$assetPattern = "haclaw-windows-${arch}.exe"
+$assetPattern = "haclawx-windows-${arch}.exe"
 $downloadUrl = Get-DownloadUrl $REPO $script:LATEST_TAG $assetPattern $apiUrl
 
 if (-not $downloadUrl) {
@@ -1650,11 +1732,27 @@ Write-Host "=======================================================" -Foreground
 Write-C "✅ Installation complete! / 安装完成！" Green
 Write-Host "=======================================================" -ForegroundColor Green
 Write-Host ""
-Write-C "HAClaw location / HAClaw 位置：        $($script:INSTALLED_BINARY)" Cyan
+Write-C "HAClaw-OS location / HAClaw-OS 位置：        $($script:INSTALLED_BINARY)" Cyan
 Write-C "Config & Data directory / 配置和数据目录： $(Join-Path (Split-Path $script:INSTALLED_BINARY -Parent) 'data')" Cyan
 Write-Host ""
 Write-C "✓ Installed in current directory / 已安装在当前目录" Green
 Write-Host ""
+
+# Register in PATH so `haclawx` is available globally
+$alreadyInPath = $false
+try {
+    $existing = Get-Command haclawx -ErrorAction SilentlyContinue
+    if ($existing -and $existing.Source -eq $script:INSTALLED_BINARY) { $alreadyInPath = $true }
+} catch { $null = $_ }
+
+if (-not $alreadyInPath) {
+    Write-C "Would you like to add haclawx to PATH for global access?" Yellow
+    Write-C "是否将 haclawx 添加到 PATH 以便全局使用？" Yellow
+    if (Read-YesNo "Register in PATH? / 注册到 PATH?" $true) {
+        Register-Path $script:INSTALLED_BINARY
+    }
+    Write-Host ""
+}
 
 # Smart port detection for binary install
 Write-C "Detecting available port... / 正在检测可用端口..." Cyan
@@ -1703,8 +1801,8 @@ if ($serviceJustInstalled) {
     Write-Host ""
 }
 
-if (Read-YesNo "Start HAClaw now? / 立即启动 HAClaw?" $true) {
-    Write-C ">> Starting HAClaw... / 正在启动 HAClaw..." Blue
+if (Read-YesNo "Start HAClaw-OS now? / 立即启动 HAClaw-OS?" $true) {
+    Write-C ">> Starting HAClaw-OS... / 正在启动 HAClaw-OS..." Blue
     Write-Host "----------------------------------------"
     Write-Host ""
     Write-C "First run: running in foreground so you can see initialization output." Cyan

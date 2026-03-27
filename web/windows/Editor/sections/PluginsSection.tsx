@@ -2,23 +2,28 @@ import React, { useState, useMemo } from 'react';
 import { SectionProps } from '../sectionTypes';
 import { ConfigSection, ConfigCard, TextField, SwitchField, ArrayField, KeyValueField, AddButton, EmptyState } from '../fields';
 import { getTranslation } from '../../../locales';
-import { getTooltip } from '../../../locales/tooltips';
+import { schemaTooltip } from '../schemaTooltip';
 
-export const PluginsSection: React.FC<SectionProps> = ({ setField, getField, deleteField, language }) => {
+export const PluginsSection: React.FC<SectionProps> = ({ schema, setField, getField, deleteField, language }) => {
   const es = useMemo(() => (getTranslation(language) as any).es || {}, [language]);
-  const tip = (key: string) => getTooltip(key, language);
+  const tip = (key: string) => schemaTooltip(key, language, schema);
   const g = (p: string[]) => getField(['plugins', ...p]);
   const s = (p: string[], v: any) => setField(['plugins', ...p], v);
   const entries = g(['entries']) || {};
   const entryKeys = Object.keys(entries);
+  const installs = g(['installs']) || {};
+  const pluginIds = useMemo(() => {
+    const ids = new Set<string>([...Object.keys(installs), ...entryKeys]);
+    return Array.from(ids).sort();
+  }, [installs, entryKeys]);
   const [newPluginKey, setNewPluginKey] = useState('');
 
   return (
     <div className="space-y-4">
       <ConfigSection title={es.pluginSettings} icon="power" iconColor="text-rose-500">
         <SwitchField label={es.enablePlugins} tooltip={tip('plugins.enabled')} value={g(['enabled']) !== false} onChange={v => s(['enabled'], v)} />
-        <ArrayField label={es.allowList} tooltip={tip('plugins.allow')} value={g(['allow']) || []} onChange={v => s(['allow'], v)} placeholder={es.phPluginName} />
-        <ArrayField label={es.denyList} tooltip={tip('plugins.deny')} value={g(['deny']) || []} onChange={v => s(['deny'], v)} placeholder={es.phPluginName} />
+        <ArrayField label={es.allowList} tooltip={tip('plugins.allow')} value={g(['allow']) || []} onChange={v => s(['allow'], v)} placeholder={es.phPluginName} suggestions={pluginIds} />
+        <ArrayField label={es.denyList} tooltip={tip('plugins.deny')} value={g(['deny']) || []} onChange={v => s(['deny'], v)} placeholder={es.phPluginName} suggestions={pluginIds} />
       </ConfigSection>
 
       <ConfigSection title={es.pluginSlots} icon="widgets" iconColor="text-rose-500" defaultOpen={false}>

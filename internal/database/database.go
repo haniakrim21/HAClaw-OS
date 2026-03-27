@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"HAClaw/internal/i18n"
-	"HAClaw/internal/logger"
-	"HAClaw/internal/webconfig"
+	"HAClaw-OS/internal/i18n"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/webconfig"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/driver/postgres"

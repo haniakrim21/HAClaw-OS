@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"HAClaw/internal/database"
-	"HAClaw/internal/logger"
-	"HAClaw/internal/monitor"
-	"HAClaw/internal/web"
-	"HAClaw/internal/webconfig"
+	"HAClaw-OS/internal/database"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/monitor"
+	"HAClaw-OS/internal/web"
+	"HAClaw-OS/internal/webconfig"
 )
 
 // MonitorConfigHandler manages monitor configuration.

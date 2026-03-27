@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"HAClaw/internal/i18n"
-	"HAClaw/internal/openclaw"
-	"HAClaw/internal/web"
+	"HAClaw-OS/internal/i18n"
+	"HAClaw-OS/internal/openclaw"
+	"HAClaw-OS/internal/web"
 )
 
 // WorkflowHandler handles multi-agent workflow orchestration.

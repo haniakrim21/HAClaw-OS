@@ -133,7 +133,7 @@ type SkillTranslation struct {
 // ReleaseNotesTranslation caches translated release notes by (product, version, lang).
 type ReleaseNotesTranslation struct {
 	ID         uint      `gorm:"primaryKey" json:"id"`
-	Product    string    `gorm:"uniqueIndex:idx_rnt_prod_ver_lang;not null;size:32" json:"product"` // "haclaw" or "openclaw"
+	Product    string    `gorm:"uniqueIndex:idx_rnt_prod_ver_lang;not null;size:32" json:"product"` // "haclawx" or "openclaw"
 	Version    string    `gorm:"uniqueIndex:idx_rnt_prod_ver_lang;not null;size:32" json:"version"`
 	Lang       string    `gorm:"uniqueIndex:idx_rnt_prod_ver_lang;not null;size:10" json:"lang"`
 	SourceHash string    `gorm:"not null" json:"source_hash"`

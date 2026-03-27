@@ -45,7 +45,7 @@ const EventsPanel: React.FC<EventsPanelProps> = ({
   }, [events]);
 
   const jumpToWindow = useCallback((id: string, extra?: Record<string, any>) => {
-    window.dispatchEvent(new CustomEvent('clawdeck:open-window', { detail: { id, ...extra } }));
+    window.dispatchEvent(new CustomEvent('haclaw:open-window', { detail: { id, ...extra } }));
   }, []);
 
   const suggestJumpWindow = useCallback((ev: any): { id: string; extra?: Record<string, any> } => {

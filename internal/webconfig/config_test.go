@@ -25,7 +25,7 @@ func TestDefault(t *testing.T) {
 
 	// Database defaults
 	assert.Equal(t, "sqlite", cfg.Database.Driver)
-	assert.Contains(t, cfg.Database.SQLitePath, "HAClaw.db")
+	assert.Contains(t, cfg.Database.SQLitePath, "HAClaw-OS.db")
 
 	// Log defaults
 	assert.Equal(t, "info", cfg.Log.Level)
@@ -210,7 +210,7 @@ func TestAlertConfig(t *testing.T) {
 
 func TestSaveLoad_EncryptsGatewayToken(t *testing.T) {
 	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "HAClaw.json")
+	configPath := filepath.Join(tmpDir, "HAClaw-OS.json")
 	t.Setenv("OCD_CONFIG", configPath)
 
 	cfg := Default()

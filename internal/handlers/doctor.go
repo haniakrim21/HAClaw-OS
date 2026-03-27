@@ -15,13 +15,13 @@ import (
 	"strings"
 	"time"
 
-	"HAClaw/internal/constants"
-	"HAClaw/internal/database"
-	"HAClaw/internal/executil"
-	"HAClaw/internal/logger"
-	"HAClaw/internal/openclaw"
-	"HAClaw/internal/service"
-	"HAClaw/internal/web"
+	"HAClaw-OS/internal/constants"
+	"HAClaw-OS/internal/database"
+	"HAClaw-OS/internal/executil"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/openclaw"
+	"HAClaw-OS/internal/service"
+	"HAClaw-OS/internal/web"
 )
 
 // DoctorHandler provides diagnostic and repair operations.
@@ -279,7 +279,7 @@ func (h *DoctorHandler) Run(w http.ResponseWriter, r *http.Request) {
 	items = append(items, h.checkPort())
 	items = append(items, h.checkDisk())
 	items = append(items, h.checkOpenClawService())
-	items = append(items, h.checkHAClawService())
+	items = append(items, h.checkHAClaw-OSService())
 	items = append(items, h.gatewayDiagnoseChecks()...)
 	items = append(items, h.securityAuditChecks()...)
 
@@ -1124,12 +1124,12 @@ func (h *DoctorHandler) checkOpenClawService() CheckItem {
 	}
 }
 
-func (h *DoctorHandler) checkHAClawService() CheckItem {
+func (h *DoctorHandler) checkHAClaw-OSService() CheckItem {
 	if service.IsInstalled() {
 		return CheckItem{
-			ID:       "service.haclaw",
-			Code:     "service.haclaw",
-			Name:     "HAClaw Service",
+			ID:       "service.haclawx",
+			Code:     "service.haclawx",
+			Name:     "HAClaw-OS Service",
 			Category: "service",
 			Severity: "info",
 			Status:   "ok",
@@ -1137,13 +1137,13 @@ func (h *DoctorHandler) checkHAClawService() CheckItem {
 		}
 	}
 	return CheckItem{
-		ID:         "service.haclaw",
-		Code:       "service.haclaw",
-		Name:       "HAClaw Service",
+		ID:         "service.haclawx",
+		Code:       "service.haclawx",
+		Name:       "HAClaw-OS Service",
 		Category:   "service",
 		Severity:   "info",
 		Status:     "warn",
-		Detail:     "system service not installed, HAClaw requires manual start",
+		Detail:     "system service not installed, HAClaw-OS requires manual start",
 		Suggestion: "install the system service in Settings → Update → System Service for auto-start on boot",
 	}
 }
@@ -1157,7 +1157,7 @@ func (h *DoctorHandler) collectChecks() []CheckItem {
 		h.checkPort(),
 		h.checkDisk(),
 		h.checkOpenClawService(),
-		h.checkHAClawService(),
+		h.checkHAClaw-OSService(),
 	}
 	items = append(items, h.checkConfigValues()...)
 	items = append(items, h.gatewayDiagnoseChecks()...)

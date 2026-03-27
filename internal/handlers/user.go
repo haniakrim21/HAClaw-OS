@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	"HAClaw/internal/constants"
-	"HAClaw/internal/database"
-	"HAClaw/internal/logger"
-	"HAClaw/internal/web"
+	"HAClaw-OS/internal/constants"
+	"HAClaw-OS/internal/database"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/web"
 
 	"golang.org/x/crypto/bcrypt"
 )

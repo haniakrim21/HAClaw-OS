@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"HAClaw/internal/appconfig"
-	"HAClaw/internal/i18n"
-	"HAClaw/internal/output"
+	"HAClaw-OS/internal/appconfig"
+	"HAClaw-OS/internal/i18n"
+	"HAClaw-OS/internal/output"
 )
 
 func SettingsShow(args []string) int {

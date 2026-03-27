@@ -252,7 +252,7 @@ const WindowFrame: React.FC<WindowFrameProps> = ({
                   <span className="hidden xs:inline">{String(t.encrypted || '')}</span>
                 </div>
               </div>
-              <div className="text-[10px] text-slate-400 dark:text-white/40 font-mono italic text-glow-blue">HAClaw OS</div>
+              <div className="text-[10px] text-slate-400 dark:text-white/40 font-mono italic text-glow-blue">HAClaw-OS OS</div>
             </footer>
           )}
         </div>

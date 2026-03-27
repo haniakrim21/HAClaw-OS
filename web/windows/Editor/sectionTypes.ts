@@ -2,6 +2,7 @@ import { Language } from '../../types';
 
 export interface SectionProps {
   config: Record<string, any>;
+  schema?: Record<string, any> | null;
   setField: (path: string[], value: any) => void;
   getField: (path: string[]) => any;
   deleteField: (path: string[]) => void;

@@ -30,7 +30,7 @@ func TestValidateJWT_Valid(t *testing.T) {
 	assert.Equal(t, uint(1), claims.UserID)
 	assert.Equal(t, "testuser", claims.Username)
 	assert.Equal(t, "user", claims.Role)
-	assert.Equal(t, "HAClaw", claims.Issuer)
+	assert.Equal(t, "HAClaw-OS", claims.Issuer)
 }
 
 func TestValidateJWT_InvalidSecret(t *testing.T) {

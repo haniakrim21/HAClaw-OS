@@ -12,14 +12,14 @@ import (
 	"strings"
 	"time"
 
-	"HAClaw/internal/constants"
-	"HAClaw/internal/database"
-	"HAClaw/internal/logger"
-	"HAClaw/internal/openclaw"
-	"HAClaw/internal/translate"
-	"HAClaw/internal/updater"
-	"HAClaw/internal/version"
-	"HAClaw/internal/web"
+	"HAClaw-OS/internal/constants"
+	"HAClaw-OS/internal/database"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/openclaw"
+	"HAClaw-OS/internal/translate"
+	"HAClaw-OS/internal/updater"
+	"HAClaw-OS/internal/version"
+	"HAClaw-OS/internal/web"
 )
 
 // SelfUpdateHandler handles self-update API endpoints.
@@ -188,7 +188,7 @@ func (h *SelfUpdateHandler) TranslateNotes(w http.ResponseWriter, r *http.Reques
 	var req struct {
 		Text    string `json:"text"`
 		Lang    string `json:"lang"`
-		Product string `json:"product"` // "haclaw" or "openclaw"
+		Product string `json:"product"` // "haclawx" or "openclaw"
 		Version string `json:"version"` // e.g. "0.8.1" or "2026.3.2"
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
