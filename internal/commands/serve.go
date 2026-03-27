@@ -409,13 +409,13 @@ func RunServe(args []string) int {
 	router.GET("/api/v1/service/status", serviceHandler.Status)
 
 	router.GET("/api/v1/runtime/status", runtimeHandler.Status)
-	router.POST("/api/v1/runtime/haclawx/update", web.RequireAdmin(runtimeHandler.UpdateHAClaw-OS))
+	router.POST("/api/v1/runtime/haclawx/update", web.RequireAdmin(runtimeHandler.UpdateHAClawOS))
 	router.POST("/api/v1/runtime/openclaw/update", web.RequireAdmin(runtimeHandler.UpdateOpenClaw))
 	router.POST("/api/v1/runtime/rollback", web.RequireAdmin(runtimeHandler.Rollback))
 	router.POST("/api/v1/service/openclaw/install", web.RequireAdmin(serviceHandler.InstallOpenClaw))
 	router.POST("/api/v1/service/openclaw/uninstall", web.RequireAdmin(serviceHandler.UninstallOpenClaw))
-	router.POST("/api/v1/service/haclawx/install", web.RequireAdmin(serviceHandler.InstallHAClaw-OS))
-	router.POST("/api/v1/service/haclawx/uninstall", web.RequireAdmin(serviceHandler.UninstallHAClaw-OS))
+	router.POST("/api/v1/service/haclawx/install", web.RequireAdmin(serviceHandler.InstallHAClawOS))
+	router.POST("/api/v1/service/haclawx/uninstall", web.RequireAdmin(serviceHandler.UninstallHAClawOS))
 
 	router.GET("/api/v1/server-config", serverConfigHandler.Get)
 	router.PUT("/api/v1/server-config", web.RequireAdmin(serverConfigHandler.Update))

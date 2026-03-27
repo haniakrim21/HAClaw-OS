@@ -35,7 +35,7 @@ func (h *ServiceHandler) writeAudit(r *http.Request, action, result, detail stri
 
 type serviceStatusResponse struct {
 	OpenClawInstalled  bool `json:"openclaw_installed"`
-	HAClaw-OSInstalled bool `json:"haclawx_installed"`
+	HAClawOSInstalled bool `json:"haclawx_installed"`
 	IsDocker           bool `json:"is_docker"`
 }
 
@@ -46,7 +46,7 @@ func (h *ServiceHandler) Status(w http.ResponseWriter, r *http.Request) {
 
 	web.OK(w, r, serviceStatusResponse{
 		OpenClawInstalled:  status.Installed,
-		HAClaw-OSInstalled: service.IsInstalled(),
+		HAClawOSInstalled:  service.IsInstalled(),
 		IsDocker:           isDocker,
 	})
 }
@@ -83,7 +83,7 @@ func (h *ServiceHandler) UninstallOpenClaw(w http.ResponseWriter, r *http.Reques
 	web.OK(w, r, map[string]string{"message": "OpenClaw service uninstalled"})
 }
 
-func (h *ServiceHandler) InstallHAClaw-OS(w http.ResponseWriter, r *http.Request) {
+func (h *ServiceHandler) InstallHAClawOS(w http.ResponseWriter, r *http.Request) {
 	logger.Log.Info().
 		Str("user", web.GetUsername(r)).
 		Str("ip", r.RemoteAddr).
@@ -107,7 +107,7 @@ func (h *ServiceHandler) InstallHAClaw-OS(w http.ResponseWriter, r *http.Request
 	web.OK(w, r, map[string]bool{"installed": service.IsInstalled()})
 }
 
-func (h *ServiceHandler) UninstallHAClaw-OS(w http.ResponseWriter, r *http.Request) {
+func (h *ServiceHandler) UninstallHAClawOS(w http.ResponseWriter, r *http.Request) {
 	logger.Log.Info().
 		Str("user", web.GetUsername(r)).
 		Str("ip", r.RemoteAddr).
