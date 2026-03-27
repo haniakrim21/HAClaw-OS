@@ -3391,8 +3391,9 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
         gwReady={gwReady}
         loadUsage={async (key) => {
           const res = await gwApi.sessionsUsage({ key, limit: 1 }) as any;
-          const entry = res?.sessions?.[0];
-          return entry?.usage ?? null;
+          if (res?.sessions?.[0]?.usage) return res.sessions[0].usage;
+          if (res?.totalTokens !== undefined) return res;
+          return null;
         }}
         loadTimeseries={async (key) => {
           return await gwApi.sessionsUsageTimeseries(key) as any;
