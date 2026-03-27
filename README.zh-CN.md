@@ -7,8 +7,8 @@
 
 [English](README.md) | **简体中文**
 
-[![Release](https://img.shields.io/github/v/release/HAClaw-OS/HAClaw-OS?style=for-the-badge&logo=rocket)](https://github.com/HAClaw-OS/HAClaw-OS/releases)
-[![Build](https://img.shields.io/badge/Build-Passing-success?style=for-the-badge&logo=github-actions)](https://github.com/HAClaw-OS/HAClaw-OS/actions)
+[![Release](https://img.shields.io/github/v/release/HAClaw-OS/HAClaw-OS?style=for-the-badge&logo=rocket)](https://github.com/haniakrim21/HAClaw-OS/releases)
+[![Build](https://img.shields.io/badge/Build-Passing-success?style=for-the-badge&logo=github-actions)](https://github.com/haniakrim21/HAClaw-OS/actions)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 
@@ -129,7 +129,7 @@ irm https://raw.githubusercontent.com/HAClaw-OS/HAClaw-OS/main/install.ps1 | iex
 
 ### 手动下载
 
-从 [Releases](https://github.com/HAClaw-OS/HAClaw-OS/releases) 下载二进制文件，零依赖，直接运行。
+从 [Releases](https://github.com/haniakrim21/HAClaw-OS/releases) 下载二进制文件，零依赖，直接运行。
 
 ```bash
 ./HAClaw-OS
@@ -302,7 +302,7 @@ docker logs haclawx
 
 ## 💬 作者寄语
 
-这是我的第一个开源项目，也希望它能在大家的参与下变得越来越好。如果你发现问题，或有任何改进想法，欢迎提交 [Issue](https://github.com/HAClaw-OS/HAClaw-OS/issues) 或 [Pull Request](https://github.com/HAClaw-OS/HAClaw-OS/pulls)。感谢你的关注和支持，每一次反馈，都是这个项目成长的一部分。
+这是我的第一个开源项目，也希望它能在大家的参与下变得越来越好。如果你发现问题，或有任何改进想法，欢迎提交 [Issue](https://github.com/haniakrim21/HAClaw-OS/issues) 或 [Pull Request](https://github.com/haniakrim21/HAClaw-OS/pulls)。感谢你的关注和支持，每一次反馈，都是这个项目成长的一部分。
 
 > *某 AI 曾预言本项目会大火——不过众所周知，AI 这东西，是会产生幻觉的😅。*
 

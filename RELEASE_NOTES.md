@@ -17,6 +17,6 @@
 - add secProfile tool strategy labels for all 13 locales
 
 ---
-**Full Changelog**: [v0.0.32...v0.0.33](https://github.com/HAClaw-OS/HAClaw-OS/compare/v0.0.32...v0.0.33)
+**Full Changelog**: [v0.0.32...v0.0.33](https://github.com/haniakrim21/HAClaw-OS/compare/v0.0.32...v0.0.33)
 
 

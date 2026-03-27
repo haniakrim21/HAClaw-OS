@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Language } from '../types';
 import { getTranslation } from '../locales';
 import { authApi, auditApi, notifyApi, serverConfigApi, gatewayApi } from '../services/api';
@@ -768,17 +768,17 @@ const Settings: React.FC<SettingsProps> = ({ language, onLogout, pendingTab, onT
                     <h3 className="text-[13px] font-bold text-slate-700 dark:text-white/70">{s.donateOtherWays}</h3>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <SmartLink href="https://github.com/HAClaw-OS/HAClaw-OS"
+                    <SmartLink href="https://github.com/haniakrim21/HAClaw-OS"
                       className="flex items-center gap-2 px-3 py-2.5 rounded-lg theme-field hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
                       <span className="material-symbols-outlined text-[16px] text-amber-500">star</span>
                       <span className="text-[11px] theme-text-secondary">{s.donateStarGithub}</span>
                     </SmartLink>
-                    <SmartLink href="https://github.com/HAClaw-OS/HAClaw-OS/issues"
+                    <SmartLink href="https://github.com/haniakrim21/HAClaw-OS/issues"
                       className="flex items-center gap-2 px-3 py-2.5 rounded-lg theme-field hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
                       <span className="material-symbols-outlined text-[16px] text-blue-500">bug_report</span>
                       <span className="text-[11px] theme-text-secondary">{s.donateFeedback}</span>
                     </SmartLink>
-                    <SmartLink href="https://github.com/HAClaw-OS/HAClaw-OS"
+                    <SmartLink href="https://github.com/haniakrim21/HAClaw-OS"
                       className="flex items-center gap-2 px-3 py-2.5 rounded-lg theme-field hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
                       <span className="material-symbols-outlined text-[16px] text-emerald-500">edit_document</span>
                       <span className="text-[11px] theme-text-secondary">{s.donateDocs}</span>
@@ -874,7 +874,7 @@ const Settings: React.FC<SettingsProps> = ({ language, onLogout, pendingTab, onT
                       </div>
                       <span className="material-symbols-outlined text-[14px] text-slate-300 dark:text-white/15 group-hover:text-primary">open_in_new</span>
                     </SmartLink>
-                    <SmartLink href="https://github.com/HAClaw-OS/HAClaw-OS"
+                    <SmartLink href="https://github.com/haniakrim21/HAClaw-OS"
                       className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors group">
                       <span className="text-[20px]">🦀</span>
                       <div className="flex-1 min-w-0">

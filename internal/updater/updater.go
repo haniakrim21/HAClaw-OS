@@ -87,7 +87,7 @@ func CheckForUpdate(ctx context.Context) (*CheckResult, error) {
 		// Network error - likely blocked or timeout
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "timeout") || strings.Contains(errMsg, "connection refused") || strings.Contains(errMsg, "no route to host") {
-			return &CheckResult{Available: false, CurrentVersion: currentVersion, Error: "Cannot connect to GitHub. Please check your network or download manually from https://github.com/HAClaw-OS/HAClaw-OS/releases"}, nil
+			return &CheckResult{Available: false, CurrentVersion: currentVersion, Error: "Cannot connect to GitHub. Please check your network or download manually from https://github.com/haniakrim21/HAClaw-OS/releases"}, nil
 		}
 		return &CheckResult{Available: false, CurrentVersion: currentVersion, Error: errMsg}, nil
 	}
@@ -166,7 +166,7 @@ func CheckForPreRelease(ctx context.Context) (*CheckResult, error) {
 		// Network error - likely blocked or timeout
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "timeout") || strings.Contains(errMsg, "connection refused") || strings.Contains(errMsg, "no route to host") {
-			return &CheckResult{Available: false, CurrentVersion: currentVersion, Error: "Cannot connect to GitHub. Please check your network or download manually from https://github.com/HAClaw-OS/HAClaw-OS/releases"}, nil
+			return &CheckResult{Available: false, CurrentVersion: currentVersion, Error: "Cannot connect to GitHub. Please check your network or download manually from https://github.com/haniakrim21/HAClaw-OS/releases"}, nil
 		}
 		return &CheckResult{Available: false, CurrentVersion: currentVersion, Error: errMsg}, nil
 	}

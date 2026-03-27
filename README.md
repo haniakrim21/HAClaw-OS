@@ -139,7 +139,7 @@ irm https://raw.githubusercontent.com/HAClaw-OS/HAClaw-OS/main/install.ps1 | iex
 
 ### Manual Download
 
-Download from [Releases](https://github.com/HAClaw-OS/HAClaw-OS/releases). Single file, no dependencies. Just run.
+Download from [Releases](https://github.com/haniakrim21/HAClaw-OS/releases). Single file, no dependencies. Just run.
 
 ```bash
 # Run with default settings (localhost:18788)
@@ -330,7 +330,7 @@ We welcome contributions! Whether you're fixing bugs, adding features, or improv
 
 ## 💬 A Note from the Author
 
-This is my first open-source project, and I hope it will continue to improve with the help of the community. If you run into any issues or have ideas for improvement, feel free to open an [Issue](https://github.com/HAClaw-OS/HAClaw-OS/issues) or submit a [Pull Request](https://github.com/HAClaw-OS/HAClaw-OS/pulls). Thank you for your support. Every piece of feedback helps this project grow.
+This is my first open-source project, and I hope it will continue to improve with the help of the community. If you run into any issues or have ideas for improvement, feel free to open an [Issue](https://github.com/haniakrim21/HAClaw-OS/issues) or submit a [Pull Request](https://github.com/haniakrim21/HAClaw-OS/pulls). Thank you for your support. Every piece of feedback helps this project grow.
 
 > *An AI predicted this project would go viral. But as we all know, AIs do hallucinate sometimes 😅*
 
