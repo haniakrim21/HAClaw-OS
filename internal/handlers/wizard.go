@@ -823,14 +823,17 @@ func (h *WizardHandler) resolveAPIKeyReference(raw string) string {
 }
 
 func (h *WizardHandler) lookupEnvVarFromFiles(key string) string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ""
+	var paths []string
+
+	if configPath := os.Getenv("OPENCLAW_CONFIG_PATH"); configPath != "" {
+		dir := filepath.Dir(configPath)
+		paths = append(paths, filepath.Join(dir, ".env"), filepath.Join(dir, "env"))
 	}
-	paths := []string{
-		filepath.Join(home, ".openclaw", ".env"),
-		filepath.Join(home, ".openclaw", "env"),
+
+	if home, err := os.UserHomeDir(); err == nil {
+		paths = append(paths, filepath.Join(home, ".openclaw", ".env"), filepath.Join(home, ".openclaw", "env"))
 	}
+
 	for _, p := range paths {
 		if v := readEnvFileValue(p, key); v != "" {
 			return v
@@ -930,11 +933,15 @@ func (h *WizardHandler) resolveProviderAPIKeyViaEnv(provider string) string {
 }
 
 func (h *WizardHandler) resolveProviderAPIKeyViaLocalConfig(provider string) string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ""
+	configPath := os.Getenv("OPENCLAW_CONFIG_PATH")
+	if configPath == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return ""
+		}
+		configPath = filepath.Join(home, ".openclaw", "openclaw.json")
 	}
-	configPath := filepath.Join(home, ".openclaw", "openclaw.json")
+
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return ""
@@ -1668,11 +1675,16 @@ func (h *WizardHandler) mergeConfig(config map[string]interface{}) error {
 
 // writeEnvKey writes an API key to ~/.openclaw/.env.
 func (h *WizardHandler) writeEnvKey(key, value string) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return
+	var envPath string
+	if configPath := os.Getenv("OPENCLAW_CONFIG_PATH"); configPath != "" {
+		envPath = filepath.Join(filepath.Dir(configPath), ".env")
+	} else {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return
+		}
+		envPath = filepath.Join(home, ".openclaw", ".env")
 	}
-	envPath := filepath.Join(home, ".openclaw", ".env")
 
 	// read existing content
 	existing := ""
