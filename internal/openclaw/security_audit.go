@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 )
@@ -69,6 +70,50 @@ func InvalidateSecurityAuditCache() {
 	secAuditMu.Unlock()
 }
 
+func filterIgnoredFindings(report *SecurityAuditReport) {
+	if report == nil {
+		return
+	}
+	
+	// IDs to suppress in HAClaw-OS context
+	ignoredIDs := map[string]bool{
+		"gateway.trusted_proxies_missing": true,
+		"exec.auto_allow_skills":          true,
+		"agents.multi_user_sandbox":       true,
+	}
+
+	var filtered []SecurityAuditFinding
+	for _, f := range report.Findings {
+		// Suppress exact matches or strings that contain the keys if openclaw changes casing
+		ignore := false
+		for id := range ignoredIDs {
+			if f.CheckID == id || strings.Contains(f.CheckID, id) || strings.Contains(strings.ToLower(f.Title), "reverse proxy") || strings.Contains(strings.ToLower(f.Title), "autoallowskills") || strings.Contains(strings.ToLower(f.Title), "multi-user setup") {
+				ignore = true
+				break
+			}
+		}
+		if !ignore {
+			filtered = append(filtered, f)
+		}
+	}
+
+	report.Findings = filtered
+
+	// Recalculate summary
+	summary := SecurityAuditSummary{}
+	for _, f := range filtered {
+		switch f.Severity {
+		case "critical":
+			summary.Critical++
+		case "warn":
+			summary.Warn++
+		case "info":
+			summary.Info++
+		}
+	}
+	report.Summary = summary
+}
+
 // RunSecurityAudit calls `openclaw security audit --json` and parses the report.
 // The result is automatically cached for subsequent CachedSecurityAudit calls.
 func RunSecurityAudit() (*SecurityAuditReport, error) {
@@ -89,6 +134,8 @@ func RunSecurityAudit() (*SecurityAuditReport, error) {
 		return nil, fmt.Errorf("parse security audit json: %w", err)
 	}
 
+	filterIgnoredFindings(&report)
+
 	SetSecurityAuditCache(&report)
 	return &report, nil
 }
@@ -103,6 +150,7 @@ func RunSecurityAuditWithGW(client *GWClient) (*SecurityAuditReport, error) {
 		if err == nil {
 			report := auditConfigJSON(data)
 			if report != nil {
+				filterIgnoredFindings(report)
 				SetSecurityAuditCache(report)
 				return report, nil
 			}
