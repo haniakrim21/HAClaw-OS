@@ -302,7 +302,7 @@ const UpdateTab: React.FC<UpdateTabProps> = ({ s, language, inputCls, rowCls }) 
         setServiceStatus(prev => prev ? { ...prev, openclaw_installed: res.installed } : { openclaw_installed: res.installed, haclawx_installed: false });
         toast('success', sRef.current.serviceInstalled || 'OpenClaw service installed');
       } else {
-        await serviceApi.installHAClaw-OS();
+        await serviceApi.installHAClawOS();
         toast('success', sRef.current.serviceInstalled || 'HAClaw-OS service installed');
       }
       await loadServiceStatus();
@@ -322,7 +322,7 @@ const UpdateTab: React.FC<UpdateTabProps> = ({ s, language, inputCls, rowCls }) 
         setServiceStatus(prev => prev ? { ...prev, openclaw_installed: res.installed } : { openclaw_installed: res.installed, haclawx_installed: false });
         toast('success', sRef.current.serviceUninstalled || 'OpenClaw service uninstalled');
       } else {
-        await serviceApi.uninstallHAClaw-OS();
+        await serviceApi.uninstallHAClawOS();
         toast('success', sRef.current.serviceUninstalled || 'HAClaw-OS service uninstalled');
       }
       await loadServiceStatus();

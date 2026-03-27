@@ -16,7 +16,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 COPY --from=frontend /app/internal/web/dist ./internal/web/dist
-ARG VERSION=0.0.1
+ARG VERSION=0.0.33
 ARG BUILD_NUMBER=0
 RUN COMPAT=$(grep -o '"openclawCompat"[[:space:]]*:[[:space:]]*"[^"]*"' web/package.json | cut -d'"' -f4) && \
     CGO_ENABLED=0 GOOS=linux go build \
@@ -71,7 +71,7 @@ ARG BUILD_REVISION=unknown
 ARG BUILD_DATE=unknown
 ARG OPENCLAW_VERSION=latest
 ARG BUILD_NUMBER=0
-ARG VERSION=0.0.1
+ARG VERSION=0.0.33
 ARG OPENCLAW_COMPAT=unknown
 LABEL org.opencontainers.image.title="HAClaw-OS" \
       org.opencontainers.image.description="Desktop management dashboard for OpenClaw AI gateway" \

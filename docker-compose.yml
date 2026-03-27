@@ -1,6 +1,7 @@
 services:
   haclawx:
     image: knowhunters/haclawx:latest
+    build: .
     container_name: haclawx
     init: true
     restart: unless-stopped

@@ -1,4 +1,4 @@
-﻿// HAClaw-OS API 服务层 — 对应后端所有 REST API 端点
+// HAClaw-OS API 服务层 — 对应后端所有 REST API 端点
 import { get, getCached, post, put, del, setToken, clearToken, ApiError } from './request';
 import { translateApiError } from './errorCodes';
 
@@ -60,8 +60,8 @@ export const serviceApi = {
   status: () => get<{ openclaw_installed: boolean; haclawx_installed: boolean; is_docker: boolean }>('/api/v1/service/status'),
   installOpenClaw: () => post<{ message: string }>('/api/v1/service/openclaw/install', {}),
   uninstallOpenClaw: () => post<{ message: string }>('/api/v1/service/openclaw/uninstall', {}),
-  installHAClaw-OS: () => post<{ message: string }>('/api/v1/service/haclawx/install', {}),
-  uninstallHAClaw-OS: () => post<{ message: string }>('/api/v1/service/haclawx/uninstall', {}),
+  installHAClawOS: () => post<{ message: string }>('/api/v1/service/haclawx/install', {}),
+  uninstallHAClawOS: () => post<{ message: string }>('/api/v1/service/haclawx/uninstall', {}),
 };
 
 // ==================== Docker 运行时覆盖 ====================
