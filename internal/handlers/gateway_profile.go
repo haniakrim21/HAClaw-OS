@@ -1,4 +1,4 @@
-﻿package handlers
+package handlers
 
 import (
 	"encoding/json"
@@ -294,7 +294,7 @@ func (h *GatewayProfileHandler) TestConnection(w http.ResponseWriter, r *http.Re
 	}
 
 	// Step 1: TCP reachability
-	addr := fmt.Sprintf("%s:%d", req.Host, req.Port)
+	addr := net.JoinHostPort(req.Host, strconv.Itoa(req.Port))
 	tcpConn, err := net.DialTimeout("tcp", addr, 5*time.Second)
 	if err != nil {
 		logger.Config.Warn().Err(err).Str("addr", addr).Msg("gateway test: TCP unreachable")
