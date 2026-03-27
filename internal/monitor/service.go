@@ -3,10 +3,10 @@
 import (
 	"time"
 
-	"HAClaw/internal/database"
-	"HAClaw/internal/i18n"
-	"HAClaw/internal/logger"
-	"HAClaw/internal/web"
+	"HAClaw-OS/internal/database"
+	"HAClaw-OS/internal/i18n"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/web"
 )
 
 type Service struct {

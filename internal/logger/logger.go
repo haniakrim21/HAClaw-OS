@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"HAClaw/internal/redact"
-	"HAClaw/internal/webconfig"
+	"HAClaw-OS/internal/redact"
+	"HAClaw-OS/internal/webconfig"
 
 	"github.com/rs/zerolog"
 	"gopkg.in/natefinch/lumberjack.v2"

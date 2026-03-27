@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"HAClaw/internal/netutil"
-	"HAClaw/internal/web"
+	"HAClaw-OS/internal/netutil"
+	"HAClaw-OS/internal/web"
 )
 
 // NetworkHandler handles network utility endpoints.

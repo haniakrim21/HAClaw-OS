@@ -6,11 +6,11 @@ ARG OPENCLAW_VERSION=latest
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ca-certificates curl git gnupg python3 make g++ && \
-    # Node.js 22 LTS via NodeSource
+    # Node.js 24 via NodeSource
     mkdir -p /etc/apt/keyrings && \
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
         | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main" \
         > /etc/apt/sources.list.d/nodesource.list && \
     apt-get update && \
     apt-get install -y --no-install-recommends nodejs && \
@@ -78,7 +78,7 @@ RUN set -eux; \
     mkdir -p /etc/apt/keyrings; \
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
         | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg; \
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main" \
         > /etc/apt/sources.list.d/nodesource.list; \
     retry_apt apt-get update; \
     retry_apt apt-get install -y --no-install-recommends nodejs python3 make tzdata tini wget jq ripgrep procps lsof; \
@@ -93,32 +93,32 @@ ARG BUILD_REVISION=unknown
 ARG BUILD_DATE=unknown
 ARG OPENCLAW_VERSION=latest
 ARG OPENCLAW_COMPAT=unknown
-LABEL org.opencontainers.image.title="HAClaw" \
+LABEL org.opencontainers.image.title="HAClaw-OS" \
       org.opencontainers.image.description="Desktop management dashboard for OpenClaw AI gateway" \
       org.opencontainers.image.version="${BUILD_VERSION}" \
       org.opencontainers.image.revision="${BUILD_REVISION}" \
       org.opencontainers.image.created="${BUILD_DATE}" \
-      org.opencontainers.image.url="https://github.com/HAClaw/HAClaw" \
-      org.opencontainers.image.documentation="https://github.com/HAClaw/HAClaw#readme" \
-      org.opencontainers.image.source="https://github.com/HAClaw/HAClaw" \
+      org.opencontainers.image.url="https://github.com/HAClaw-OS/HAClaw-OS" \
+      org.opencontainers.image.documentation="https://github.com/HAClaw-OS/HAClaw-OS#readme" \
+      org.opencontainers.image.source="https://github.com/HAClaw-OS/HAClaw-OS" \
       org.opencontainers.image.licenses="MIT" \
-      ai.haclaw.openclaw.version="${OPENCLAW_VERSION}" \
-      ai.haclaw.openclaw.compat="${OPENCLAW_COMPAT}"
+      ai.haclawx.openclaw.version="${OPENCLAW_VERSION}" \
+      ai.haclawx.openclaw.compat="${OPENCLAW_COMPAT}"
 
 WORKDIR /app
 ARG TARGETARCH
 COPY --from=openclaw-builder /opt/openclaw /opt/openclaw
 COPY --from=openclaw-builder /usr/local/bin/openclaw /usr/local/bin/openclaw
-COPY haclaw-linux-${TARGETARCH} ./haclaw
+COPY haclawx-linux-${TARGETARCH} ./haclawx
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
-RUN mkdir -p /data/haclaw /data/openclaw/npm /data/openclaw/state /data/openclaw/logs /data/openclaw/bootstrap /data/runtime/haclaw /data/runtime/openclaw && \
-    chmod +x ./haclaw /app/docker-entrypoint.sh && \
-    ln -sf /app/haclaw /usr/local/bin/haclaw
+RUN mkdir -p /data/haclawx /data/openclaw/npm /data/openclaw/state /data/openclaw/logs /data/openclaw/bootstrap /data/runtime/haclawx /data/runtime/openclaw && \
+    chmod +x ./haclawx /app/docker-entrypoint.sh && \
+    ln -sf /app/haclawx /usr/local/bin/haclawx
 VOLUME ["/data"]
 EXPOSE 18788 18789
-ENV OCD_CONFIG=/data/haclaw/HAClaw.json \
-    OCD_DB_SQLITE_PATH=/data/haclaw/HAClaw.db \
-    OCD_LOG_FILE=/data/haclaw/HAClaw.log \
+ENV OCD_CONFIG=/data/haclawx/HAClaw-OS.json \
+    OCD_DB_SQLITE_PATH=/data/haclawx/HAClaw-OS.db \
+    OCD_LOG_FILE=/data/haclawx/HAClaw-OS.log \
     OPENCLAW_HOME=/data/openclaw/home \
     OPENCLAW_STATE_DIR=/data/openclaw/state \
     OPENCLAW_CONFIG_PATH=/data/openclaw/state/openclaw.json \

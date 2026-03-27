@@ -18,19 +18,19 @@ jobs:
         include:
           - goos: linux
             goarch: amd64
-            output_name: haclaw-linux-amd64
+            output_name: haclawx-linux-amd64
           - goos: linux
             goarch: arm64
-            output_name: haclaw-linux-arm64
+            output_name: haclawx-linux-arm64
           - goos: windows
             goarch: amd64
-            output_name: haclaw-windows-amd64.exe
+            output_name: haclawx-windows-amd64.exe
           - goos: darwin
             goarch: amd64
-            output_name: haclaw-darwin-amd64
+            output_name: haclawx-darwin-amd64
           - goos: darwin
             goarch: arm64
-            output_name: haclaw-darwin-arm64
+            output_name: haclawx-darwin-arm64
 
     steps:
       - name: Checkout code
@@ -39,7 +39,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: '22'
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
 
@@ -60,7 +60,7 @@ jobs:
         if: matrix.goos == 'windows'
         run: |
           go install github.com/tc-hib/go-winres@latest
-          go-winres make --in cmd/haclaw/winres/winres.json --product-version "$(node -p "require('./web/package.json').version")" --file-version "$(node -p "require('./web/package.json').version")" --out cmd/haclaw/rsrc
+          go-winres make --in cmd/haclawx/winres/winres.json --product-version "$(node -p "require('./web/package.json').version")" --file-version "$(node -p "require('./web/package.json').version")" --out cmd/haclawx/rsrc
 
       - name: Build Backend
         env:
@@ -71,8 +71,8 @@ jobs:
           VERSION=$(node -p "require('./web/package.json').version" 2>/dev/null || echo "0.0.0")
           COMPAT=$(node -p "require('./web/package.json').openclawCompat" 2>/dev/null || echo "")
           BUILD_NUM="${{ github.run_number }}"
-          LDFLAGS="-s -w -X HAClaw/internal/version.Version=${VERSION} -X HAClaw/internal/version.Build=${BUILD_NUM} -X HAClaw/internal/version.OpenClawCompat=${COMPAT}"
-          go build -ldflags="${LDFLAGS}" -o dist/${{ matrix.output_name }} ./cmd/haclaw
+          LDFLAGS="-s -w -X HAClaw-OS/internal/version.Version=${VERSION} -X HAClaw-OS/internal/version.Build=${BUILD_NUM} -X HAClaw-OS/internal/version.OpenClawCompat=${COMPAT}"
+          go build -ldflags="${LDFLAGS}" -o dist/${{ matrix.output_name }} ./cmd/haclawx
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v5
@@ -160,7 +160,7 @@ jobs:
       - name: Setup Node.js (for reading package.json)
         uses: actions/setup-node@v5
         with:
-          node-version: '22'
+          node-version: '24'
 
       - name: Extract version and OpenClaw compat info
         id: meta
@@ -180,20 +180,20 @@ jobs:
       - name: Download linux/amd64 binary
         uses: actions/download-artifact@v5
         with:
-          name: haclaw-linux-amd64
+          name: haclawx-linux-amd64
           path: dist/
 
       - name: Download linux/arm64 binary
         uses: actions/download-artifact@v5
         with:
-          name: haclaw-linux-arm64
+          name: haclawx-linux-arm64
           path: dist/
 
       - name: Prepare binaries for Docker
         run: |
-          cp dist/haclaw-linux-amd64 haclaw-linux-amd64
-          cp dist/haclaw-linux-arm64 haclaw-linux-arm64
-          chmod +x haclaw-linux-amd64 haclaw-linux-arm64
+          cp dist/haclawx-linux-amd64 haclawx-linux-amd64
+          cp dist/haclawx-linux-arm64 haclawx-linux-arm64
+          chmod +x haclawx-linux-amd64 haclawx-linux-arm64
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -224,7 +224,7 @@ jobs:
           cache-from: type=gha,scope=docker-amd64
           cache-to: type=gha,mode=max,scope=docker-amd64
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/haclaw:${{ steps.meta.outputs.VERSION }}-amd64
+            ${{ secrets.DOCKERHUB_USERNAME }}/haclawx:${{ steps.meta.outputs.VERSION }}-amd64
 
       - name: Build and push (arm64)
         uses: docker/build-push-action@v6
@@ -243,12 +243,12 @@ jobs:
           cache-from: type=gha,scope=docker-arm64
           cache-to: type=gha,mode=max,scope=docker-arm64
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/haclaw:${{ steps.meta.outputs.VERSION }}-arm64
+            ${{ secrets.DOCKERHUB_USERNAME }}/haclawx:${{ steps.meta.outputs.VERSION }}-arm64
 
       - name: Smoke test Docker image (amd64)
         run: |
           set -euo pipefail
-          REPO=${{ secrets.DOCKERHUB_USERNAME }}/haclaw
+          REPO=${{ secrets.DOCKERHUB_USERNAME }}/haclawx
           VERSION=${{ steps.meta.outputs.VERSION }}
           IMAGE="${REPO}:${VERSION}-amd64"
           CID=""
@@ -287,8 +287,8 @@ jobs:
           docker run --rm --platform linux/amd64 --entrypoint /usr/bin/rg "$IMAGE" --version
           docker run --rm --platform linux/amd64 --entrypoint /usr/bin/wget "$IMAGE" --version
           docker run --rm --platform linux/amd64 --entrypoint /usr/bin/make "$IMAGE" --version
-          echo "==> Verifying HAClaw binary..."
-          docker run --rm --platform linux/amd64 --entrypoint /app/haclaw "$IMAGE" --version || true
+          echo "==> Verifying HAClaw-OS binary..."
+          docker run --rm --platform linux/amd64 --entrypoint /app/haclawx "$IMAGE" --version || true
           echo "==> Starting container for health check..."
           CID=$(docker run -d --platform linux/amd64 -p 28788:18788 "$IMAGE")
           if ! wait_for_health "http://localhost:28788/api/v1/health" 30 2; then
@@ -307,7 +307,7 @@ jobs:
       - name: Smoke test Docker image (arm64)
         run: |
           set -euo pipefail
-          REPO=${{ secrets.DOCKERHUB_USERNAME }}/haclaw
+          REPO=${{ secrets.DOCKERHUB_USERNAME }}/haclawx
           VERSION=${{ steps.meta.outputs.VERSION }}
           IMAGE="${REPO}:${VERSION}-arm64"
           CID=""
@@ -346,8 +346,8 @@ jobs:
           docker run --rm --platform linux/arm64 --entrypoint /usr/bin/rg "$IMAGE" --version
           docker run --rm --platform linux/arm64 --entrypoint /usr/bin/wget "$IMAGE" --version
           docker run --rm --platform linux/arm64 --entrypoint /usr/bin/make "$IMAGE" --version
-          echo "==> Verifying HAClaw binary..."
-          docker run --rm --platform linux/arm64 --entrypoint /app/haclaw "$IMAGE" --version || true
+          echo "==> Verifying HAClaw-OS binary..."
+          docker run --rm --platform linux/arm64 --entrypoint /app/haclawx "$IMAGE" --version || true
           echo "==> Starting container for health check..."
           CID=$(docker run -d --platform linux/arm64 -p 28789:18788 "$IMAGE")
           if ! wait_for_health "http://localhost:28789/api/v1/health" 60 3; then
@@ -366,7 +366,7 @@ jobs:
       - name: Create and push multi-arch manifest
         run: |
           VERSION=${{ steps.meta.outputs.VERSION }}
-          REPO=${{ secrets.DOCKERHUB_USERNAME }}/haclaw
+          REPO=${{ secrets.DOCKERHUB_USERNAME }}/haclawx
           docker buildx imagetools create \
             --tag ${REPO}:${VERSION} \
             --tag ${REPO}:latest \
@@ -378,5 +378,5 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ secrets.DOCKERHUB_USERNAME }}/haclaw
+          repository: ${{ secrets.DOCKERHUB_USERNAME }}/haclawx
           readme-filepath: ./README.md

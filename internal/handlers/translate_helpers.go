@@ -3,7 +3,7 @@ package handlers
 import (
 	"encoding/json"
 
-	"HAClaw/internal/openclaw"
+	"HAClaw-OS/internal/openclaw"
 )
 
 // resolveProvidersFromGWClient fetches model provider configuration from a

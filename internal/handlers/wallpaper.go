@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"HAClaw/internal/web"
+	"HAClaw-OS/internal/web"
 
 	"github.com/rs/zerolog/log"
 )

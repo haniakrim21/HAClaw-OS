@@ -1,8 +1,8 @@
 ﻿package openclaw
 
 import (
-	"HAClaw/internal/executil"
-	"HAClaw/internal/i18n"
+	"HAClaw-OS/internal/executil"
+	"HAClaw-OS/internal/i18n"
 	"encoding/json"
 	"fmt"
 	"net"

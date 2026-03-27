@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"HAClaw/internal/openclaw"
-	"HAClaw/internal/web"
+	"HAClaw-OS/internal/openclaw"
+	"HAClaw-OS/internal/web"
 )
 
 // MaintenanceHandler provides context budget optimization APIs.

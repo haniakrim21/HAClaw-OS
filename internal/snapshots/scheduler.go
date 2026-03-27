@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"HAClaw/internal/constants"
-	"HAClaw/internal/database"
+	"HAClaw-OS/internal/constants"
+	"HAClaw-OS/internal/database"
 )
 
 const (

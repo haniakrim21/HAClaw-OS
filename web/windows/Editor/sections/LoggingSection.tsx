@@ -2,13 +2,13 @@ import React, { useMemo } from 'react';
 import { SectionProps } from '../sectionTypes';
 import { ConfigSection, TextField, SelectField, SwitchField, NumberField, ArrayField } from '../fields';
 import { getTranslation } from '../../../locales';
-import { getTooltip } from '../../../locales/tooltips';
+import { schemaTooltip } from '../schemaTooltip';
 
 // Options moved inside component
 
-export const LoggingSection: React.FC<SectionProps> = ({ setField, getField, language }) => {
+export const LoggingSection: React.FC<SectionProps> = ({ schema, setField, getField, language }) => {
   const es = useMemo(() => (getTranslation(language) as any).es || {}, [language]);
-  const tip = (key: string) => getTooltip(key, language);
+  const tip = (key: string) => schemaTooltip(key, language, schema);
 
   const LOG_LEVEL_OPTIONS = useMemo(() => [
     { value: 'silent', label: es.logSilent }, { value: 'fatal', label: es.logFatal }, { value: 'error', label: es.logError },

@@ -6,13 +6,13 @@ import (
 	"strconv"
 	"time"
 
-	"HAClaw/internal/constants"
-	"HAClaw/internal/database"
-	"HAClaw/internal/logger"
-	"HAClaw/internal/openclaw"
-	"HAClaw/internal/sentinel"
-	"HAClaw/internal/web"
-	"HAClaw/internal/webconfig"
+	"HAClaw-OS/internal/constants"
+	"HAClaw-OS/internal/database"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/openclaw"
+	"HAClaw-OS/internal/sentinel"
+	"HAClaw-OS/internal/web"
+	"HAClaw-OS/internal/webconfig"
 )
 
 // GatewayHandler manages gateway lifecycle.

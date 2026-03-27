@@ -7,18 +7,18 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"HAClaw/internal/executil"
+	"HAClaw-OS/internal/executil"
 )
 
 func IsInstalled() bool {
 	switch runtime.GOOS {
 	case "linux":
-		return fileExists("/etc/systemd/system/haclaw.service") ||
-			fileExists(filepath.Join(os.Getenv("HOME"), ".config/systemd/user/haclaw.service"))
+		return fileExists("/etc/systemd/system/haclawx.service") ||
+			fileExists(filepath.Join(os.Getenv("HOME"), ".config/systemd/user/haclawx.service"))
 	case "darwin":
-		return fileExists(filepath.Join(os.Getenv("HOME"), "Library/LaunchAgents/ai.haclaw.plist"))
+		return fileExists(filepath.Join(os.Getenv("HOME"), "Library/LaunchAgents/ai.haclawx.plist"))
 	case "windows":
-		cmd := exec.Command("schtasks", "/Query", "/TN", "HAClaw")
+		cmd := exec.Command("schtasks", "/Query", "/TN", "HAClaw-OS")
 		executil.HideWindow(cmd)
 		out, _ := cmd.Output()
 		return len(out) > 0
@@ -60,7 +60,7 @@ func installLinux(port int) error {
 	absExe, _ := filepath.Abs(exe)
 
 	unit := fmt.Sprintf(`[Unit]
-Description=HAClaw Web Service
+Description=HAClaw-OS Web Service
 After=network-online.target
 Wants=network-online.target
 
@@ -75,21 +75,21 @@ WantedBy=default.target
 `, absExe, port, filepath.Dir(absExe))
 
 	// Try user service first
-	userPath := filepath.Join(os.Getenv("HOME"), ".config/systemd/user/haclaw.service")
+	userPath := filepath.Join(os.Getenv("HOME"), ".config/systemd/user/haclawx.service")
 	if err := os.MkdirAll(filepath.Dir(userPath), 0755); err == nil {
 		if err := os.WriteFile(userPath, []byte(unit), 0644); err == nil {
 			exec.Command("systemctl", "--user", "daemon-reload").Run()
-			exec.Command("systemctl", "--user", "enable", "haclaw").Run()
+			exec.Command("systemctl", "--user", "enable", "haclawx").Run()
 			return nil
 		}
 	}
 
 	// Fallback to system service
-	tmpFile := "/tmp/haclaw.service"
+	tmpFile := "/tmp/haclawx.service"
 	os.WriteFile(tmpFile, []byte(unit), 0644)
-	exec.Command("sudo", "mv", tmpFile, "/etc/systemd/system/haclaw.service").Run()
+	exec.Command("sudo", "mv", tmpFile, "/etc/systemd/system/haclawx.service").Run()
 	exec.Command("sudo", "systemctl", "daemon-reload").Run()
-	exec.Command("sudo", "systemctl", "enable", "haclaw").Run()
+	exec.Command("sudo", "systemctl", "enable", "haclawx").Run()
 	return nil
 }
 
@@ -102,7 +102,7 @@ func installDarwin(port int) error {
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>ai.haclaw</string>
+	<string>ai.haclawx</string>
 	<key>ProgramArguments</key>
 	<array>
 		<string>%s</string>
@@ -118,7 +118,7 @@ func installDarwin(port int) error {
 </dict>
 </plist>`, absExe, port, filepath.Dir(absExe))
 
-	plistPath := filepath.Join(os.Getenv("HOME"), "Library/LaunchAgents/ai.haclaw.plist")
+	plistPath := filepath.Join(os.Getenv("HOME"), "Library/LaunchAgents/ai.haclawx.plist")
 	if err := os.MkdirAll(filepath.Dir(plistPath), 0755); err != nil {
 		return err
 	}
@@ -138,22 +138,22 @@ func installWindows(port int) error {
 
 	// Create a .cmd wrapper script in the same directory
 	stateDir := filepath.Dir(absExe)
-	scriptPath := filepath.Join(stateDir, "haclaw-service.cmd")
-	script := fmt.Sprintf("@echo off\r\nrem HAClaw Service\r\ncd /d \"%s\"\r\n\"%s\" --port %d\r\n",
+	scriptPath := filepath.Join(stateDir, "haclawx-service.cmd")
+	script := fmt.Sprintf("@echo off\r\nrem HAClaw-OS Service\r\ncd /d \"%s\"\r\n\"%s\" --port %d\r\n",
 		stateDir, absExe, port)
 	if err := os.WriteFile(scriptPath, []byte(script), 0644); err != nil {
 		return fmt.Errorf("write service script: %w", err)
 	}
 
 	// Create VBS launcher to run without visible console window
-	launcherPath := filepath.Join(stateDir, "haclaw-launcher.vbs")
+	launcherPath := filepath.Join(stateDir, "haclawx-launcher.vbs")
 	vbs := fmt.Sprintf("Set ws = CreateObject(\"WScript.Shell\")\r\nws.Run \"%s\", 0, False\r\n", scriptPath)
 	if err := os.WriteFile(launcherPath, []byte(vbs), 0644); err != nil {
 		launcherPath = "" // fallback to .cmd
 	}
 
 	// Remove existing task if present
-	delCmd := exec.Command("schtasks", "/Delete", "/F", "/TN", "HAClaw")
+	delCmd := exec.Command("schtasks", "/Delete", "/F", "/TN", "HAClaw-OS")
 	executil.HideWindow(delCmd)
 	delCmd.Run()
 
@@ -167,7 +167,7 @@ func installWindows(port int) error {
 	cmd := exec.Command("schtasks", "/Create", "/F",
 		"/SC", "ONLOGON",
 		"/RL", "LIMITED",
-		"/TN", "HAClaw",
+		"/TN", "HAClaw-OS",
 		"/TR", fmt.Sprintf(`"%s"`, taskTarget))
 	executil.HideWindow(cmd)
 	out, err := cmd.CombinedOutput()
@@ -179,19 +179,19 @@ func installWindows(port int) error {
 
 func uninstallLinux() error {
 	// Try user service
-	userPath := filepath.Join(os.Getenv("HOME"), ".config/systemd/user/haclaw.service")
+	userPath := filepath.Join(os.Getenv("HOME"), ".config/systemd/user/haclawx.service")
 	if fileExists(userPath) {
-		exec.Command("systemctl", "--user", "stop", "haclaw").Run()
-		exec.Command("systemctl", "--user", "disable", "haclaw").Run()
+		exec.Command("systemctl", "--user", "stop", "haclawx").Run()
+		exec.Command("systemctl", "--user", "disable", "haclawx").Run()
 		os.Remove(userPath)
 		exec.Command("systemctl", "--user", "daemon-reload").Run()
 	}
 
 	// Try system service
-	systemPath := "/etc/systemd/system/haclaw.service"
+	systemPath := "/etc/systemd/system/haclawx.service"
 	if fileExists(systemPath) {
-		exec.Command("sudo", "systemctl", "stop", "haclaw").Run()
-		exec.Command("sudo", "systemctl", "disable", "haclaw").Run()
+		exec.Command("sudo", "systemctl", "stop", "haclawx").Run()
+		exec.Command("sudo", "systemctl", "disable", "haclawx").Run()
 		exec.Command("sudo", "rm", "-f", systemPath).Run()
 		exec.Command("sudo", "systemctl", "daemon-reload").Run()
 	}
@@ -199,7 +199,7 @@ func uninstallLinux() error {
 }
 
 func uninstallDarwin() error {
-	plistPath := filepath.Join(os.Getenv("HOME"), "Library/LaunchAgents/ai.haclaw.plist")
+	plistPath := filepath.Join(os.Getenv("HOME"), "Library/LaunchAgents/ai.haclawx.plist")
 	if fileExists(plistPath) {
 		exec.Command("launchctl", "unload", plistPath).Run()
 		os.Remove(plistPath)
@@ -213,15 +213,15 @@ func uninstallWindows() error {
 	stateDir := filepath.Dir(absExe)
 
 	// Stop and delete the scheduled task
-	endCmd := exec.Command("schtasks", "/End", "/TN", "HAClaw")
+	endCmd := exec.Command("schtasks", "/End", "/TN", "HAClaw-OS")
 	executil.HideWindow(endCmd)
 	endCmd.Run()
-	delCmd := exec.Command("schtasks", "/Delete", "/F", "/TN", "HAClaw")
+	delCmd := exec.Command("schtasks", "/Delete", "/F", "/TN", "HAClaw-OS")
 	executil.HideWindow(delCmd)
 	delCmd.Run()
 
 	// Clean up task scripts
-	os.Remove(filepath.Join(stateDir, "haclaw-service.cmd"))
-	os.Remove(filepath.Join(stateDir, "haclaw-launcher.vbs"))
+	os.Remove(filepath.Join(stateDir, "haclawx-service.cmd"))
+	os.Remove(filepath.Join(stateDir, "haclawx-launcher.vbs"))
 	return nil
 }

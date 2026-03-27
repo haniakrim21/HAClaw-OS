@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"HAClaw/internal/executil"
-	"HAClaw/internal/logger"
-	"HAClaw/internal/openclaw"
-	"HAClaw/internal/web"
+	"HAClaw-OS/internal/executil"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/openclaw"
+	"HAClaw-OS/internal/web"
 )
 
 // LLMHealthHandler provides LLM provider health monitoring and CLI execution APIs.

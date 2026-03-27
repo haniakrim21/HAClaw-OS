@@ -134,7 +134,7 @@ export function useConfigEditor(): UseConfigEditorReturn {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
-  const [mode, setModeState] = useState<ConfigMode>('local');
+  const [mode, setModeState] = useState<ConfigMode>('remote');
   const [errors, setErrors] = useState<ValidationError[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [configPath, setConfigPath] = useState('');
@@ -243,10 +243,9 @@ export function useConfigEditor(): UseConfigEditorReturn {
     if (!config) return false;
     setSaving(true);
     setSaveError('');
-    // Refresh baseHash after gateway reload. The rpc() layer auto-retries on
-    // transient 502 / GW_PROXY_FAILED errors, so a brief initial delay is enough.
-    const refreshHash = async () => {
-      await new Promise(r => setTimeout(r, 1000));
+    // Refresh baseHashRef from gateway (with optional delay for post-save reload)
+    const refreshHash = async (delay = 0) => {
+      if (delay > 0) await new Promise(r => setTimeout(r, delay));
       const freshData: any = await gwApi.configGet().catch(() => null);
       if (freshData?.hash) baseHashRef.current = freshData.hash;
     };
@@ -273,20 +272,20 @@ export function useConfigEditor(): UseConfigEditorReturn {
       const raw = JSON.stringify(payload, null, 2);
       // 统一优先走 WebSocket 保存（本地/远程网关均适用）
       if (baseHashRef.current) {
-        // 有 hash → 用 configApply（原子写入+重载）
+        // 有 hash → 用 configSafeApply（自动刷新 hash + 重试）
         // WARNING: Because the payload came from the gateway, it might contain __OPENCLAW_REDACTED__ strings.
         // We MUST NOT fall back to configApi.update(payload) here, because openclaw CLI will blindly overwrite the API keys with the redacted placeholder.
-        await gwApi.configApply(raw, baseHashRef.current).then(async (res: any) => {
-          if (res?.config) setConfig(res.config);
-          await refreshHash();
-        });
+        const res: any = await gwApi.configSafeApply(raw);
+        if (res?.config) setConfig(res.config);
+        // Refresh hash after gateway reload settles
+        await refreshHash(1000);
       } else {
         // 无 hash → 尝试 configSetAll + reload，失败时降级本地写入
         try {
           await gwApi.configSetAll(payload);
           await gwApi.configReload().catch(() => {});
-          // 刷新 hash 以便后续保存走 configApply
-          await refreshHash();
+          // 刷新 hash 以便后续保存走 configSafeApply
+          await refreshHash(1000);
         } catch (applyErr: any) {
           // WS 不可用，降级本地写入 (SAFE because config was loaded via configApi.get so it has no redacted strings)
           const isProxyError = (applyErr?.code === 'GW_PROXY_FAILED' || applyErr?.status === 502 || applyErr?.status === 504) && !applyErr?.message?.toLowerCase().includes('validation');

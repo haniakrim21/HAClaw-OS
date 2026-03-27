@@ -519,7 +519,7 @@ const TestCenterPanel: React.FC<TestCenterPanelProps> = ({ language }) => {
             title={execCap.mode === 'remote'
               ? (dr.tcModeRemoteHint || 'Commands are proxied to the remote gateway via WebSocket RPC')
               : execCap.mode === 'local'
-                ? (dr.tcModeLocalHint || 'Commands execute locally on the HAClaw host')
+                ? (dr.tcModeLocalHint || 'Commands execute locally on the HAClaw-OS host')
                 : (dr.tcModeUnavailableHint || 'Cannot execute commands — gateway not connected or CLI not installed')}>
             <span className="material-symbols-outlined text-[14px]">{modeIcon}</span>
             {modeLabel}

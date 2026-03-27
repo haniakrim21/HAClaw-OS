@@ -1,6 +1,6 @@
 ﻿package diagnostics
 
-import "HAClaw/internal/i18n"
+import "HAClaw-OS/internal/i18n"
 
 type Issue struct {
 	Level      string

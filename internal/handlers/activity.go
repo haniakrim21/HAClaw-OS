@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"HAClaw/internal/database"
-	"HAClaw/internal/web"
+	"HAClaw-OS/internal/database"
+	"HAClaw-OS/internal/web"
 )
 
 // ActivityHandler manages activity events.

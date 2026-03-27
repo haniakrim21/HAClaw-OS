@@ -1,7 +1,7 @@
 ﻿package commands
 
 import (
-	"HAClaw/internal/i18n"
+	"HAClaw-OS/internal/i18n"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -52,7 +52,7 @@ func patchRuntimeFile(path string) (bool, error) {
 		return false, fmt.Errorf(i18n.T(i18n.MsgErrTargetFragmentNotFound), path)
 	}
 
-	backup := fmt.Sprintf("%s.HAClaw-%s.bak", path, time.Now().Format("20060102-150405"))
+	backup := fmt.Sprintf("%s.HAClaw-OS-%s.bak", path, time.Now().Format("20060102-150405"))
 	if err := os.WriteFile(backup, data, 0o644); err != nil {
 		return false, err
 	}
@@ -97,7 +97,7 @@ func rollbackOpenclawRuntimeFix() (bool, error) {
 }
 
 func latestRuntimeBackup(target string) (string, bool, error) {
-	pattern := target + ".HAClaw-*.bak"
+	pattern := target + ".HAClaw-OS-*.bak"
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
 		return "", false, err

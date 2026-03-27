@@ -46,6 +46,7 @@ interface GwSession {
   activeRun?: boolean;
   isStreaming?: boolean;
   fastMode?: boolean;
+  lastTo?: string;
 }
 
 interface ChatMsg {
@@ -70,6 +71,43 @@ interface LiveToolCall {
   result?: unknown;
   isError?: boolean;
   phase: 'start' | 'running' | 'done';
+}
+
+/** Extract original-case peer ID from a session's lastTo field.
+ *  lastTo format is typically "channel:<peerId>" (e.g. "channel:wrG05CBgAAdaBosTJfzemv-S9FYE66yQ").
+ *  Returns the peerId portion preserving original casing, or null if not extractable.
+ */
+function extractPeerIdFromLastTo(lastTo: string | undefined): string | null {
+  if (!lastTo) return null;
+  // Format: "channel:<peerId>" or "room:<peerId>" — extract after first ":"
+  const idx = lastTo.indexOf(':');
+  if (idx >= 0 && idx < lastTo.length - 1) {
+    return lastTo.slice(idx + 1).trim() || null;
+  }
+  return lastTo.trim() || null;
+}
+
+/** Parse peer info from an agent session key. Format: agent:<agentId>:<rest> where rest can be:
+ *  - <channel>:group:<peerId>  (group chat)
+ *  - <channel>:channel:<peerId> (channel chat)
+ *  - <channel>:direct:<peerId> (DM per-channel-peer)
+ *  - main (main session, no peer)
+ */
+function parseSessionKeyPeer(sessionKey: string): { channel: string; peerKind: string; peerId: string; accountId: string } | null {
+  const parts = sessionKey.trim().toLowerCase().split(':').filter(Boolean);
+  // agent:<agentId>:<channel>:<peerKind>:<peerId...>
+  if (parts.length < 5 || parts[0] !== 'agent') return null;
+  const channel = parts[2];
+  const peerKind = parts[3];
+  if (!channel || !peerKind) return null;
+  if (!['group', 'channel', 'direct'].includes(peerKind)) return null;
+  // peerId may contain colons (e.g. thread suffixes), take everything after peerKind
+  const peerId = parts.slice(4).join(':');
+  if (!peerId) return null;
+  // Strip thread suffix if present
+  const threadIdx = peerId.indexOf(':thread:');
+  const cleanPeerId = threadIdx >= 0 ? peerId.slice(0, threadIdx) : peerId;
+  return { channel, peerKind, peerId: cleanPeerId, accountId: 'default' };
 }
 
 interface MarkdownMessageBoundaryProps {
@@ -221,6 +259,16 @@ function areSessionsEquivalent(a: GwSession[], b: GwSession[]): boolean {
   });
 }
 
+/* ── In-memory config cache (avoids re-fetch on re-mount) ── */
+let _cfgCache: { data: any; ts: number } | null = null;
+const CFG_CACHE_TTL = 60_000;
+async function getCachedConfig() {
+  if (_cfgCache && Date.now() - _cfgCache.ts < CFG_CACHE_TTL) return _cfgCache.data;
+  const data = await gwApi.configGet();
+  _cfgCache = { data, ts: Date.now() };
+  return data;
+}
+
 const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSessionKeyConsumed }) => {
   const t = useMemo(() => getTranslation(language), [language]);
   const c = t.chat as any;
@@ -237,7 +285,7 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
   const wasWsDisconnectedRef = useRef(false);
   const cRef = useRef(c);
   cRef.current = c;
-  const { ready: gwReady, connected: gwConnected, checked: gwChecked, refresh: gwRefresh } = useGatewayStatus();
+  const { ready: gwReady, checked: gwChecked, refresh: gwRefresh } = useGatewayStatus();
   const gwReadyRef = useRef(gwReady);
   gwReadyRef.current = gwReady;
 
@@ -256,7 +304,7 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
   // Sessions — restore from sessionStorage for instant display
   const [sessions, setSessions] = useState<GwSession[]>(() => {
     try {
-      const cached = sessionStorage.getItem('clawdeck-sessions-cache');
+      const cached = sessionStorage.getItem('haclaw-sessions-cache');
       return cached ? JSON.parse(cached) : [];
     } catch { return []; }
   });
@@ -310,6 +358,13 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
   const historyRequestSeqRef = useRef(0);
   const sessionsRequestSeqRef = useRef(0);
   const sendingRef = useRef(false);
+  // Pagination state for cursor-based history loading
+  const [hasMoreHistory, setHasMoreHistory] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const nextCursorRef = useRef<string | undefined>(undefined);
+  const loadingOlderRef = useRef(false);
+  // Session message cache: stores messages + pagination state per session key
+  const sessionCacheRef = useRef<Map<string, { messages: ChatMsg[]; hasMore: boolean; cursor?: string }>>(new Map());
 
   // --- New state for optimizations ---
   // Sidebar search
@@ -342,15 +397,26 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
   const [dragOver, setDragOver] = useState(false);
   // Model image capability map: { "provider/modelId": boolean }
   const [modelImageMap, setModelImageMap] = useState<Record<string, boolean>>({});
+  // Model context window map: { "provider/modelId": number } — fallback when gateway doesn't report maxContextTokens
+  const [modelCtxMap, setModelCtxMap] = useState<Record<string, number>>({});
   // Live tool calls (real-time streaming from agent events)
   const [liveToolCalls, setLiveToolCalls] = useState<Map<string, LiveToolCall>>(new Map());
-  // Global tool expand/collapse toggle
-  const [toolsExpanded, setToolsExpanded] = useState(false);
   // Fun waiting phrase (picked once per waiting session, rotates)
   const [waitingPhrase, setWaitingPhrase] = useState('');
   const waitingPhraseRef = useRef('');
   // Btw / side-result inline messages from gateway
   const [btwMessage, setBtwMessage] = useState<{ question: string; text: string; isError?: boolean } | null>(null);
+
+  // Fetch agents list on mount for sidebar filter
+  useEffect(() => {
+    if (!gwReady) return;
+    gwApi.agents().then((data: any) => {
+      const list = Array.isArray(data) ? data : data?.agents;
+      if (Array.isArray(list)) {
+        setAgentsList(list.map((a: any) => ({ id: a.id || '', label: a.name?.trim() || a.label || a.id || '' })).filter((a: { id: string }) => a.id));
+      }
+    }).catch(() => {});
+  }, [gwReady]);
 
   // Load model capabilities from config (for image support detection)
   useEffect(() => {
@@ -362,6 +428,7 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
         if (cancelled) return;
         const providers = cfg?.models?.providers || cfg?.parsed?.models?.providers || cfg?.config?.models?.providers || {};
         const map: Record<string, boolean> = {};
+        const ctxMap: Record<string, number> = {};
         for (const [pName, pCfg] of Object.entries(providers) as [string, any][]) {
           const pModels = Array.isArray(pCfg?.models) ? pCfg.models : [];
           for (const m of pModels) {
@@ -369,9 +436,11 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
             if (!id) continue;
             const input = Array.isArray(m?.input) ? m.input : ['text', 'image'];
             map[`${pName}/${id}`] = input.includes('image');
+            if (typeof m === 'object' && m?.contextWindow > 0) ctxMap[`${pName}/${id}`] = m.contextWindow;
           }
         }
         setModelImageMap(map);
+        setModelCtxMap(ctxMap);
       } catch { /* ignore */ }
     })();
     return () => { cancelled = true; };
@@ -432,6 +501,12 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
   const [renameKey, setRenameKey] = useState('');
   const [renameLabel, setRenameLabel] = useState('');
   const [renaming, setRenaming] = useState(false);
+  const [bindAgentId, setBindAgentId] = useState('');
+  const [bindAgentOriginal, setBindAgentOriginal] = useState('');
+  const [bindPeerIdOriginal, setBindPeerIdOriginal] = useState('');
+  const [agentsList, setAgentsList] = useState<Array<{ id: string; label?: string }>>([]);
+  const [bindAgentsList, setBindAgentsList] = useState<Array<{ id: string; label?: string }>>([]);
+  const [agentFilter, setAgentFilter] = useState('');
   const [deleteConfirmKey, setDeleteConfirmKey] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -766,6 +841,16 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
       pendingRunRef.current = null;
     } else if (payload.state === 'error') {
       markFinalized(eventRunId);
+      // If we have partial streamed content, preserve it as a message instead of
+      // discarding it — the user already sees the text on screen.
+      const partialText = streamTextRef.current;
+      if (partialText) {
+        setMessages(msgs => appendMessageDedup(msgs, {
+          role: 'assistant',
+          content: [{ type: 'text', text: partialText }],
+          timestamp: Date.now(),
+        }, recentAddedRef));
+      }
       if (streamRafRef.current !== null) { clearTimeout(streamRafRef.current); streamRafRef.current = null; }
       streamTextRef.current = '';
       setStream(null);
@@ -916,6 +1001,7 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
         maxContextTokens: s.maxContextTokens || s.contextWindow || s.maxTokens || 0,
         compacted: !!s.compacted,
         fastMode: s.fastMode ?? undefined,
+        lastTo: s.lastTo || s.deliveryContext?.to || '',
       }));
       // Clean up expired patch grace entries
       const nowMs = Date.now();
@@ -942,7 +1028,7 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
         });
         if (!changed) return prev;
         // Persist to sessionStorage for instant display on next window open
-        try { sessionStorage.setItem('clawdeck-sessions-cache', JSON.stringify(merged)); } catch { /* ignore */ }
+        try { sessionStorage.setItem('haclaw-sessions-cache', JSON.stringify(merged)); } catch { /* ignore */ }
         return merged;
       });
     } catch { /* ignore */ }
@@ -957,76 +1043,91 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
   const messagesLenRef = useRef(0);
   messagesLenRef.current = messages.length;
 
-  // Load chat history (via REST proxy)
+  // Helper: map raw gateway messages to ChatMsg
+  const mapMessages = useCallback((msgs: any[]): ChatMsg[] => msgs.map((m: any) => ({
+    role: m.role || 'assistant',
+    content: m.content,
+    timestamp: m.timestamp || m.ts,
+    ...(m.usage ? { usage: m.usage } : {}),
+    ...(m.cost ? { cost: m.cost } : {}),
+    ...(m.model ? { model: m.model } : {}),
+    ...(m.provider ? { provider: m.provider } : {}),
+    ...(m.stopReason ? { stopReason: m.stopReason } : {}),
+  })), []);
+
+  // Helper: restore optimistic image data stripped by gateway
+  const restoreImages = useCallback((prev: ChatMsg[], mapped: ChatMsg[]): ChatMsg[] => {
+    const prevUserWithImages: Array<{ ts: number; text: string; imgs: any[] }> = [];
+    for (const m of prev) {
+      if (m.role === 'user' && Array.isArray(m.content)) {
+        const imgs = m.content.filter((b: any) => b?.type === 'image' && b?.source?.data);
+        if (imgs.length > 0) {
+          const text = m.content.filter((b: any) => b?.type === 'text').map((b: any) => b.text || '').join('');
+          prevUserWithImages.push({ ts: m.timestamp || 0, text, imgs });
+        }
+      }
+    }
+    if (prevUserWithImages.length === 0) return mapped;
+    return mapped.map((m: ChatMsg) => {
+      if (m.role !== 'user' || !Array.isArray(m.content)) return m;
+      const hasOmitted = m.content.some((b: any) => b?.type === 'image' && (b?.omitted || (b?.source && !b?.source?.data)));
+      if (!hasOmitted) return m;
+      const mText = m.content.filter((b: any) => b?.type === 'text').map((b: any) => b.text || '').join('');
+      const mTs = m.timestamp || 0;
+      const match = prevUserWithImages.find(p =>
+        p.text === mText && (!mTs || !p.ts || Math.abs(mTs - p.ts) < 60000)
+      );
+      if (!match) return m;
+      let imgIdx = 0;
+      const restored = m.content.map((b: any) => {
+        if (b?.type === 'image' && (b?.omitted || (b?.source && !b?.source?.data)) && imgIdx < match.imgs.length) {
+          return match.imgs[imgIdx++];
+        }
+        return b;
+      });
+      return { ...m, content: restored };
+    });
+  }, []);
+
+  // Load chat history — uses paginated endpoint for initial load, RPC for silent refresh
   const loadHistory = useCallback(async (opts?: { silent?: boolean }) => {
     if (!gwReadyRef.current) return;
     const requestSeq = ++historyRequestSeqRef.current;
     const targetSessionKey = sessionKey;
-    // Only show loading spinner on first load (no existing messages)
     const showSpinner = !opts?.silent && messagesLenRef.current === 0;
     if (showSpinner) setChatLoading(true);
     try {
-      const res = await gwApi.proxy('chat.history', { sessionKey: targetSessionKey, limit: 200 }) as any;
-      if (historyRequestSeqRef.current !== requestSeq || sessionKeyRef.current !== targetSessionKey) {
-        return;
+      let mapped: ChatMsg[];
+      if (opts?.silent) {
+        // Silent refresh: use lightweight RPC (no pagination needed, just sync latest)
+        if (pendingRunRef.current && streamTextRef.current) return;
+        const res = await gwApi.proxy('chat.history', { sessionKey: targetSessionKey, limit: 200 }) as any;
+        if (historyRequestSeqRef.current !== requestSeq || sessionKeyRef.current !== targetSessionKey) return;
+        mapped = mapMessages(Array.isArray(res?.messages) ? res.messages : []);
+        // Don't reset pagination state on silent refresh
+      } else {
+        // Initial load: use paginated endpoint for fast first render
+        const res = await gwApi.sessionsHistoryPaginated(targetSessionKey, 50) as any;
+        if (historyRequestSeqRef.current !== requestSeq || sessionKeyRef.current !== targetSessionKey) return;
+        const msgs = Array.isArray(res?.messages) ? res.messages : [];
+        mapped = mapMessages(msgs);
+        // Update pagination state
+        const more = Boolean(res?.hasMore);
+        setHasMoreHistory(more);
+        nextCursorRef.current = more ? (res?.nextCursor || undefined) : undefined;
       }
-      // Skip replacing messages while actively streaming — the stream/final events
-      // are the source of truth during a run; history will sync after finalization.
-      if (opts?.silent && pendingRunRef.current && streamTextRef.current) {
-        return;
-      }
-      const msgs = Array.isArray(res?.messages) ? res.messages : [];
-      const mapped = msgs.map((m: any) => ({
-        role: m.role || 'assistant',
-        content: m.content,
-        timestamp: m.timestamp || m.ts,
-        ...(m.usage ? { usage: m.usage } : {}),
-        ...(m.cost ? { cost: m.cost } : {}),
-        ...(m.model ? { model: m.model } : {}),
-        ...(m.provider ? { provider: m.provider } : {}),
-        ...(m.stopReason ? { stopReason: m.stopReason } : {}),
-      }));
-      // Preserve image data from optimistic user messages: the gateway strips
-      // image data from chat.history (sets omitted:true), so restore from prev.
-      // IMPORTANT: must be a single setMessages(prev => ...) call so `prev`
-      // contains the original optimistic messages (not the already-stripped mapped).
+      // Preserve image data from optimistic user messages
       setMessages(prev => {
-        // Collect image blocks from previous optimistic user messages
-        const prevUserWithImages: Array<{ ts: number; text: string; imgs: any[] }> = [];
-        for (const m of prev) {
-          if (m.role === 'user' && Array.isArray(m.content)) {
-            const imgs = m.content.filter((b: any) => b?.type === 'image' && b?.source?.data);
-            if (imgs.length > 0) {
-              const text = m.content.filter((b: any) => b?.type === 'text').map((b: any) => b.text || '').join('');
-              prevUserWithImages.push({ ts: m.timestamp || 0, text, imgs });
-            }
-          }
-        }
-        if (prevUserWithImages.length === 0) return mapped;
-        // For each mapped user message with omitted images, restore from prev
-        return mapped.map((m: ChatMsg) => {
-          if (m.role !== 'user' || !Array.isArray(m.content)) return m;
-          const hasOmitted = m.content.some((b: any) => b?.type === 'image' && (b?.omitted || (b?.source && !b?.source?.data)));
-          if (!hasOmitted) return m;
-          const mText = m.content.filter((b: any) => b?.type === 'text').map((b: any) => b.text || '').join('');
-          const mTs = m.timestamp || 0;
-          const match = prevUserWithImages.find(p =>
-            p.text === mText && (!mTs || !p.ts || Math.abs(mTs - p.ts) < 60000)
-          );
-          if (!match) return m;
-          let imgIdx = 0;
-          const restored = m.content.map((b: any) => {
-            if (b?.type === 'image' && (b?.omitted || (b?.source && !b?.source?.data)) && imgIdx < match.imgs.length) {
-              return match.imgs[imgIdx++];
-            }
-            return b;
-          });
-          return { ...m, content: restored };
-        });
+        const result = restoreImages(prev, mapped);
+        // Update session cache
+        sessionCacheRef.current.set(targetSessionKey, { messages: result, hasMore: Boolean(nextCursorRef.current), cursor: nextCursorRef.current });
+        return result;
       });
     } catch {
       if (historyRequestSeqRef.current === requestSeq && sessionKeyRef.current === targetSessionKey) {
         setMessages([]);
+        setHasMoreHistory(false);
+        nextCursorRef.current = undefined;
       }
     } finally {
       if (showSpinner && historyRequestSeqRef.current === requestSeq && sessionKeyRef.current === targetSessionKey) {
@@ -1037,7 +1138,51 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionKey]);
+  }, [sessionKey, mapMessages, restoreImages]);
+
+  // Load older messages when user scrolls to top (cursor-based pagination)
+  const loadOlderMessages = useCallback(async () => {
+    if (!gwReadyRef.current || loadingOlderRef.current || !nextCursorRef.current) return;
+    loadingOlderRef.current = true;
+    setLoadingOlder(true);
+    const targetSessionKey = sessionKeyRef.current;
+    const cursor = nextCursorRef.current;
+    try {
+      const res = await gwApi.sessionsHistoryPaginated(targetSessionKey, 50, cursor) as any;
+      if (sessionKeyRef.current !== targetSessionKey) return;
+      const msgs = Array.isArray(res?.messages) ? res.messages : [];
+      if (msgs.length === 0) {
+        setHasMoreHistory(false);
+        nextCursorRef.current = undefined;
+        return;
+      }
+      const mapped = mapMessages(msgs);
+      const more = Boolean(res?.hasMore);
+      setHasMoreHistory(more);
+      nextCursorRef.current = more ? (res?.nextCursor || undefined) : undefined;
+      // Preserve scroll position: measure scrollHeight before prepend
+      const el = scrollContainerRef.current;
+      const prevScrollHeight = el?.scrollHeight || 0;
+      const prevScrollTop = el?.scrollTop || 0;
+      setMessages(prev => {
+        const combined = [...mapped, ...prev];
+        // Update session cache with combined messages
+        sessionCacheRef.current.set(targetSessionKey, { messages: combined, hasMore: more, cursor: nextCursorRef.current });
+        return combined;
+      });
+      // Restore scroll position after React renders the prepended messages
+      requestAnimationFrame(() => {
+        if (el) {
+          const newScrollHeight = el.scrollHeight;
+          el.scrollTop = prevScrollTop + (newScrollHeight - prevScrollHeight);
+        }
+      });
+    } catch { /* ignore */ }
+    finally {
+      loadingOlderRef.current = false;
+      setLoadingOlder(false);
+    }
+  }, [mapMessages]);
 
   // Refs to latest callbacks for use inside stable-dependency useEffects (e.g. WS subscription)
   const loadHistoryRef = useRef(loadHistory);
@@ -1053,11 +1198,10 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
     if (!hasStartedInitialDetectingRef.current) {
       hasStartedInitialDetectingRef.current = true;
       setInitialDetecting(true);
-      // Priority: show chat history ASAP, then refresh sidebar sessions
-      loadHistory().then(() => {
-        setInitialDetecting(false);
-        return loadSessions({ silent: true });
-      }).then(() => {
+      // Load history + sessions in parallel for faster first paint
+      const historyP = loadHistory().then(() => setInitialDetecting(false));
+      const sessionsP = loadSessions({ silent: true });
+      Promise.all([historyP, sessionsP]).then(() => {
         // Auto-select first session if current session has no messages
         if (!hasAutoSelectedRef.current) {
           hasAutoSelectedRef.current = true;
@@ -1274,6 +1418,10 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
     }
   }, [messages, stream, liveToolCalls, runPhase]);
 
+  // Keep ref for loadOlderMessages to avoid stale closure in scroll handler
+  const loadOlderRef = useRef(loadOlderMessages);
+  loadOlderRef.current = loadOlderMessages;
+
   useEffect(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
@@ -1281,6 +1429,10 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
       const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
       nearBottomRef.current = distFromBottom < 300;
       setShowScrollBtn(distFromBottom > 200);
+      // Scroll-to-top: load older messages when near top
+      if (el.scrollTop < 100 && !loadingOlderRef.current && nextCursorRef.current) {
+        loadOlderRef.current();
+      }
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
@@ -1289,7 +1441,7 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
   // Draft save on session switch
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('clawdeck-chat-drafts');
+      const saved = localStorage.getItem('haclaw-chat-drafts');
       if (saved) draftsRef.current = JSON.parse(saved);
     } catch { /* ignore */ }
   }, []);
@@ -1299,7 +1451,7 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
     } else {
       delete draftsRef.current[key];
     }
-    try { localStorage.setItem('clawdeck-chat-drafts', JSON.stringify(draftsRef.current)); } catch { /* ignore */ }
+    try { localStorage.setItem('haclaw-chat-drafts', JSON.stringify(draftsRef.current)); } catch { /* ignore */ }
   }, []);
   const loadDraft = useCallback((key: string) => {
     return draftsRef.current[key] || '';
@@ -1369,14 +1521,21 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
 
   // Sidebar: filtered + grouped sessions
   const filteredSessions = useMemo(() => {
-    if (!sidebarSearch) return sessions;
+    let list = sessions;
+    if (agentFilter) {
+      list = list.filter(s => {
+        const parts = (s.key || '').split(':');
+        return parts[0] === 'agent' && parts[1] === agentFilter;
+      });
+    }
+    if (!sidebarSearch) return list;
     const q = sidebarSearch.toLowerCase();
-    return sessions.filter(s => 
+    return list.filter(s => 
       (s.label || '').toLowerCase().includes(q) ||
       (s.key || '').toLowerCase().includes(q) ||
       (s.lastMessagePreview || '').toLowerCase().includes(q)
     );
-  }, [sessions, sidebarSearch]);
+  }, [sessions, sidebarSearch, agentFilter]);
   const showSidebarRefreshHint = false; // Suppress flashing refresh hint — background polls are silent
   const showSidebarSkeleton = sessionsLoading && sessions.length === 0 && !wsConnecting && !initialDetecting;
   const showSidebarEmpty = sessions.length === 0 && !sessionsLoading && !wsConnecting && !initialDetecting;
@@ -1499,7 +1658,7 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
 
   // Send message (via REST proxy; streaming events come via Manager WS)
   const sendMessage = useCallback(async () => {
-    if (!gwConnected || sending || sendingRef.current || isStreaming) return;
+    if (!gwReady || sending || sendingRef.current || isStreaming) return;
     const msg = input.trim();
     const attachments_ = pendingAttachments || [];
     if (!msg && attachments_.length === 0) return;
@@ -1622,15 +1781,6 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
     }).catch(() => {});
   }, []);
 
-  // TTS speak assistant message
-  const handleSpeak = useCallback((text: string) => {
-    if (!gwReady || !text) return;
-    // Truncate very long messages to avoid overloading TTS
-    const truncated = text.length > 2000 ? text.slice(0, 2000) + '…' : text;
-    gwApi.talkSpeak(truncated).catch(() => {
-      toast('warning', cRef.current.ttsError || 'TTS unavailable');
-    });
-  }, [gwReady, sessionKey, toast]);
 
   // Inject system message (via REST proxy)
   const handleInject = useCallback(async () => {
@@ -1772,25 +1922,44 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
     }
     // Save current draft before switching
     saveDraft(sessionKey, input);
+    // Cache current session messages + pagination state before switching away
+    setMessages(prev => {
+      sessionCacheRef.current.set(sessionKey, { messages: prev, hasMore: hasMoreHistory, cursor: nextCursorRef.current });
+      return prev;
+    });
     ensureSessionPresent(key);
-    setIsSwitchingSession(true);
-    setSessionKey(key);
     clearStream();
     setRunId(null);
     setRunPhase('idle');
     pendingRunRef.current = null;
     setBtwMessage(null);
     setDrawerOpen(false);
+    // Restore from cache if available (instant display)
+    const cached = sessionCacheRef.current.get(key);
+    if (cached) {
+      setMessages(cached.messages);
+      setHasMoreHistory(cached.hasMore);
+      nextCursorRef.current = cached.cursor;
+      setIsSwitchingSession(false);
+    } else {
+      setMessages([]);
+      setHasMoreHistory(false);
+      nextCursorRef.current = undefined;
+      setIsSwitchingSession(true);
+    }
+    setSessionKey(key);
     // Restore draft for new session
     setInput(loadDraft(key));
     // Clear unread
     setUnreadMap(prev => { const next = { ...prev }; delete next[key]; return next; });
     setExpandedMsgs(new Set());
-  }, [sessionKey, input, saveDraft, loadDraft, clearStream, ensureSessionPresent]);
+  }, [sessionKey, input, hasMoreHistory, saveDraft, loadDraft, clearStream, ensureSessionPresent]);
 
   // New session
   const handleNewSession = useCallback(() => {
-    const key = `web-${Date.now()}`;
+    const ts = Date.now();
+    // When an agent is selected in the filter, create session scoped to that agent
+    const key = agentFilter ? `agent:${agentFilter}:web:${ts}` : `web-${ts}`;
     ensureSessionPresent(key);
     setIsSwitchingSession(true);
     setSessionKey(key);
@@ -1799,34 +1968,101 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
     setRunPhase('idle');
     pendingRunRef.current = null;
     setBtwMessage(null);
+    // Reset pagination state for new session
+    setHasMoreHistory(false);
+    nextCursorRef.current = undefined;
     void loadSessions();
-  }, [clearStream, ensureSessionPresent, loadSessions]);
+  }, [agentFilter, clearStream, ensureSessionPresent, loadSessions]);
 
   // Rename session
   const openRenameDialog = useCallback((key: string, currentLabel: string) => {
     setRenameKey(key);
     setRenameLabel(currentLabel || '');
+    setBindAgentId('');
+    setBindAgentOriginal('');
+    setBindPeerIdOriginal('');
     setRenameOpen(true);
     setSessionMenuKey(null);
+    // For group/channel sessions, fetch agents + current binding
+    const peer = parseSessionKeyPeer(key);
+    if (peer && (peer.peerKind === 'group' || peer.peerKind === 'channel')) {
+      // Extract original-case peer ID from session's lastTo (preserves casing from channel plugin)
+      const sessionData = sessionsRef.current.find(s => s.key === key);
+      const originalPeerId = extractPeerIdFromLastTo(sessionData?.lastTo);
+      setBindPeerIdOriginal(originalPeerId || '');
+      Promise.all([
+        gwApi.agents().catch(() => null),
+        gwApi.configGet().catch(() => null),
+      ]).then(([agentsData, cfg]) => {
+        const raw = Array.isArray(agentsData) ? agentsData : agentsData?.agents || [];
+        const list = raw.map((a: any) => ({ id: a.id || '', label: a.name?.trim() || a.label || a.id || '' })).filter((a: { id: string }) => a.id);
+        setBindAgentsList(list);
+        // Find existing peer binding (case-insensitive match to handle mixed sources)
+        const parsed = (cfg as any)?.parsed || (cfg as any)?.config || cfg || {};
+        const bindings: any[] = Array.isArray(parsed.bindings) ? parsed.bindings : [];
+        const existing = bindings.find((b: any) =>
+          b.match?.channel?.toLowerCase() === peer.channel &&
+          b.match?.peer?.id?.toLowerCase() === peer.peerId &&
+          ['group', 'channel'].includes(b.match?.peer?.kind?.toLowerCase() || '')
+        );
+        const boundId = existing?.agentId || '';
+        setBindAgentId(boundId);
+        setBindAgentOriginal(boundId);
+      });
+    } else {
+      setBindAgentsList([]);
+    }
   }, []);
 
   const handleRenameSession = useCallback(async () => {
     if (!gwReady || renaming || !renameKey) return;
     setRenaming(true);
     try {
+      // Save rename
       await gwApi.proxy('sessions.patch', { key: renameKey, label: renameLabel.trim() || null });
-      // Update local sessions list
       setSessions(prev => prev.map(s => s.key === renameKey ? { ...s, label: renameLabel.trim() || s.key } : s));
+      // Save peer binding if changed
+      const peer = parseSessionKeyPeer(renameKey);
+      if (peer && (peer.peerKind === 'group' || peer.peerKind === 'channel') && bindAgentId !== bindAgentOriginal) {
+        try {
+          const cfg = await gwApi.configGet() as any;
+          const parsed = cfg?.parsed || cfg?.config || cfg || {};
+          const allBindings: any[] = Array.isArray(parsed.bindings) ? parsed.bindings : [];
+          // Remove existing peer binding for this channel+peer (case-insensitive match)
+          let updated = allBindings.filter((b: any) => !(
+            b.match?.channel?.toLowerCase() === peer.channel &&
+            b.match?.peer?.id?.toLowerCase() === peer.peerId &&
+            ['group', 'channel'].includes(b.match?.peer?.kind?.toLowerCase() || '')
+          ));
+          // Add new binding if agent selected
+          // Use original-case peer ID from session's lastTo when available,
+          // because OpenClaw's route matching is case-sensitive.
+          if (bindAgentId) {
+            const effectivePeerId = bindPeerIdOriginal || peer.peerId;
+            updated.push({
+              agentId: bindAgentId,
+              match: { channel: peer.channel, peer: { kind: peer.peerKind, id: effectivePeerId } }
+            });
+          }
+          await gwApi.configSafePatch({ bindings: updated });
+          toast('success', bindAgentId ? (c.bindSaved || 'Agent binding saved') : (c.bindRemoved || 'Agent binding removed'));
+        } catch (err: any) {
+          toast('error', err?.message || c.bindFailed || 'Failed to save agent binding');
+        }
+      }
       setRenameOpen(false);
       setRenameKey('');
       setRenameLabel('');
+      setBindAgentId('');
+      setBindAgentOriginal('');
+      setBindPeerIdOriginal('');
     } catch (err: any) {
       console.error('Rename failed:', err);
     } finally {
       setRenaming(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [renaming, renameKey, renameLabel]);
+  }, [renaming, renameKey, renameLabel, bindAgentId, bindAgentOriginal, bindPeerIdOriginal, c]);
 
   // Delete session
   const handleDeleteSession = useCallback(async (key: string) => {
@@ -1994,13 +2230,28 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
 
   // Available models for session override dropdown
   const [modelOptions, setModelOptions] = useState<{ value: string; label: string }[]>([]);
+  const [securityCfg, setSecurityCfg] = useState<any>(null);
+  // Load securityCfg eagerly on gwReady so the right-panel Tool Policy shows immediately
+  useEffect(() => {
+    if (!gwReady) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const cfg = await getCachedConfig() as any;
+        if (!cancelled) setSecurityCfg(cfg);
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, [gwReady]);
+  // Load model options only when override panel is opened
   useEffect(() => {
     if (!settingsOpen || !gwReady) return;
     let cancelled = false;
     (async () => {
       try {
-        const cfg = await gwApi.configGet() as any;
+        const cfg = securityCfg || await getCachedConfig() as any;
         if (cancelled) return;
+        if (!securityCfg) setSecurityCfg(cfg);
         const providers = cfg?.models?.providers || cfg?.parsed?.models?.providers || cfg?.config?.models?.providers || {};
         const opts: { value: string; label: string }[] = [
           { value: '', label: cRef.current.inherit || 'Inherit' },
@@ -2096,15 +2347,17 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
           </button>
         </div>
 
-        {/* Session Key Input + Search */}
+        {/* Agent Filter + Search */}
         <div className="px-3 py-2.5 border-b border-slate-200 dark:border-white/5 space-y-2">
-          <div className="relative">
-            <span className="material-symbols-outlined absolute start-2 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/20 text-[14px]">key</span>
-            <input value={sessionKey} onChange={e => setSessionKey(e.target.value)}
-              onBlur={() => loadHistory()}
-              className="w-full h-9 ps-7 pe-3 bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-lg text-[12px] font-mono text-slate-700 dark:text-white/70 focus:ring-1 focus:ring-primary/50 outline-none sci-input"
-              placeholder={c.sessionKey} />
-          </div>
+          <CustomSelect
+            value={agentFilter}
+            onChange={(v: string) => setAgentFilter(v)}
+            options={[
+              { value: '', label: c.allAgents || 'All Agents' },
+              ...agentsList.map(a => ({ value: a.id, label: a.label || a.id }))
+            ]}
+            className="w-full h-9 px-2.5 bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-lg text-[12px] text-slate-700 dark:text-white/70 sci-input"
+          />
           <div className="relative">
             <span className="material-symbols-outlined absolute start-2 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/20 text-[13px]">search</span>
             <input value={sidebarSearch} onChange={e => setSidebarSearch(e.target.value)}
@@ -2163,10 +2416,24 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
                       </div>
                       <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
-                      <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${s.kind === 'direct' ? 'bg-blue-500/10 text-blue-500' :
-                        s.kind === 'group' ? 'bg-purple-500/10 text-purple-500' :
-                          'bg-slate-200 dark:bg-white/5 text-slate-400 dark:text-white/40'
-                        }`}>{s.kind || sessionDefault}</span>
+                      <div className="flex items-center gap-1">
+                        {/* Agent name badge (before kind badge) */}
+                        {(() => {
+                          const kp = (s.key || '').split(':');
+                          if (kp[0] !== 'agent' || !kp[1]) return null;
+                          const aId = kp[1];
+                          const aLabel = agentsList.find(a => a.id === aId)?.label || aId;
+                          return (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 truncate max-w-[80px]" title={aId}>
+                              {aLabel}
+                            </span>
+                          );
+                        })()}
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${s.kind === 'direct' ? 'bg-blue-500/10 text-blue-500' :
+                          s.kind === 'group' ? 'bg-purple-500/10 text-purple-500' :
+                            'bg-slate-200 dark:bg-white/5 text-slate-400 dark:text-white/40'
+                          }`}>{s.kind || sessionDefault}</span>
+                      </div>
                       <div className="flex items-center gap-1">
                         {unreadMap[s.key] ? <span className="w-1.5 h-1.5 rounded-full bg-primary" /> : null}
                         {s.totalTokens ? <span className="text-[10px] text-slate-400 dark:text-white/20 font-mono">{(s.totalTokens / 1000).toFixed(1)}k</span> : null}
@@ -2210,7 +2477,7 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
                     <button
                       onClick={(e) => { e.stopPropagation(); openRenameDialog(s.key, s.label || ''); }}
                       className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-white/10 text-slate-400 hover:text-primary transition-all"
-                      title={c.renameSession}>
+                      title={c.editSession || c.renameSession}>
                       <span className="material-symbols-outlined text-[14px]">edit</span>
                     </button>
                     {s.key !== 'main' && (
@@ -2318,11 +2585,6 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setToolbarMenuOpen(false)} />
                   <div className="absolute top-full end-0 mt-1 z-50 rounded-xl theme-panel sci-card shadow-xl py-1.5 min-w-[180px] animate-fade-in">
-                    <button onClick={() => { setToolsExpanded(v => !v); setToolbarMenuOpen(false); }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-[11px] theme-text-secondary hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
-                      <span className={`material-symbols-outlined text-[16px] ${toolsExpanded ? 'text-purple-500' : ''}`}>{toolsExpanded ? 'unfold_less' : 'unfold_more'}</span>
-                      {toolsExpanded ? (c.toolsCollapse || 'Collapse tools') : (c.toolsExpand || 'Expand tools')}
-                    </button>
                     <button onClick={() => { exportChat('md'); setToolbarMenuOpen(false); }} disabled={messages.length === 0}
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-[11px] theme-text-secondary hover:bg-slate-100 dark:hover:bg-white/5 disabled:opacity-30 transition-colors">
                       <span className="material-symbols-outlined text-[16px]">description</span>
@@ -2499,6 +2761,19 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
                 <button onClick={() => setSessionNotice(null)} className="text-amber-400 hover:text-amber-600 dark:hover:text-amber-300 transition-colors">
                   <span className="material-symbols-outlined text-[16px]">close</span>
                 </button>
+              </div>
+            )}
+
+            {/* Load older messages indicator */}
+            {loadingOlder && (
+              <div className="flex items-center justify-center gap-2 py-3">
+                <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                <span className="text-[11px] text-text-secondary">{c.loadingOlder || 'Loading older messages…'}</span>
+              </div>
+            )}
+            {!loadingOlder && !hasMoreHistory && messages.length > 0 && !chatLoading && (
+              <div className="text-center py-2">
+                <span className="text-[10px] text-text-muted">{c.noMoreHistory || 'Beginning of conversation'}</span>
               </div>
             )}
 
@@ -2747,13 +3022,6 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
                           {copiedIdx === idx ? c.copied : c.copy}
                         </button>
                       )}
-                      {!isUser && text && (
-                        <button onClick={() => handleSpeak(text)}
-                          className="flex items-center gap-0.5 text-[11px] text-slate-400 hover:text-sky-500 transition-colors"
-                          title={c.ttsSpeak || 'Speak'}>
-                          <span className="material-symbols-outlined text-[12px]">volume_up</span>
-                        </button>
-                      )}
                       {/* Resend for user messages */}
                       {isUser && !msg.sendFailed && (
                         <button onClick={() => resendMessage(idx)}
@@ -2880,13 +3148,6 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
                           {tc.phase === 'done' ? (tc.isError ? c.toolError || 'Error' : c.toolDone || 'Done') : c.toolRunning || 'Running'}
                         </span>
                       </div>
-                      {toolsExpanded && tc.args && (
-                        <div className="px-3 pb-2">
-                          <pre className="text-[9px] font-mono text-slate-400 dark:text-white/30 bg-slate-100/50 dark:bg-black/10 rounded-lg p-1.5 overflow-auto max-h-20 whitespace-pre-wrap break-all">
-                            {typeof tc.args === 'string' ? tc.args : JSON.stringify(tc.args, null, 2)}
-                          </pre>
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -2918,8 +3179,8 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
               </div>
             )}
 
-            {/* Error */}
-            {error && (
+            {/* Error — suppress while stream content is still visible */}
+            {error && stream === null && (
               <div className="flex justify-center">
                 <div className="px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-[11px] text-red-500 font-medium flex items-center gap-2">
                   <span className="material-symbols-outlined text-[14px]">error</span>
@@ -2968,7 +3229,7 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
           <div className="fixed inset-0 z-50" onClick={() => setCtxMenu(null)} onContextMenu={e => { e.preventDefault(); setCtxMenu(null); }} onKeyDown={e => { if (e.key === 'Escape') setCtxMenu(null); }} tabIndex={-1} role="dialog" aria-modal="true">
             <div className="absolute rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1a1c20] shadow-2xl shadow-black/15 dark:shadow-black/40 py-1 min-w-[140px] animate-in fade-in zoom-in-95 duration-100"
               style={{ top: Math.min(ctxMenu.y, window.innerHeight - 180), left: Math.min(ctxMenu.x, window.innerWidth - 160) }}>
-              <button onClick={() => { navigator.clipboard.writeText(ctxMenu.text); setCtxMenu(null); }}
+              <button onClick={() => { copyToClipboard(ctxMenu.text).catch(() => {}); setCtxMenu(null); }}
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-slate-600 dark:text-white/60 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
                 <span className="material-symbols-outlined text-[14px]">content_copy</span>
                 {c.copy}
@@ -2996,8 +3257,9 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
         )}
 
         {/* Token context bar above input */}
-        {activeSession?.totalTokens && activeSession?.maxContextTokens ? (() => {
-          const pct = Math.min(100, (activeSession.totalTokens / activeSession.maxContextTokens) * 100);
+        {activeSession?.totalTokens && (activeSession?.maxContextTokens || modelCtxMap[activeSession?.model || '']) ? (() => {
+          const maxCtx = activeSession.maxContextTokens || modelCtxMap[activeSession.model || ''] || 0;
+          const pct = Math.min(100, (activeSession.totalTokens / maxCtx) * 100);
           const clr = pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-amber-500' : 'bg-emerald-500';
           return (
             <div className="shrink-0 px-4 py-1 border-t border-slate-100/50 dark:border-white/[0.03] flex items-center gap-2">
@@ -3005,7 +3267,7 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
                 <div className={`h-full rounded-full ${clr} transition-all duration-500`} style={{ width: `${pct}%` }} />
               </div>
               <span className="text-[8px] font-mono text-slate-400 dark:text-white/25 tabular-nums shrink-0">
-                {(activeSession.totalTokens / 1000).toFixed(1)}k / {(activeSession.maxContextTokens / 1000).toFixed(0)}k
+                {(activeSession.totalTokens / 1000).toFixed(1)}k / {(maxCtx / 1000).toFixed(0)}k
               </span>
             </div>
           );
@@ -3105,8 +3367,8 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
                   </button>
                 ) : (
                   <button onClick={sendMessage}
-                    disabled={(!input.trim() && !(pendingAttachments?.length)) || sending || !gwConnected}
-                    className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center shrink-0 transition-all active:scale-90 ${(input.trim() || (pendingAttachments?.length || 0) > 0) && !sending && gwConnected
+                    disabled={(!input.trim() && !(pendingAttachments?.length)) || sending || !gwReady}
+                    className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center shrink-0 transition-all active:scale-90 ${(input.trim() || (pendingAttachments?.length || 0) > 0) && !sending && gwReady
                       ? 'bg-gradient-to-br from-primary to-primary/80 text-white shadow-lg shadow-primary/30 hover:shadow-primary/40 hover:scale-105 send-btn-glow'
                       : 'bg-slate-100 dark:bg-white/5 text-slate-400'
                       }`}>
@@ -3158,19 +3420,60 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
              totalCost: (sIn * (costConfig.input / 1000000)) + (sOut * (costConfig.output / 1000000))
           };
         }}
-        labels={c}
-        session={{
-          model: activeSession?.model,
-          modelProvider: activeSession?.modelProvider,
-          totalTokens: activeSession?.totalTokens,
-          maxContextTokens: activeSession?.maxContextTokens,
-          compacted: activeSession?.compacted,
-          thinkingLevel: activeSession?.thinkingLevel,
-          messageCount: messages.length || undefined,
-          lastLatencyMs: lastLatencyMs,
-          liveElapsed: liveElapsed,
-          runPhase: runPhase,
+        loadTimeseries={async (key) => {
+          return await gwApi.sessionsUsageTimeseries(key) as any;
         }}
+        labels={c}
+        securityInfo={(() => {
+          if (!securityCfg) return undefined;
+          const parsed = securityCfg?.parsed || securityCfg?.config || securityCfg || {};
+          const globalTools = parsed?.tools || {};
+          const agentsCfg = parsed?.agents || {};
+          const agentId = sessionKey?.split(':')?.[1] || '';
+          const agentList: any[] = agentsCfg?.list || [];
+          const agentEntry = agentList.find((e: any) => e?.id === agentId) || {};
+          const agentTools = agentEntry.tools || {};
+          const sandboxCfg = agentEntry.sandbox || agentsCfg?.defaults?.sandbox || {};
+          return {
+            toolProfile: agentTools.profile || globalTools.profile || 'full',
+            sandboxMode: sandboxCfg.mode || sandboxCfg.backend || 'Off',
+            execSecurity: agentTools.exec?.security || globalTools.exec?.security || '—',
+          };
+        })()}
+        session={(() => {
+          const agentMatch = sessionKey.match(/^agent:([^:]+):/);
+          const agentId = agentMatch?.[1];
+          const agentObj = agentId ? agentsList.find(ag => ag.id === agentId) : undefined;
+          return {
+            model: activeSession?.model,
+            modelProvider: activeSession?.modelProvider,
+            totalTokens: activeSession?.totalTokens,
+            inputTokens: activeSession?.inputTokens,
+            outputTokens: activeSession?.outputTokens,
+            maxContextTokens: activeSession?.maxContextTokens || modelCtxMap[activeSession?.model || ''] || 0,
+            compacted: activeSession?.compacted,
+            thinkingLevel: activeSession?.thinkingLevel,
+            reasoningLevel: activeSession?.reasoningLevel,
+            verboseLevel: activeSession?.verboseLevel,
+            sendPolicy: activeSession?.sendPolicy,
+            fastMode: activeSession?.fastMode,
+            kind: activeSession?.kind,
+            messageCount: messages.length || undefined,
+            lastLatencyMs: lastLatencyMs,
+            liveElapsed: liveElapsed,
+            runPhase: runPhase,
+            agentId,
+            agentLabel: agentObj?.label || agentObj?.id,
+          };
+        })()}
+        onNavigateAgent={(() => {
+          const agentMatch = sessionKey.match(/^agent:([^:]+):/);
+          const agentId = agentMatch?.[1];
+          if (!agentId) return undefined;
+          return () => {
+            window.dispatchEvent(new CustomEvent('haclaw:open-window', { detail: { id: 'agents', agentId, panel: 'tools' } }));
+          };
+        })()}
         onModelChange={async (model) => {
           try {
             await gwApi.sessionsPatch(sessionKey, { model: model || null });
@@ -3262,7 +3565,7 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
             onClick={e => e.stopPropagation()}>
             <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
               <span className="material-symbols-outlined text-[18px] text-primary">edit</span>
-              {c.renameSession}
+              {c.editSession || c.renameSession}
             </h3>
 
             <div>
@@ -3281,6 +3584,29 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
               </p>
             </div>
 
+            {/* Bind Agent — only for group/channel sessions */}
+            {bindAgentsList.length > 0 && parseSessionKeyPeer(renameKey) && (
+              <div className="mt-4">
+                <label className="text-[10px] font-bold text-slate-500 dark:text-white/40 uppercase block mb-1">
+                  <span className="material-symbols-outlined text-[12px] align-middle me-0.5">link</span>
+                  {c.bindAgent || 'Bind Agent'}
+                </label>
+                <CustomSelect
+                  value={bindAgentId}
+                  onChange={setBindAgentId}
+                  options={[
+                    { value: '', label: c.bindDefault || 'Default (no override)' },
+                    ...bindAgentsList.map(a => ({ value: a.id, label: a.label || a.id }))
+                  ]}
+                  className="w-full h-9 px-3 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-xl text-[12px] text-slate-800 dark:text-white/80"
+                  disabled={renaming}
+                />
+                <p className="text-[10px] text-slate-400 dark:text-white/30 mt-1">
+                  {c.bindAgentHint || "Route this peer's messages to a specific agent"}
+                </p>
+              </div>
+            )}
+
             <div className="flex justify-end gap-2 mt-5">
               <button onClick={() => setRenameOpen(false)} disabled={renaming}
                 className="px-4 py-2 rounded-xl text-[11px] font-bold text-slate-500 dark:text-white/40 hover:bg-slate-100 dark:hover:bg-white/5 transition-all">
@@ -3289,7 +3615,7 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
               <button onClick={handleRenameSession} disabled={renaming}
                 className="px-4 py-2 rounded-xl bg-primary text-white text-[11px] font-bold disabled:opacity-40 transition-all flex items-center gap-1.5">
                 {renaming && <span className="material-symbols-outlined text-[14px] animate-spin">progress_activity</span>}
-                {renaming ? c.renaming : c.renameSession}
+                {renaming ? c.renaming : (c.saveSession || c.renameSession)}
               </button>
             </div>
           </div>

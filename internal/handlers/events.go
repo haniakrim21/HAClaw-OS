@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"HAClaw/internal/database"
-	"HAClaw/internal/web"
+	"HAClaw-OS/internal/database"
+	"HAClaw-OS/internal/web"
 )
 
 type EventsHandler struct {

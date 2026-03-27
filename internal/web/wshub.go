@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"HAClaw/internal/logger"
+	"HAClaw-OS/internal/logger"
 
 	"github.com/gorilla/websocket"
 )

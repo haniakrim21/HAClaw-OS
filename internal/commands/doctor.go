@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"HAClaw/internal/i18n"
-	"HAClaw/internal/openclaw"
-	"HAClaw/internal/output"
+	"HAClaw-OS/internal/i18n"
+	"HAClaw-OS/internal/openclaw"
+	"HAClaw-OS/internal/output"
 )
 
 func Doctor(args []string) int {

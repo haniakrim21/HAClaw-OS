@@ -40,7 +40,7 @@ interface MergedPlugin {
   origin?: string; source?: string; kind?: string;
 }
 
-const PLUGIN_CACHE_KEY = 'haclaw_plugin_cache';
+const PLUGIN_CACHE_KEY = 'haclawx_plugin_cache';
 
 const normalizePluginSpecIdentity = (spec?: string): string => {
   if (!spec) return '';

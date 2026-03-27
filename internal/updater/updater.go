@@ -14,14 +14,14 @@ import (
 	"strings"
 	"time"
 
-	"HAClaw/internal/logger"
-	"HAClaw/internal/netutil"
-	"HAClaw/internal/version"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/netutil"
+	"HAClaw-OS/internal/version"
 )
 
 const (
-	GitHubOwner = "HAClaw"
-	GitHubRepo  = "HAClaw"
+	GitHubOwner = "HAClaw-OS"
+	GitHubRepo  = "HAClaw-OS"
 )
 
 // ReleaseInfo holds GitHub release metadata.
@@ -80,14 +80,14 @@ func CheckForUpdate(ctx context.Context) (*CheckResult, error) {
 		return &CheckResult{Available: false, CurrentVersion: currentVersion, Error: err.Error()}, nil
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", "HAClaw/"+currentVersion)
+	req.Header.Set("User-Agent", "HAClaw-OS/"+currentVersion)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		// Network error - likely blocked or timeout
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "timeout") || strings.Contains(errMsg, "connection refused") || strings.Contains(errMsg, "no route to host") {
-			return &CheckResult{Available: false, CurrentVersion: currentVersion, Error: "Cannot connect to GitHub. Please check your network or download manually from https://github.com/HAClaw/HAClaw/releases"}, nil
+			return &CheckResult{Available: false, CurrentVersion: currentVersion, Error: "Cannot connect to GitHub. Please check your network or download manually from https://github.com/HAClaw-OS/HAClaw-OS/releases"}, nil
 		}
 		return &CheckResult{Available: false, CurrentVersion: currentVersion, Error: errMsg}, nil
 	}
@@ -159,14 +159,14 @@ func CheckForPreRelease(ctx context.Context) (*CheckResult, error) {
 		return &CheckResult{Available: false, CurrentVersion: currentVersion, Error: err.Error()}, nil
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", "HAClaw/"+currentVersion)
+	req.Header.Set("User-Agent", "HAClaw-OS/"+currentVersion)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		// Network error - likely blocked or timeout
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "timeout") || strings.Contains(errMsg, "connection refused") || strings.Contains(errMsg, "no route to host") {
-			return &CheckResult{Available: false, CurrentVersion: currentVersion, Error: "Cannot connect to GitHub. Please check your network or download manually from https://github.com/HAClaw/HAClaw/releases"}, nil
+			return &CheckResult{Available: false, CurrentVersion: currentVersion, Error: "Cannot connect to GitHub. Please check your network or download manually from https://github.com/HAClaw-OS/HAClaw-OS/releases"}, nil
 		}
 		return &CheckResult{Available: false, CurrentVersion: currentVersion, Error: errMsg}, nil
 	}
@@ -241,7 +241,7 @@ func ApplyUpdate(ctx context.Context, downloadURL string, progressFn func(ApplyP
 	if err != nil {
 		return fmt.Errorf("create request: %w", err)
 	}
-	req.Header.Set("User-Agent", "HAClaw/"+version.Version)
+	req.Header.Set("User-Agent", "HAClaw-OS/"+version.Version)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -272,7 +272,7 @@ func ApplyUpdate(ctx context.Context, downloadURL string, progressFn func(ApplyP
 	}
 
 	dir := filepath.Dir(currentExe)
-	tmpFile, err := os.CreateTemp(dir, "HAClaw-update-*.tmp")
+	tmpFile, err := os.CreateTemp(dir, "HAClaw-OS-update-*.tmp")
 	if err != nil {
 		return fmt.Errorf("create temp file: %w", err)
 	}
@@ -339,7 +339,7 @@ func expectedAssetName() string {
 	if runtime.GOOS == "windows" {
 		ext = ".exe"
 	}
-	return fmt.Sprintf("haclaw-%s-%s%s", runtime.GOOS, runtime.GOARCH, ext)
+	return fmt.Sprintf("haclawx-%s-%s%s", runtime.GOOS, runtime.GOARCH, ext)
 }
 
 // replaceBinary replaces the current executable with the new one.

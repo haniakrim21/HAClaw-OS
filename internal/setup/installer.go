@@ -1,10 +1,10 @@
 package setup
 
 import (
-	"HAClaw/internal/executil"
-	"HAClaw/internal/i18n"
-	"HAClaw/internal/netutil"
-	"HAClaw/internal/openclaw"
+	"HAClaw-OS/internal/executil"
+	"HAClaw-OS/internal/i18n"
+	"HAClaw-OS/internal/netutil"
+	"HAClaw-OS/internal/openclaw"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -270,19 +270,20 @@ func (i *Installer) InstallClawHub(ctx context.Context, registry string) error {
 }
 
 func (i *Installer) verifyOpenClawInstalled() bool {
-	info := detectTool("openclaw", "--version")
+	// Invalidate cached discovery so we pick up newly installed binaries
+	openclaw.InvalidateDiscoveryCache()
+	info := detectOpenClawWithFallback()
 	return info.Installed
 }
 
 func (i *Installer) InstallOpenClawWithConfig(ctx context.Context, config InstallConfig) error {
 	i.emitter.EmitStep("install", "install-openclaw", i18n.T(i18n.MsgInstallerInstallingPackage, map[string]interface{}{"Package": "OpenClaw"}), 30)
 
-	cmdName := "openclaw"
-
 	if i.env.Tools["npm"].Installed || detectTool("npm", "--version").Installed {
 		i.emitter.EmitLog(i18n.T(i18n.MsgInstallerNpmGlobalInstalling))
 		if err := i.installViaNpmWithOptions(ctx, "openclaw", config.Registry); err == nil {
-			if detectTool(cmdName, "--version").Installed {
+			openclaw.InvalidateDiscoveryCache()
+			if detectOpenClawWithFallback().Installed {
 				i.emitter.EmitLog(i18n.T(i18n.MsgInstallerOpenclawNpmSuccess))
 				return nil
 			}
@@ -398,6 +399,12 @@ func (i *Installer) installViaNpmWithOptions(ctx context.Context, version string
 		}
 	}
 
+	// If npm install failed and git is not available, it's likely "spawn git ENOENT".
+	// Emit a targeted hint so the user knows to install Git first.
+	if lastErr != nil && !i.env.Tools["git"].Installed {
+		i.emitter.EmitLog("⚠ Git is not installed — npm may have failed with 'spawn git ENOENT'. Please install Git first.")
+	}
+
 	return lastErr
 }
 
@@ -437,7 +444,10 @@ func registryDisplayName(url string) string {
 func (i *Installer) ConfigureOpenClaw(ctx context.Context, config InstallConfig) error {
 	i.emitter.EmitStep("configure", "configure-openclaw", i18n.T(i18n.MsgInstallerConfiguringOpenclaw), 60)
 
-	cmdName := resolveOpenClawFullPath("openclaw")
+	cmdName := openclaw.ResolveOpenClawCmd()
+	if cmdName == "" {
+		cmdName = resolveOpenClawFullPath("openclaw")
+	}
 	i.emitter.EmitLog(i18n.T(i18n.MsgInstallerUsingCommand, map[string]interface{}{"Command": cmdName}))
 
 	args := []string{
@@ -519,7 +529,10 @@ func (i *Installer) ensureDefaultConfig() error {
 		return nil
 	}
 
-	cmdName := resolveOpenClawFullPath("openclaw")
+	cmdName := openclaw.ResolveOpenClawCmd()
+	if cmdName == "" {
+		cmdName = resolveOpenClawFullPath("openclaw")
+	}
 	i.emitter.EmitLog(i18n.T(i18n.MsgInstallerGeneratingDefaultConfig, map[string]interface{}{"Command": cmdName}))
 
 	args := []string{
@@ -885,6 +898,8 @@ func (i *Installer) UpdateOpenClaw(ctx context.Context) error {
 		return fmt.Errorf("npm update failed: %w", err)
 	}
 
+	// Invalidate cached path so subsequent calls pick up the new binary
+	openclaw.InvalidateDiscoveryCache()
 	i.emitter.EmitLog("✓ OpenClaw updated successfully")
 	return nil
 }

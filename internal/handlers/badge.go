@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"HAClaw/internal/database"
-	"HAClaw/internal/openclaw"
-	"HAClaw/internal/web"
+	"HAClaw-OS/internal/database"
+	"HAClaw-OS/internal/openclaw"
+	"HAClaw-OS/internal/web"
 )
 
 // BadgeHandler provides desktop icon badge counts.

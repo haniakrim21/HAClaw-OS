@@ -47,9 +47,9 @@ web/dist/
 *.syso
 
 # Binaries
-/HAClaw
-/HAClaw.exe
-haclaw-linux-amd64
+/HAClaw-OS
+/HAClaw-OS.exe
+haclawx-linux-amd64
 openclawmanager-*
 
 # Build counter

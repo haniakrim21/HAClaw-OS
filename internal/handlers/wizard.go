@@ -13,12 +13,12 @@ import (
 	"strings"
 	"time"
 
-	"HAClaw/internal/constants"
-	"HAClaw/internal/database"
-	"HAClaw/internal/i18n"
-	"HAClaw/internal/logger"
-	"HAClaw/internal/openclaw"
-	"HAClaw/internal/web"
+	"HAClaw-OS/internal/constants"
+	"HAClaw-OS/internal/database"
+	"HAClaw-OS/internal/i18n"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/openclaw"
+	"HAClaw-OS/internal/web"
 )
 
 // probeHTTPClient is a dedicated HTTP client for model/channel probe requests
@@ -151,7 +151,7 @@ func (h *WizardHandler) TestModel(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			web.Fail(w, r, "GW_MODEL_TEST_FAILED", modelTestFriendlyMessage(pe.UpstreamStatus, req.Model, pe.Msg), http.StatusUnprocessableEntity)
+			web.Fail(w, r, "GW_MODEL_TEST_FAILED", modelTestFriendlyMessage(pe.UpstreamStatus, req.Model), http.StatusUnprocessableEntity)
 			return
 		}
 
@@ -249,7 +249,7 @@ func (h *WizardHandler) TestProviderSmart(w http.ResponseWriter, r *http.Request
 		if pe.UpstreamStatus == 401 || pe.UpstreamStatus == 403 {
 			web.OK(w, r, SmartTestResult{
 				Status:  "fail",
-				Message: modelTestFriendlyMessage(pe.UpstreamStatus, req.Model, pe.Msg),
+				Message: modelTestFriendlyMessage(pe.UpstreamStatus, req.Model),
 				Model:   req.Model,
 				APIType: originalAPIType,
 				Error:   pe.Msg,
@@ -283,7 +283,7 @@ func (h *WizardHandler) TestProviderSmart(w http.ResponseWriter, r *http.Request
 	// All attempts failed — return original error
 	errMsg := "Connection test failed"
 	if pe, ok := err.(*ProbeError); ok {
-		errMsg = modelTestFriendlyMessage(pe.UpstreamStatus, req.Model, pe.Msg)
+		errMsg = modelTestFriendlyMessage(pe.UpstreamStatus, req.Model)
 	}
 	web.OK(w, r, SmartTestResult{
 		Status:  "fail",
@@ -294,7 +294,7 @@ func (h *WizardHandler) TestProviderSmart(w http.ResponseWriter, r *http.Request
 	})
 }
 
-func modelTestFriendlyMessage(status int, modelID string, peMsg string) string {
+func modelTestFriendlyMessage(status int, modelID string) string {
 	switch status {
 	case http.StatusUnauthorized, http.StatusForbidden:
 		return i18n.T(i18n.MsgModelAuthFailed, nil)
@@ -304,17 +304,10 @@ func modelTestFriendlyMessage(status int, modelID string, peMsg string) string {
 		return i18n.T(i18n.MsgModelRateLimited, nil)
 	default:
 		if status >= 500 {
-			return i18n.T(i18n.MsgModelTestUnstable, nil) + " (" + peMsg + ")"
+			return i18n.T(i18n.MsgModelTestUnstable, nil)
 		}
-		
-		// Unmask real API errors from the upstream provider!
-		errorDetail := i18n.T(i18n.MsgModelTestUnstable, nil)
-		if peMsg != "" {
-			errorDetail = peMsg
-		}
-		
 		return i18n.T(i18n.MsgModelTestFailed, map[string]interface{}{
-			"Error": errorDetail,
+			"Error": i18n.T(i18n.MsgModelTestUnstable, nil),
 		})
 	}
 }
@@ -455,13 +448,7 @@ func buildProbeRequest(req TestModelRequest) (endpoint string, headers map[strin
 		if baseURL == "" {
 			baseURL = "https://generativelanguage.googleapis.com/v1beta"
 		}
-		
-		testModel := req.Model
-		if testModel == "gemini-2.5-pro" || testModel == "gemini-3.1-pro" {
-			testModel = "gemini-2.0-flash"
-		}
-		
-		endpoint = baseURL + "/models/" + testModel + ":generateContent?key=" + req.APIKey
+		endpoint = baseURL + "/models/" + req.Model + ":generateContent?key=" + req.APIKey
 		headers = map[string]string{}
 		body, _ = json.Marshal(map[string]interface{}{
 			"contents": []map[string]interface{}{
@@ -481,8 +468,9 @@ func buildProbeRequest(req TestModelRequest) (endpoint string, headers map[strin
 			headers["Authorization"] = "Bearer " + req.APIKey
 		}
 		body, _ = json.Marshal(map[string]interface{}{
-			"model":    req.Model,
-			"messages": []map[string]string{{"role": "user", "content": "Reply OK"}},
+			"model":      req.Model,
+			"max_tokens": 4,
+			"messages":   []map[string]string{{"role": "user", "content": "Reply OK"}},
 		})
 	}
 
@@ -873,7 +861,7 @@ func readEnvFileValue(path, key string) string {
 
 // resolveProviderAPIKeyViaGW fetches the real API key from a remote gateway
 // via the config.get RPC call. This covers the case where
-// HAClaw is connected to a remote gateway and the local config file does
+// HAClaw-OS is connected to a remote gateway and the local config file does
 // not contain the provider credentials.
 func (h *WizardHandler) resolveProviderAPIKeyViaGW(provider string) string {
 	if h.gwClient == nil {
@@ -937,14 +925,11 @@ func (h *WizardHandler) resolveProviderAPIKeyViaEnv(provider string) string {
 }
 
 func (h *WizardHandler) resolveProviderAPIKeyViaLocalConfig(provider string) string {
-	configPath := os.Getenv("OPENCLAW_CONFIG_PATH")
-	if configPath == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return ""
-		}
-		configPath = filepath.Join(home, ".openclaw", "openclaw.json")
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
 	}
+	configPath := filepath.Join(home, ".openclaw", "openclaw.json")
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return ""

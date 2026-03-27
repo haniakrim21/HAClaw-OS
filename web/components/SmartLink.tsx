@@ -35,7 +35,7 @@ export function SmartLink({ href, children, className, title, target = '_blank',
 
     // Find best mirror and transform URL
     let mounted = true;
-    findFastestMirror(GITHUB_MIRRORS, '/haniakrim21/HAClaw-OS', 'github', 3000)
+    findFastestMirror(GITHUB_MIRRORS, '/HAClaw-OS/HAClaw-OS', 'github', 3000)
       .then(mirror => {
         if (mounted) {
           const transformed = transformGitHubURL(href, mirror);
@@ -75,7 +75,7 @@ export function useSmartGitHubURL(originalURL: string): string {
     }
 
     let mounted = true;
-    findFastestMirror(GITHUB_MIRRORS, '/haniakrim21/HAClaw-OS', 'github', 3000)
+    findFastestMirror(GITHUB_MIRRORS, '/HAClaw-OS/HAClaw-OS', 'github', 3000)
       .then(mirror => {
         if (mounted) {
           setUrl(transformGitHubURL(originalURL, mirror));

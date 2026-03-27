@@ -6,11 +6,11 @@ import (
 	"os"
 	"strings"
 
-	"HAClaw/internal/appconfig"
-	"HAClaw/internal/commands"
-	"HAClaw/internal/i18n"
-	"HAClaw/internal/output"
-	"HAClaw/internal/version"
+	"HAClaw-OS/internal/appconfig"
+	"HAClaw-OS/internal/commands"
+	"HAClaw-OS/internal/i18n"
+	"HAClaw-OS/internal/output"
+	"HAClaw-OS/internal/version"
 )
 
 func Run(args []string) int {
@@ -38,7 +38,7 @@ func Run(args []string) int {
 		output.Println(usage())
 		return 0
 	case "-v", "--version", "version":
-		output.Printf("HAClaw %s\n", version.Version)
+		output.Printf("HAClaw-OS %s\n", version.Version)
 		return 0
 	case "doctor":
 		return commands.Doctor(args[2:])

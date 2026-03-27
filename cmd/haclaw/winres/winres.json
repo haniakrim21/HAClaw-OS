@@ -8,10 +8,10 @@
     "#1": {
       "0409": {
         "identity": {
-          "name": "HAClaw",
+          "name": "HAClaw-OS",
           "version": "0.0.0.0"
         },
-        "description": "HAClaw - OpenClaw Management Dashboard",
+        "description": "HAClaw-OS - OpenClaw Management Dashboard",
         "minimum-os": "vista",
         "execution-level": "asInvoker",
         "dpi-awareness": "permonitorv2",
@@ -28,11 +28,11 @@
         },
         "info": {
           "0409": {
-            "CompanyName": "HAClaw",
-            "FileDescription": "HAClaw",
-            "ProductName": "HAClaw",
-            "LegalCopyright": "Copyright (c) HAClaw contributors",
-            "OriginalFilename": "haclaw.exe",
+            "CompanyName": "HAClaw-OS",
+            "FileDescription": "HAClaw-OS",
+            "ProductName": "HAClaw-OS",
+            "LegalCopyright": "Copyright (c) HAClaw-OS contributors",
+            "OriginalFilename": "haclawx.exe",
             "ProductVersion": "",
             "FileVersion": ""
           }

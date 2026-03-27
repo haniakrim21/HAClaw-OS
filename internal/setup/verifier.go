@@ -1,8 +1,8 @@
 ﻿package setup
 
 import (
-	"HAClaw/internal/executil"
-	"HAClaw/internal/i18n"
+	"HAClaw-OS/internal/executil"
+	"HAClaw-OS/internal/i18n"
 	"context"
 	"fmt"
 	"net"

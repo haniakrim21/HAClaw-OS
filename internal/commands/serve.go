@@ -19,21 +19,21 @@ import (
 	"time"
 	"unicode"
 
-	"HAClaw/internal/constants"
-	"HAClaw/internal/database"
-	"HAClaw/internal/handlers"
-	"HAClaw/internal/i18n"
-	"HAClaw/internal/logger"
-	"HAClaw/internal/monitor"
-	"HAClaw/internal/notify"
-	"HAClaw/internal/openclaw"
-	"HAClaw/internal/proclock"
-	"HAClaw/internal/runtime"
-	"HAClaw/internal/sentinel"
-	"HAClaw/internal/tray"
-	"HAClaw/internal/version"
-	"HAClaw/internal/web"
-	"HAClaw/internal/webconfig"
+	"HAClaw-OS/internal/constants"
+	"HAClaw-OS/internal/database"
+	"HAClaw-OS/internal/handlers"
+	"HAClaw-OS/internal/i18n"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/monitor"
+	"HAClaw-OS/internal/notify"
+	"HAClaw-OS/internal/openclaw"
+	"HAClaw-OS/internal/proclock"
+	"HAClaw-OS/internal/runtime"
+	"HAClaw-OS/internal/sentinel"
+	"HAClaw-OS/internal/tray"
+	"HAClaw-OS/internal/version"
+	"HAClaw-OS/internal/web"
+	"HAClaw-OS/internal/webconfig"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -369,6 +369,8 @@ func RunServe(args []string) int {
 	badgeHandler.SetGWClient(gwClient)
 	maintenanceHandler := handlers.NewMaintenanceHandler(svc)
 	maintenanceHandler.SetGWClient(gwClient)
+	workspaceMemoryHandler := handlers.NewWorkspaceMemoryHandler()
+	workspaceMemoryHandler.SetGWClient(gwClient)
 
 	// Runtime overlay manager (Docker persistent updates)
 	var runtimeMgr *runtime.Manager
@@ -407,13 +409,13 @@ func RunServe(args []string) int {
 	router.GET("/api/v1/service/status", serviceHandler.Status)
 
 	router.GET("/api/v1/runtime/status", runtimeHandler.Status)
-	router.POST("/api/v1/runtime/haclaw/update", web.RequireAdmin(runtimeHandler.UpdateHAClaw))
+	router.POST("/api/v1/runtime/haclawx/update", web.RequireAdmin(runtimeHandler.UpdateHAClaw-OS))
 	router.POST("/api/v1/runtime/openclaw/update", web.RequireAdmin(runtimeHandler.UpdateOpenClaw))
 	router.POST("/api/v1/runtime/rollback", web.RequireAdmin(runtimeHandler.Rollback))
 	router.POST("/api/v1/service/openclaw/install", web.RequireAdmin(serviceHandler.InstallOpenClaw))
 	router.POST("/api/v1/service/openclaw/uninstall", web.RequireAdmin(serviceHandler.UninstallOpenClaw))
-	router.POST("/api/v1/service/haclaw/install", web.RequireAdmin(serviceHandler.InstallHAClaw))
-	router.POST("/api/v1/service/haclaw/uninstall", web.RequireAdmin(serviceHandler.UninstallHAClaw))
+	router.POST("/api/v1/service/haclawx/install", web.RequireAdmin(serviceHandler.InstallHAClaw-OS))
+	router.POST("/api/v1/service/haclawx/uninstall", web.RequireAdmin(serviceHandler.UninstallHAClaw-OS))
 
 	router.GET("/api/v1/server-config", serverConfigHandler.Get)
 	router.PUT("/api/v1/server-config", web.RequireAdmin(serverConfigHandler.Update))
@@ -496,6 +498,10 @@ func RunServe(args []string) int {
 	router.GET("/api/v1/maintenance/context/analyze", maintenanceHandler.ContextAnalyze)
 	router.POST("/api/v1/maintenance/context/optimize", web.RequireAdmin(maintenanceHandler.ContextOptimize))
 	router.POST("/api/v1/maintenance/context/optimize-all", web.RequireAdmin(maintenanceHandler.ContextOptimizeAll))
+
+	router.GET("/api/v1/workspace/memory", workspaceMemoryHandler.List)
+	router.GET("/api/v1/workspace/memory/file", workspaceMemoryHandler.Get)
+	router.PUT("/api/v1/workspace/memory/file", web.RequireAdmin(workspaceMemoryHandler.Set))
 
 	router.GET("/api/v1/llm/models-status", llmHealthHandler.ModelsStatus)
 	router.GET("/api/v1/llm/auth-health", llmHealthHandler.AuthHealth)
@@ -587,6 +593,7 @@ func RunServe(args []string) int {
 	router.POST("/api/v1/gw/config/reload", web.RequireAdmin(gwProxy.ConfigReload))
 	router.GET("/api/v1/gw/sessions/messages", gwProxy.SessionsPreviewMessages)
 	router.GET("/api/v1/gw/sessions/history", gwProxy.SessionsHistory)
+	router.GET("/api/v1/gw/sessions/history-paginated", gwProxy.SessionsHistoryPaginated)
 	router.POST("/api/v1/gw/proxy", web.RequireAdmin(gwProxy.GenericProxy))
 	router.POST("/api/v1/gw/skills/install-stream", web.RequireAdmin(gwProxy.DepInstallStreamSSE))
 	router.POST("/api/v1/gw/skills/install-async", web.RequireAdmin(gwProxy.DepInstallAsync))
@@ -610,6 +617,7 @@ func RunServe(args []string) int {
 	router.GET("/api/v1/clawhub/search", clawHubHandler.Search)
 	router.GET("/api/v1/clawhub/skill", clawHubHandler.SkillDetail)
 	router.POST("/api/v1/clawhub/install", web.RequireAdmin(clawHubHandler.Install))
+	router.POST("/api/v1/clawhub/install-recipe", web.RequireAdmin(clawHubHandler.InstallRecipe))
 	router.POST("/api/v1/clawhub/install-stream", web.RequireAdmin(clawHubHandler.InstallStreamSSE))
 	router.POST("/api/v1/clawhub/uninstall", web.RequireAdmin(clawHubHandler.Uninstall))
 	router.POST("/api/v1/clawhub/update", web.RequireAdmin(clawHubHandler.Update))
@@ -732,7 +740,7 @@ func RunServe(args []string) int {
 			fmt.Fprintln(os.Stderr, i18n.T(i18n.MsgServeAlreadyRunning, map[string]interface{}{"Port": cfg.Server.Port}))
 			fmt.Fprintln(os.Stderr)
 			fmt.Fprintln(os.Stderr, i18n.T(i18n.MsgServeAlreadyRunningSolutions))
-			logger.Log.Error().Int("port", cfg.Server.Port).Msg("HAClaw already running")
+			logger.Log.Error().Int("port", cfg.Server.Port).Msg("HAClaw-OS already running")
 		} else {
 			fmt.Fprintln(os.Stderr, i18n.T(i18n.MsgServePortInUse, map[string]interface{}{"Port": cfg.Server.Port}))
 			logger.Log.Error().Err(err).Msg("failed to acquire process lock")
@@ -866,7 +874,7 @@ func RunServe(args []string) int {
 	printLine(logoPad + "C     L     A   A  WW WW D   D E    C    K K    X X")
 	printLine(logoPad + "CCCC  LLLLL A   A  W   W DDDD  EEEE CCCC K  K  X   X")
 	printLine("")
-	printLine(centerLine(fmt.Sprintf("HAClaw Web %s", version.Version)))
+	printLine(centerLine(fmt.Sprintf("HAClaw-OS Web %s", version.Version)))
 
 	userRepo := database.NewUserRepo()
 	userCount, _ := userRepo.Count()
@@ -984,9 +992,9 @@ func RunServe(args []string) int {
 			fmt.Fprintf(os.Stderr, "   %s\n", i18n.TLang("en", i18n.MsgServePortOccupiedBy, procData))
 			fmt.Fprintf(os.Stderr, "   %s\n\n", i18n.TLang("zh", i18n.MsgServePortOccupiedBy, procData))
 
-			// Only offer to kill if the blocking process is another HAClaw instance.
+			// Only offer to kill if the blocking process is another HAClaw-OS instance.
 			// Never kill unrelated processes (e.g. openclaw gateway).
-			isSelf := strings.Contains(strings.ToLower(info.Name), "haclaw")
+			isSelf := strings.Contains(strings.ToLower(info.Name), "haclawx")
 			if isSelf {
 				// Interactive: ask user whether to kill
 				// Use ReadLineFromTTY to read from /dev/tty (Unix) or CON (Windows),
@@ -1030,7 +1038,7 @@ func RunServe(args []string) int {
 					return 1
 				}
 			} else {
-				// Not a HAClaw process — do not offer to kill, just show solutions
+				// Not a HAClaw-OS process — do not offer to kill, just show solutions
 				biPrint(i18n.MsgServePortInUseSolutions)
 				return 1
 			}
@@ -1264,7 +1272,7 @@ func getPublicIP() string {
 // It uses only existing public APIs from the openclaw package.
 func buildDetailedHealth(svc *openclaw.Service) map[string]interface{} {
 	result := map[string]interface{}{
-		"haclaw": map[string]interface{}{
+		"haclawx": map[string]interface{}{
 			"status":  "ok",
 			"version": version.Version,
 		},
@@ -1341,7 +1349,7 @@ func buildDetailedHealth(svc *openclaw.Service) map[string]interface{} {
 }
 
 // detectLoopbackRouteConflict checks if localhost and 127.0.0.1 route to different services.
-// Returns true when localhost works as HAClaw but 127.0.0.1 is not HAClaw.
+// Returns true when localhost works as HAClaw-OS but 127.0.0.1 is not HAClaw-OS.
 func detectLoopbackRouteConflict(port int) (bool, string) {
 	client := &http.Client{Timeout: 1200 * time.Millisecond}
 

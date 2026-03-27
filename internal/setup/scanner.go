@@ -1,9 +1,9 @@
 ﻿package setup
 
 import (
-	"HAClaw/internal/executil"
-	"HAClaw/internal/i18n"
-	"HAClaw/internal/openclaw"
+	"HAClaw-OS/internal/executil"
+	"HAClaw-OS/internal/i18n"
+	"HAClaw-OS/internal/openclaw"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -390,8 +390,8 @@ func detectTools() map[string]ToolInfo {
 		tools["powershell"] = detectTool("powershell", "-Command \"$PSVersionTable.PSVersion.ToString()\"")
 	}
 
-	// OpenClaw
-	tools["openclaw"] = detectTool("openclaw", "--version")
+	// OpenClaw — use comprehensive discovery (handles nvm, fnm, volta, custom npm prefix, etc.)
+	tools["openclaw"] = detectOpenClawWithFallback()
 
 	// ClawHub CLI
 	tools["clawhub"] = detectTool("clawhub", "--version")
@@ -487,6 +487,34 @@ func detectPython() ToolInfo {
 		return info
 	}
 	return detectTool("python", "--version")
+}
+
+// detectOpenClawWithFallback uses the comprehensive discovery module in the
+// openclaw package, which scans exec.LookPath, npm global bin, well-known
+// installation paths (nvm, fnm, volta, pnpm, yarn, bun, etc.), and interactive
+// shell fallback.  This replaces the simple detectTool("openclaw", "--version")
+// that relied solely on the Go process's PATH.
+func detectOpenClawWithFallback() ToolInfo {
+	cmd := openclaw.ResolveOpenClawCmd()
+	if cmd == "" {
+		return ToolInfo{Installed: false}
+	}
+	info := ToolInfo{Installed: true, Path: cmd}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	c := exec.CommandContext(ctx, cmd, "--version")
+	executil.HideWindow(c)
+	out, err := c.Output()
+	if err != nil {
+		return ToolInfo{Installed: false}
+	}
+	version := strings.TrimSpace(string(out))
+	version = extractVersion(version)
+	if version == "" {
+		return ToolInfo{Installed: false}
+	}
+	info.Version = version
+	return info
 }
 
 func detectNodeWithFallback() ToolInfo {
@@ -786,7 +814,7 @@ func checkHomeDirWritable() bool {
 	if err != nil {
 		return false
 	}
-	testFile := filepath.Join(home, ".HAClaw_write_test")
+	testFile := filepath.Join(home, ".HAClaw-OS_write_test")
 	f, err := os.Create(testFile)
 	if err != nil {
 		return false

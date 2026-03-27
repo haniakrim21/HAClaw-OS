@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "HAClaw Template Schema",
+  "title": "HAClaw-OS Template Schema",
   "type": "object",
   "required": ["id", "version", "type", "metadata", "content"],
   "properties": {

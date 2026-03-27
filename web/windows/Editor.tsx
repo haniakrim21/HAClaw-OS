@@ -102,7 +102,7 @@ const Editor: React.FC<EditorProps> = ({ language }) => {
                   <div className="space-y-4">
                     <div className="flex flex-col sm:grid sm:grid-cols-3 sm:items-center gap-1.5 sm:gap-4">
                       <label className="text-[10px] md:text-xs font-bold theme-text-muted">{edit.mainModel}</label>
-                      <input className="sm:col-span-2 h-8 bg-white dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-md px-3 text-[11px] md:text-xs text-primary font-mono" defaultValue="gemini-2.5-pro" />
+                      <input className="sm:col-span-2 h-8 bg-white dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-md px-3 text-[11px] md:text-xs text-primary font-mono" defaultValue="gemini-3-flash-preview" />
                     </div>
                     <div className="flex flex-col sm:grid sm:grid-cols-3 sm:items-center gap-1.5 sm:gap-4">
                       <label className="text-[10px] md:text-xs font-bold text-slate-500">{edit.maxConcurrency}</label>

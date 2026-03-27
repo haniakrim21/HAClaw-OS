@@ -38,13 +38,13 @@ func ConfigPath() string {
 	if custom := strings.TrimSpace(os.Getenv("OCD_CONFIG")); custom != "" {
 		return custom
 	}
-	// Use legacy scheme: ./data/HAClaw.json (same directory as executable)
+	// Use legacy scheme: ./data/HAClaw-OS.json (same directory as executable)
 	exe, err := os.Executable()
 	if err != nil {
-		return "./data/HAClaw.json"
+		return "./data/HAClaw-OS.json"
 	}
 	exeDir := filepath.Dir(exe)
-	return filepath.Join(exeDir, "data", "HAClaw.json")
+	return filepath.Join(exeDir, "data", "HAClaw-OS.json")
 }
 
 func Load(path string) (Config, error) {

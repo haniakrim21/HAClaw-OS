@@ -5,15 +5,15 @@ import (
 	"os"
 	"time"
 
-	"HAClaw/internal/constants"
-	"HAClaw/internal/database"
-	"HAClaw/internal/logger"
-	"HAClaw/internal/webconfig"
+	"HAClaw-OS/internal/constants"
+	"HAClaw-OS/internal/database"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/webconfig"
 )
 
 func Unlock(args []string) int {
 	if len(args) < 1 {
-		fmt.Fprintln(os.Stderr, "Usage: haclaw unlock <username>")
+		fmt.Fprintln(os.Stderr, "Usage: haclawx unlock <username>")
 		fmt.Fprintln(os.Stderr, "")
 		fmt.Fprintln(os.Stderr, "Unlock a user account that has been locked due to failed login attempts.")
 		fmt.Fprintln(os.Stderr, "This command clears the account lock and resets the failed login attempt counter.")

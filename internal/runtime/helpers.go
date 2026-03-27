@@ -5,8 +5,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"HAClaw/internal/executil"
-	"HAClaw/internal/version"
+	"HAClaw-OS/internal/executil"
+	"HAClaw-OS/internal/version"
 )
 
 // IsDocker returns true if running inside a Docker container.
@@ -24,10 +24,10 @@ func IsDocker() bool {
 	return false
 }
 
-// imageHAClawVersion returns the HAClaw version baked into the Docker image.
+// imageHAClaw-OSVersion returns the HAClaw-OS version baked into the Docker image.
 // We read this from a stamp file written by the entrypoint at first boot.
 // Falls back to the compiled-in version constant.
-func imageHAClawVersion() string {
+func imageHAClaw-OSVersion() string {
 	data, err := os.ReadFile("/app/.image-version")
 	if err == nil {
 		v := strings.TrimSpace(string(data))

@@ -1,9 +1,9 @@
 ﻿package openclaw
 
 import (
-	"HAClaw/internal/i18n"
-	"HAClaw/internal/logger"
-	"HAClaw/internal/output"
+	"HAClaw-OS/internal/i18n"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/output"
 	"context"
 	"encoding/json"
 	"errors"
@@ -379,7 +379,7 @@ func (s *Service) gwClientRestart() error {
 		params := map[string]interface{}{
 			"raw":            rawConfig,
 			"restartDelayMs": 0,
-			"note":           "HAClaw restart",
+			"note":           "HAClaw-OS restart",
 		}
 		if baseHash != "" {
 			params["baseHash"] = baseHash

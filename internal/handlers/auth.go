@@ -6,13 +6,13 @@ import (
 	"net/http"
 	"time"
 
-	"HAClaw/internal/constants"
-	"HAClaw/internal/database"
-	"HAClaw/internal/i18n"
-	"HAClaw/internal/logger"
-	"HAClaw/internal/ratelimit"
-	"HAClaw/internal/web"
-	"HAClaw/internal/webconfig"
+	"HAClaw-OS/internal/constants"
+	"HAClaw-OS/internal/database"
+	"HAClaw-OS/internal/i18n"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/ratelimit"
+	"HAClaw-OS/internal/web"
+	"HAClaw-OS/internal/webconfig"
 
 	"golang.org/x/crypto/bcrypt"
 )

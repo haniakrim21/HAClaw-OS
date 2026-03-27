@@ -3,8 +3,8 @@ package database
 import (
 	"strings"
 
-	"HAClaw/internal/secretutil"
-	"HAClaw/internal/webconfig"
+	"HAClaw-OS/internal/secretutil"
+	"HAClaw-OS/internal/webconfig"
 )
 
 func encryptStoredValue(value string) (string, error) {

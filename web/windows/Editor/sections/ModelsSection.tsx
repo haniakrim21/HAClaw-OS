@@ -134,7 +134,7 @@ function formatFriendlyError(err: any, es: any): string {
   const raw = String(err?.message || '').trim();
   const lower = raw.toLowerCase();
   // Prefer the upstream HTTP status embedded in the error message (e.g. "HTTP 401")
-  // over the HAClaw API response status, because test-model returns 422 to avoid
+  // over the HAClaw-OS API response status, because test-model returns 422 to avoid
   // triggering the frontend auto-logout on upstream 401.
   const msgMatch = raw.match(/HTTP\s*[:\s]?(\d{3})/i);
   const msgStatus = msgMatch ? Number(msgMatch[1]) : null;
@@ -156,9 +156,9 @@ function formatFriendlyError(err: any, es: any): string {
 }
 
 const PROVIDERS: ProviderPreset[] = [
-  { id: 'anthropic', name: 'Anthropic', icon: '🅰️', category: 'builtin', envVar: 'ANTHROPIC_API_KEY', defaultModel: 'claude-3-5-sonnet-20241022', models: [
-    { id: 'claude-3-opus-20240229', name: 'Claude Opus 4', ctx: '200K', cost: { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18.75 } },
-    { id: 'claude-3-5-sonnet-20241022', name: 'Claude Sonnet 4.5', ctx: '200K', cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 } },
+  { id: 'anthropic', name: 'Anthropic', icon: '🅰️', category: 'builtin', envVar: 'ANTHROPIC_API_KEY', defaultModel: 'claude-sonnet-4-5', models: [
+    { id: 'claude-opus-4-6', name: 'Claude Opus 4', ctx: '200K', cost: { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18.75 } },
+    { id: 'claude-sonnet-4-5', name: 'Claude Sonnet 4.5', ctx: '200K', cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 } },
     { id: 'claude-sonnet-4-1', name: 'Claude Sonnet 4.1', ctx: '200K', cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 } }
   ], baseUrl: 'https://api.anthropic.com', api: 'anthropic-messages', helpUrl: 'https://console.anthropic.com' },
   { id: 'openai', name: 'OpenAI', icon: '🤖', category: 'builtin', envVar: 'OPENAI_API_KEY', defaultModel: 'gpt-5.4', models: [
@@ -174,11 +174,9 @@ const PROVIDERS: ProviderPreset[] = [
     { id: 'gpt-5.2-codex', name: 'GPT-5.2 Codex', ctx: '256K', cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } },
     { id: 'gpt-5.2', name: 'GPT-5.2', ctx: '128K', cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }
   ], baseUrl: 'https://api.githubcopilot.com', api: 'github-copilot', helpUrl: 'https://github.com/features/copilot' },
-  { id: 'gemini', name: 'Google Gemini', icon: '✨', category: 'builtin', envVar: 'GEMINI_API_KEY', defaultModel: 'gemini-2.5-pro', models: [
-    { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', ctx: '2M', cost: { input: 1.25, output: 5, cacheRead: 0.3, cacheWrite: 1.25 } },
-    { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', ctx: '1M', cost: { input: 0.1, output: 0.4, cacheRead: 0.025, cacheWrite: 1 } },
-    { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', ctx: '2M', cost: { input: 1.25, output: 5, cacheRead: 0.3, cacheWrite: 1.25 } },
-    { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', ctx: '1M', cost: { input: 0.075, output: 0.3, cacheRead: 0.01875, cacheWrite: 1 } }
+  { id: 'gemini', name: 'Google Gemini', icon: '✨', category: 'builtin', envVar: 'GEMINI_API_KEY', defaultModel: 'gemini-3-pro', models: [
+    { id: 'gemini-3-pro', name: 'Gemini 3 Pro', ctx: '2M', cost: { input: 1.25, output: 5, cacheRead: 0.3, cacheWrite: 1.25 } },
+    { id: 'gemini-3-flash', name: 'Gemini 3 Flash', ctx: '2M', cost: { input: 0.075, output: 0.3, cacheRead: 0.02, cacheWrite: 0.075 } }
   ], baseUrl: 'https://generativelanguage.googleapis.com/v1beta', api: 'openai-completions', helpUrl: 'https://aistudio.google.com' },
   { id: 'xai', name: 'xAI (Grok)', icon: '✖️', category: 'builtin', envVar: 'XAI_API_KEY', defaultModel: 'grok-2', models: [
     { id: 'grok-2', name: 'Grok 2', ctx: '128K', cost: { input: 2, output: 10, cacheRead: 0.5, cacheWrite: 2 } },
@@ -255,25 +253,23 @@ const PROVIDERS: ProviderPreset[] = [
   { id: 'synthetic', name: 'Synthetic', icon: '🧪', category: 'builtin', envVar: 'SYNTHETIC_API_KEY', defaultModel: 'hf:MiniMaxAI/MiniMax-M2.5', models: [
     { id: 'hf:MiniMaxAI/MiniMax-M2.5', name: 'MiniMax M2.5', ctx: '200K' }
   ], baseUrl: 'https://api.synthetic.new/anthropic', api: 'anthropic-messages', helpUrl: 'https://synthetic.new' },
-  { id: 'opencode', name: 'OpenCode Zen', icon: '💻', category: 'builtin', envVar: 'OPENCODE_API_KEY', defaultModel: 'claude-3-opus-20240229', models: [
-    { id: 'claude-3-opus-20240229', name: 'Claude Opus 4.6', ctx: '200K' }
+  { id: 'opencode', name: 'OpenCode Zen', icon: '💻', category: 'builtin', envVar: 'OPENCODE_API_KEY', defaultModel: 'claude-opus-4-6', models: [
+    { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', ctx: '200K' }
   ], baseUrl: 'https://opencode.ai/zen/v1', api: 'openai-completions', helpUrl: 'https://opencode.ai' },
   { id: 'kilocode', name: 'KiloCode', icon: '📊', category: 'builtin', envVar: 'KILOCODE_API_KEY', defaultModel: 'anthropic/claude-opus-4.6', models: [
     { id: 'anthropic/claude-opus-4.6', name: 'Claude Opus 4.6', ctx: '200K' }
   ], baseUrl: 'https://api.kilo.ai/api/gateway/', api: 'openai-completions', helpUrl: 'https://kilo.ai' },
   { id: 'vercel-ai-gateway', name: 'Vercel AI Gateway', icon: '▲', category: 'builtin', envVar: 'AI_GATEWAY_API_KEY', defaultModel: 'anthropic/claude-opus-4.6', models: [], baseUrl: '', api: 'openai-completions', needsBaseUrl: true, helpUrl: 'https://vercel.com/docs/ai-gateway' },
-  { id: 'cloudflare-ai-gateway', name: 'Cloudflare AI Gateway', icon: '☁️', category: 'builtin', envVar: 'CLOUDFLARE_AI_GATEWAY_API_KEY', defaultModel: 'claude-3-opus-20240229', models: [], baseUrl: '', api: 'anthropic-messages', needsBaseUrl: true, helpUrl: 'https://developers.cloudflare.com/ai-gateway' },
-  { id: 'google-vertex', name: 'Google Vertex AI', icon: '🔶', category: 'builtin', envVar: '', defaultModel: 'gemini-2.5-pro', models: [
-    { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', ctx: '2M' },
-    { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', ctx: '1M' },
-    { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', ctx: '2M' }
+  { id: 'cloudflare-ai-gateway', name: 'Cloudflare AI Gateway', icon: '☁️', category: 'builtin', envVar: 'CLOUDFLARE_AI_GATEWAY_API_KEY', defaultModel: 'claude-opus-4-6', models: [], baseUrl: '', api: 'anthropic-messages', needsBaseUrl: true, helpUrl: 'https://developers.cloudflare.com/ai-gateway' },
+  { id: 'google-vertex', name: 'Google Vertex AI', icon: '🔶', category: 'builtin', envVar: '', defaultModel: 'gemini-3-pro', models: [
+    { id: 'gemini-3-pro', name: 'Gemini 3 Pro', ctx: '2M' }
   ], baseUrl: '', api: 'google-vertex', needsBaseUrl: true, helpUrl: 'https://cloud.google.com/vertex-ai' },
-  { id: 'amazon-bedrock', name: 'Amazon Bedrock', icon: '🟠', category: 'builtin', envVar: 'AWS_PROFILE', defaultModel: 'anthropic.claude-3-opus-20240229', models: [], baseUrl: '', api: 'bedrock-converse-stream', needsBaseUrl: true, helpUrl: 'https://aws.amazon.com/bedrock' },
+  { id: 'amazon-bedrock', name: 'Amazon Bedrock', icon: '🟠', category: 'builtin', envVar: 'AWS_PROFILE', defaultModel: 'anthropic.claude-opus-4-6', models: [], baseUrl: '', api: 'bedrock-converse-stream', needsBaseUrl: true, helpUrl: 'https://aws.amazon.com/bedrock' },
   { id: 'ollama', name: 'Ollama', icon: '🦙', category: 'local', envVar: '', defaultModel: 'llama3', models: [], baseUrl: 'http://localhost:11434/v1', api: 'openai-completions', helpUrl: 'https://ollama.com' },
   { id: 'lmstudio', name: 'LM Studio', icon: '🖥️', category: 'local', envVar: '', defaultModel: 'local-model', models: [], baseUrl: 'http://localhost:1234/v1', api: 'openai-completions', helpUrl: 'https://lmstudio.ai' },
   { id: 'localai', name: 'LocalAI', icon: '🏠', category: 'local', envVar: '', defaultModel: 'gpt-3.5-turbo', models: [], baseUrl: 'http://localhost:8080/v1', api: 'openai-completions', helpUrl: 'https://localai.io' },
   { id: 'vllm', name: 'vLLM', icon: '⚙️', category: 'local', envVar: 'VLLM_API_KEY', defaultModel: '', models: [], baseUrl: 'http://127.0.0.1:8000/v1', api: 'openai-completions', helpUrl: 'https://docs.vllm.ai' },
-  { id: 'litellm', name: 'LiteLLM', icon: '🔗', category: 'local', envVar: 'LITELLM_API_KEY', defaultModel: 'claude-3-opus-20240229', models: [], baseUrl: 'http://localhost:4000', api: 'openai-completions', helpUrl: 'https://litellm.ai' },
+  { id: 'litellm', name: 'LiteLLM', icon: '🔗', category: 'local', envVar: 'LITELLM_API_KEY', defaultModel: 'claude-opus-4-6', models: [], baseUrl: 'http://localhost:4000', api: 'openai-completions', helpUrl: 'https://litellm.ai' },
   { id: 'custom', name: 'Custom', labelKey: 'customProvider', icon: '⚙️', category: 'custom', envVar: '', defaultModel: '', models: [], baseUrl: '', api: 'openai-completions', needsBaseUrl: true },
 ];
 

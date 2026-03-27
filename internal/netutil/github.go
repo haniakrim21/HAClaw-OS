@@ -36,14 +36,14 @@ func init() {
 	// Cache duration is 24 hours since host network environment rarely changes
 	githubAPISelector = NewMirrorSelector(
 		GitHubAPIMirrors,
-		"/repos/HAClaw/HAClaw",
+		"/repos/HAClaw-OS/HAClaw-OS",
 		3*time.Second,
 		24*time.Hour,
 	)
 
 	githubReleaseSelector = NewMirrorSelector(
 		GitHubReleaseMirrors,
-		"/HAClaw/HAClaw/releases",
+		"/HAClaw-OS/HAClaw-OS/releases",
 		3*time.Second,
 		24*time.Hour,
 	)

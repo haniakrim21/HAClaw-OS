@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Language } from '../types';
 import { getTranslation } from '../locales';
-import { gwApi } from '../services/api';
+import { gwApi, workspaceMemoryApi, MemoryFileEntry } from '../services/api';
 import { useGatewayStatus } from '../hooks/useGatewayStatus';
 import { fmtAgoCompact } from '../utils/time';
 import { subscribeManagerWS } from '../services/manager-ws';
@@ -98,10 +98,29 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
   const [fileSaving, setFileSaving] = useState(false);
   const [tplDropdown, setTplDropdown] = useState(false);
   const [fileTemplates, setFileTemplates] = useState<WorkspaceTemplate[]>([]);
+  const [memoryFiles, setMemoryFiles] = useState<MemoryFileEntry[]>([]);
+  const [memoryExpanded, setMemoryExpanded] = useState(true);
+  const [memoryShowCount, setMemoryShowCount] = useState(7);
   const [skillsReport, setSkillsReport] = useState<any>(null);
   const [skillsFilter, setSkillsFilter] = useState<'all' | 'ready' | 'notReady'>('ready');
   const [channelsSnap, setChannelsSnap] = useState<any>(null);
   const [channelsLoading, setChannelsLoading] = useState(false);
+  const [expandedChannel, setExpandedChannel] = useState<string | null>(null);
+  const [bindingSaving, setBindingSaving] = useState(false);
+  const [a2aSaving, setA2aSaving] = useState(false);
+  const [a2aExpanded, setA2aExpanded] = useState(false);
+  const [toolDraft, setToolDraft] = useState<Record<string, any> | null>(null);
+  const [toolSaving, setToolSaving] = useState(false);
+  const [customToolInput, setCustomToolInput] = useState('');
+  const [toolSearch, setToolSearch] = useState('');
+  const [toolSourceFilter, setToolSourceFilter] = useState<'all' | 'core' | 'plugin'>('all');
+  const [toolProfileFilter, setToolProfileFilter] = useState('all');
+  const [toolsCatalog, setToolsCatalog] = useState<any>(null);
+  const [toolsCatalogLoading, setToolsCatalogLoading] = useState(false);
+  const [toolsExpanded, setToolsExpanded] = useState<Set<string>>(new Set());
+  const [a2aDraft, setA2aDraft] = useState<{ enabled: boolean; allow: string[]; ppTurns: number } | null>(null);
+  const [subSaving, setSubSaving] = useState(false);
+  const [subDraft, setSubDraft] = useState<string[] | null>(null);
   const [cronStatus, setCronStatus] = useState<any>(null);
   const [cronJobs, setCronJobs] = useState<any[]>([]);
   const [skillsLoaded, setSkillsLoaded] = useState(false);
@@ -234,6 +253,18 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
 
   useEffect(() => { loadAgents(); loadConfig(); }, []);
 
+  // Listen for cross-window navigation: { id: 'agents', agentId: 'xxx', panel: 'tools' }
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.id !== 'agents') return;
+      if (detail.agentId) setSelectedId(detail.agentId);
+      if (detail.panel) setPanel(detail.panel as Panel);
+    };
+    window.addEventListener('haclaw:open-window', handler);
+    return () => window.removeEventListener('haclaw:open-window', handler);
+  }, []);
+
   const selectAgent = useCallback(async (id: string) => {
     if (hasUnsavedDraft()) {
       const discard = await confirm({
@@ -247,7 +278,9 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
     setSelectedId(id);
     setDrawerOpen(false);
     setFilesList(null); setFileActive(null); setFileContents({}); setFileDrafts({});
+    setMemoryFiles([]); setMemoryShowCount(7);
     setSkillsReport(null); setSkillsLoaded(false);
+    setSubDraft(null);
   }, [hasUnsavedDraft, confirm, a]);
 
   const selectPanel = useCallback(async (p: Panel) => {
@@ -263,6 +296,14 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
     setPanel(p);
     if (p === 'files' && selectedId) {
       gwApi.agentFilesList(selectedId).then(setFilesList).catch((err: any) => { toast('error', err?.message || a.fetchFailed); });
+      workspaceMemoryApi.list(selectedId).then(r => setMemoryFiles(r?.files || [])).catch(() => setMemoryFiles([]));
+    }
+    if (p === 'tools' && !toolsCatalog && !toolsCatalogLoading) {
+      setToolsCatalogLoading(true);
+      gwApi.toolsCatalog({ includePlugins: true }).then((r: any) => {
+        setToolsCatalog(r);
+        setToolsExpanded(new Set((r?.groups || []).map((g: any) => g.id)));
+      }).catch(() => {}).finally(() => setToolsCatalogLoading(false));
     }
     if (p === 'skills' && selectedId) {
       setSkillsLoaded(false);
@@ -270,7 +311,11 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
     }
     if (p === 'channels') {
       setChannelsLoading(true);
-      gwApi.channels().then(setChannelsSnap).catch((err: any) => { toast('error', err?.message || a.channelsFetchFailed); }).finally(() => setChannelsLoading(false));
+      setExpandedChannel(null);
+      Promise.all([
+        gwApi.channels().then(setChannelsSnap),
+        gwApi.configGet().then(setConfig),
+      ]).catch((err: any) => { toast('error', err?.message || a.channelsFetchFailed); }).finally(() => setChannelsLoading(false));
     }
     if (p === 'cron') {
       gwApi.cronStatus().then(setCronStatus).catch((err: any) => { toast('error', err?.message || a.cronFetchFailed); });
@@ -283,25 +328,39 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
     setFileActive(name);
     if (fileContents[name] != null) return;
     try {
-      const res = await gwApi.agentFileGet(selectedId, name);
-      const content = (res as any)?.file?.content || '';
-      setFileContents(prev => ({ ...prev, [name]: content }));
-      setFileDrafts(prev => ({ ...prev, [name]: content }));
+      if (name.startsWith('memory/')) {
+        const realName = name.slice('memory/'.length);
+        const res = await workspaceMemoryApi.getFile(realName, selectedId);
+        const content = res?.content || '';
+        setFileContents(prev => ({ ...prev, [name]: content }));
+        setFileDrafts(prev => ({ ...prev, [name]: content }));
+      } else {
+        const res = await gwApi.agentFileGet(selectedId, name);
+        const content = (res as any)?.file?.content || '';
+        setFileContents(prev => ({ ...prev, [name]: content }));
+        setFileDrafts(prev => ({ ...prev, [name]: content }));
+      }
     } catch (err: any) { toast('error', err?.message || a.fileLoadFailed); }
   }, [selectedId, fileContents]);
 
   const saveFile = useCallback(async () => {
     if (!selectedId || !fileActive) return;
+    const displayName = fileActive.startsWith('memory/') ? fileActive.slice('memory/'.length) : fileActive;
     const confirmed = await confirm({
       title: a.confirmSave,
-      message: (a.confirmSaveMsg || '').replace('{file}', fileActive),
+      message: (a.confirmSaveMsg || '').replace('{file}', displayName),
       confirmText: a.save,
       cancelText: a.cancel,
     });
     if (!confirmed) return;
     setFileSaving(true);
     try {
-      await gwApi.agentFileSet(selectedId, fileActive, fileDrafts[fileActive] || '');
+      if (fileActive.startsWith('memory/')) {
+        const realName = fileActive.slice('memory/'.length);
+        await workspaceMemoryApi.setFile(realName, fileDrafts[fileActive] || '', selectedId);
+      } else {
+        await gwApi.agentFileSet(selectedId, fileActive, fileDrafts[fileActive] || '');
+      }
       setFileContents(prev => ({ ...prev, [fileActive!]: fileDrafts[fileActive!] || '' }));
     } catch (err: any) { toast('error', err?.message || a.fileSaveFailed); }
     setFileSaving(false);
@@ -372,7 +431,7 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
     let idx = agents.length + 1;
     let suggestedName = `agent-${idx}`;
     while (existingIds.has(suggestedName)) { idx++; suggestedName = `agent-${idx}`; }
-    // Derive workspace base path from existing agents
+    // Derive workspace base path from existing agents, fallback to config file dir
     let wsBase = '';
     if (config) {
       const cfg0 = config?.agents || config?.parsed?.agents || config?.config?.agents || {};
@@ -381,10 +440,18 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
       const refEntry = list.find((e: any) => e?.workspace) || defaults;
       const refWs = refEntry?.workspace || '';
       if (refWs) {
-        // Extract base dir: e.g. "/home/user/.openclaw/workspace-shop" → "/home/user/.openclaw"
         const sep = refWs.includes('\\') ? '\\' : '/';
         const lastSep = refWs.lastIndexOf(sep);
         wsBase = lastSep > 0 ? refWs.slice(0, lastSep) : refWs;
+      }
+      // Fallback: derive from config file path (e.g. /root/.openclaw/config.json5 → /root/.openclaw)
+      if (!wsBase) {
+        const cfgPath = config?.path || '';
+        if (cfgPath) {
+          const sep = cfgPath.includes('\\') ? '\\' : '/';
+          const lastSep = cfgPath.lastIndexOf(sep);
+          wsBase = lastSep > 0 ? cfgPath.slice(0, lastSep) : cfgPath;
+        }
       }
     }
     const suggestedWs = wsBase ? `${wsBase}${wsBase.includes('\\') ? '\\' : '/'}workspace-${suggestedName}` : '';
@@ -426,6 +493,10 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
       setCrudError(a.nameValidation);
       return;
     }
+    if (!crudWorkspace.trim()) {
+      setCrudError(a.workspaceRequired || 'Workspace path is required');
+      return;
+    }
     setCrudBusy(true); setCrudError(null);
     try {
       await gwApi.proxy('agents.create', {
@@ -436,8 +507,6 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
       // Patch config for model/default/emoji/theme if specified
       if (crudModel.trim() || crudDefault || crudEmoji.trim() || crudTheme.trim()) {
         try {
-          const cfgRaw = await gwApi.configGet() as any;
-          const baseHash = cfgRaw?.hash || cfgRaw?.baseHash || '';
           const agentEntry: Record<string, any> = { id: crudName.trim() };
           if (crudModel.trim()) agentEntry.model = crudModel.trim();
           if (crudDefault) agentEntry.default = true;
@@ -445,7 +514,7 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
           if (crudEmoji.trim()) identityPatch.emoji = crudEmoji.trim();
           if (crudTheme.trim()) identityPatch.theme = crudTheme.trim();
           if (Object.keys(identityPatch).length > 0) agentEntry.identity = identityPatch;
-          await gwApi.configPatch(JSON.stringify({ agents: { list: [agentEntry] } }), baseHash);
+          await gwApi.configSafePatch({ agents: { list: [agentEntry] } });
         } catch { /* best-effort */ }
       }
       setCrudMode(null);
@@ -474,10 +543,7 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
       if (crudTheme.trim()) identityPatch.theme = crudTheme.trim();
       if (Object.keys(identityPatch).length > 0) agentEntry.identity = identityPatch;
       // Patch config via config.patch (merges agents.list by id)
-      const cfgRaw = await gwApi.configGet() as any;
-      const baseHash = cfgRaw?.hash || cfgRaw?.baseHash || '';
-      const patch = { agents: { list: [agentEntry] } };
-      await gwApi.configPatch(JSON.stringify(patch), baseHash);
+      await gwApi.configSafePatch({ agents: { list: [agentEntry] } });
       setCrudMode(null);
       loadAgents();
       loadConfig();
@@ -492,9 +558,48 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
     if (!gwReady || crudBusy || !selectedId) return;
     setCrudBusy(true); setCrudError(null);
     try {
-      await gwApi.proxy('agents.delete', { agentId: selectedId, deleteFiles });
+      const deletedId = selectedId;
+      await gwApi.proxy('agents.delete', { agentId: deletedId, deleteFiles });
+      // Clean up stale agent ID from A2A allow list and subagent configs
+      try {
+        const cfg: any = await gwApi.configGet();
+        const parsed = cfg?.parsed || cfg?.config || cfg || {};
+        const patch: Record<string, any> = {};
+        let needsPatch = false;
+        // Remove deleted agent from tools.agentToAgent.allow
+        const a2aAllow: string[] = parsed?.tools?.agentToAgent?.allow;
+        if (Array.isArray(a2aAllow) && a2aAllow.includes(deletedId)) {
+          const cleaned = a2aAllow.filter(id => id !== deletedId);
+          patch.tools = { agentToAgent: { ...parsed.tools.agentToAgent, allow: cleaned.length > 0 ? cleaned : undefined } };
+          needsPatch = true;
+        }
+        // Remove deleted agent from all subagent allowAgents lists
+        const agentsList: any[] = parsed?.agents?.list;
+        if (Array.isArray(agentsList)) {
+          let listChanged = false;
+          const cleanedList = agentsList.map((entry: any) => {
+            const subs: string[] = entry?.subagents?.allowAgents;
+            if (!Array.isArray(subs) || !subs.includes(deletedId)) return entry;
+            listChanged = true;
+            const filtered = subs.filter(id => id !== deletedId);
+            const sub = { ...(entry.subagents || {}), allowAgents: filtered.length > 0 ? filtered : undefined };
+            if (!sub.allowAgents && !sub.model && !sub.thinking) return { ...entry, subagents: undefined };
+            return { ...entry, subagents: sub };
+          });
+          if (listChanged) {
+            patch.agents = { ...(parsed.agents || {}), list: cleanedList };
+            needsPatch = true;
+          }
+        }
+        if (needsPatch) {
+          const fresh = await gwApi.configSafePatch(patch);
+          setConfig(fresh);
+        }
+      } catch { /* best-effort cleanup */ }
       setDeleteConfirm(false);
       setSelectedId(null);
+      setA2aDraft(null);
+      setSubDraft(null);
       loadAgents();
     } catch (err: any) {
       setCrudError(aRef.current.deleteFailed + ': ' + (err?.message || ''));
@@ -514,6 +619,12 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
     return id?.emoji?.trim() || ag.identity?.emoji?.trim() || id?.avatar?.trim() || ag.identity?.avatar?.trim() || '';
   };
 
+  const resolveAgentLabel = (agentId: string): string => {
+    const ag = agents.find((x: any) => x.id === agentId);
+    if (ag) return resolveLabel(ag);
+    return agentId;
+  };
+
   const resolveAgentConfig = (agentId: string) => {
     if (!config) return { model: na, workspace: a.workspaceDefault, skills: null, tools: null };
     const cfg0 = config?.agents || config?.parsed?.agents || config?.config?.agents || {};
@@ -529,6 +640,9 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
       workspace: entry?.workspace || defaults?.workspace || a.workspaceDefault,
       skills: entry?.skills || null,
       tools: entry?.tools || toolsCfg,
+      subagents: entry?.subagents || null,
+      _entry: entry,
+      _defaults: defaults,
     };
   };
 
@@ -599,7 +713,6 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
     { id: 'skills', icon: 'extension', label: a.skills },
     { id: 'channels', icon: 'forum', label: a.channels },
     { id: 'cron', icon: 'schedule', label: a.cron },
-    { id: 'run', icon: 'play_arrow', label: a.run },
     { id: 'scenarios', icon: 'auto_awesome', label: sc.title || 'Scenarios' },
     { id: 'collaboration', icon: 'groups', label: ma.title || 'Multi-Agent' },
   ];
@@ -670,6 +783,141 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
             );
           })}
         </div>
+
+        {/* Agent-to-Agent Communication — global setting (hidden if ≤1 agent) */}
+        {agents.length >= 2 && (() => {
+          const parsed = config?.parsed || config?.config || config || {};
+          const a2aCfg = parsed?.tools?.agentToAgent || {};
+          const serverEnabled = a2aCfg.enabled === true;
+          const serverAllow: string[] = Array.isArray(a2aCfg.allow) ? a2aCfg.allow : [];
+          const serverPPTurns: number = typeof parsed?.session?.agentToAgent?.maxPingPongTurns === 'number' ? parsed.session.agentToAgent.maxPingPongTurns : 5;
+          // Draft state: use draft if editing, otherwise mirror server
+          const a2aEnabled = a2aDraft?.enabled ?? serverEnabled;
+          const a2aAllow = a2aDraft?.allow ?? serverAllow;
+          const ppTurns = a2aDraft?.ppTurns ?? serverPPTurns;
+          const agentOpts = agents.filter((ag: any) => !a2aAllow.includes(ag.id)).map((ag: any) => ag.id);
+          const a2aDirty = a2aDraft !== null && (a2aDraft.enabled !== serverEnabled || JSON.stringify(a2aDraft.allow) !== JSON.stringify(serverAllow) || a2aDraft.ppTurns !== serverPPTurns);
+          const initDraft = () => a2aDraft || { enabled: serverEnabled, allow: [...serverAllow], ppTurns: serverPPTurns };
+
+          const saveA2aAll = async () => {
+            if (!a2aDraft) return;
+            setA2aSaving(true);
+            try {
+              // When enabled with empty allow → default to * (all); when disabled → clear allow list
+              const resolvedAllow = a2aDraft.enabled
+                ? (a2aDraft.allow.length > 0 ? a2aDraft.allow : ['*'])
+                : undefined;
+              const fresh = await gwApi.configSafePatch({
+                tools: { agentToAgent: { enabled: a2aDraft.enabled, allow: resolvedAllow } },
+                session: { agentToAgent: { maxPingPongTurns: a2aDraft.ppTurns } },
+              });
+              setConfig(fresh);
+              setA2aDraft(null);
+              toast('success', a.a2aSaved || 'Saved');
+            } catch (err: any) {
+              toast('error', err?.message || a.a2aSaveFailed || 'Failed to save');
+            }
+            setA2aSaving(false);
+          };
+
+          return (
+            <div className="shrink-0 border-t border-slate-200/60 dark:border-white/[0.06] p-2.5">
+              <div className={`rounded-lg border p-2.5 transition-colors ${a2aEnabled ? 'bg-violet-50/50 dark:bg-violet-500/[0.03] border-violet-200/60 dark:border-violet-500/[0.12]' : 'bg-white/50 dark:bg-white/[0.02] border-slate-200/40 dark:border-white/[0.04]'}`}>
+                <button className="flex items-center justify-between w-full" onClick={() => setA2aExpanded(v => !v)}>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className={`material-symbols-outlined text-[15px] ${a2aEnabled ? 'text-violet-500' : 'text-slate-400 dark:text-white/25'}`}>swap_horiz</span>
+                    <span className="text-[10px] font-bold text-slate-600 dark:text-white/60 truncate">{a.a2aTitle || 'Agent-to-Agent'}</span>
+                    {a2aEnabled && <span className="w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0" />}
+                  </div>
+                  <span className={`material-symbols-outlined text-[14px] text-slate-400 dark:text-white/25 transition-transform ${a2aExpanded ? 'rotate-180' : ''}`}>expand_more</span>
+                </button>
+
+                {a2aExpanded && (
+                  <div className="mt-2.5 pt-2 border-t border-slate-200/40 dark:border-white/[0.06] space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-bold text-slate-400 dark:text-white/20 uppercase">{a.a2aEnabled || 'Enabled'}</span>
+                      <button
+                        onClick={() => { const d = initDraft(); const next = !d.enabled; setA2aDraft({ ...d, enabled: next, allow: next ? (d.allow.length > 0 ? d.allow : ['*']) : [] }); }}
+                        disabled={a2aSaving}
+                        className={`relative w-8 h-4 rounded-full transition-colors shrink-0 ${a2aEnabled ? 'bg-violet-500' : 'bg-slate-300 dark:bg-white/15'} ${a2aSaving ? 'opacity-50' : 'cursor-pointer'}`}
+                      >
+                        <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-all ${a2aEnabled ? 'start-[17px]' : 'start-0.5'}`} />
+                      </button>
+                    </div>
+
+                    <div>
+                      <p className="text-[9px] font-bold text-slate-400 dark:text-white/20 uppercase tracking-wider mb-1.5">
+                        {a.a2aAllowTitle || 'Allowed Agents'}
+                      </p>
+
+                      {a2aAllow.filter(id => id !== '*' && !id.includes('*')).length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {a2aAllow.filter(id => id !== '*' && !id.includes('*')).map(id => (
+                              <div key={id} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-200/60 dark:border-violet-500/20">
+                                {resolveAgentLabel(id)}
+                                <button onClick={() => { const d = initDraft(); setA2aDraft({ ...d, allow: d.allow.filter(x => x !== id) }); }} disabled={a2aSaving}
+                                  className="p-0 opacity-40 hover:opacity-100 transition-opacity">
+                                  <span className="material-symbols-outlined text-[9px]">close</span>
+                                </button>
+                              </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <CustomSelect
+                        value=""
+                        onChange={(v: string) => { if (!v || a2aAllow.includes(v)) return; const d = initDraft(); if (v === '*') { setA2aDraft({ ...d, allow: ['*'] }); } else { setA2aDraft({ ...d, allow: [...d.allow.filter(x => x !== '*'), v] }); } }}
+                        options={[
+                          { value: '', label: a.a2aAddAgent || 'Add agent…' },
+                          { value: '*', label: `* (${a.a2aAllWildcard || 'all agents'})` },
+                          ...agentOpts.map((id: string) => ({ value: id, label: resolveAgentLabel(id) }))
+                        ]}
+                        className="w-full h-7 px-2 bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-md text-[10px] text-slate-600 dark:text-white/60"
+                        disabled={a2aSaving}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-dashed border-slate-200/40 dark:border-white/[0.06]">
+                      <span className="text-[9px] font-bold text-slate-400 dark:text-white/20 uppercase">{a.a2aPingPong || 'Ping-Pong'}</span>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => { const d = initDraft(); if (d.ppTurns > 0) setA2aDraft({ ...d, ppTurns: d.ppTurns - 1 }); }} disabled={a2aSaving || ppTurns <= 0}
+                          className="w-5 h-5 rounded bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/40 hover:bg-violet-100 dark:hover:bg-violet-500/10 hover:text-violet-600 dark:hover:text-violet-400 transition-colors disabled:opacity-30 flex items-center justify-center">
+                          <span className="material-symbols-outlined text-[12px]">remove</span>
+                        </button>
+                        <span className="w-5 text-center text-[11px] font-bold text-violet-600 dark:text-violet-400">{ppTurns}</span>
+                        <button onClick={() => { const d = initDraft(); if (d.ppTurns < 5) setA2aDraft({ ...d, ppTurns: d.ppTurns + 1 }); }} disabled={a2aSaving || ppTurns >= 5}
+                          className="w-5 h-5 rounded bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/40 hover:bg-violet-100 dark:hover:bg-violet-500/10 hover:text-violet-600 dark:hover:text-violet-400 transition-colors disabled:opacity-30 flex items-center justify-center">
+                          <span className="material-symbols-outlined text-[12px]">add</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {(a2aDirty || a2aSaving) && (
+                  <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-200/40 dark:border-white/[0.06]">
+                    <button
+                      onClick={saveA2aAll}
+                      disabled={a2aSaving || !a2aDirty}
+                      className="h-6 px-3 rounded-md text-[10px] font-bold text-white bg-violet-500 hover:bg-violet-600 disabled:opacity-50 transition-colors flex items-center gap-1"
+                    >
+                      {a2aSaving
+                        ? <><span className="material-symbols-outlined text-[11px] animate-spin">progress_activity</span>{a.saving}</>
+                        : <><span className="material-symbols-outlined text-[11px]">save</span>{a.save}</>}
+                    </button>
+                    {a2aDirty && !a2aSaving && (
+                      <button
+                        onClick={() => setA2aDraft(null)}
+                        className="h-6 px-2 rounded-md text-[10px] font-bold text-slate-500 dark:text-white/40 hover:text-slate-700 dark:hover:text-white/60 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
+                      >{a.reset}</button>
+                    )}
+                    {a2aDirty && <span className="text-[9px] text-amber-500 font-bold">{a.unsaved}</span>}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Main Content */}
@@ -790,12 +1038,265 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
                         </div>
                       ))}
                     </div>
+
+                    {/* Editable Security & Tool Config */}
+                    {(() => {
+                      const parsed = config?.parsed || config?.config || config || {};
+                      const globalTools = parsed?.tools || {};
+                      const agentsCfg = parsed?.agents || {};
+                      const agentList: any[] = agentsCfg?.list || [];
+                      const agentEntry = agentList.find((e: any) => e?.id === selected.id) || {};
+                      const agentTools = agentEntry.tools || {};
+                      const draft = toolDraft || {};
+                      const liveProfile = agentTools.profile || globalTools.profile || 'full';
+                      const liveExec = { host: agentTools.exec?.host ?? globalTools.exec?.host ?? '', security: agentTools.exec?.security ?? globalTools.exec?.security ?? '', ask: agentTools.exec?.ask ?? globalTools.exec?.ask ?? false };
+                      const liveFsWsOnly = agentTools.fs?.workspaceOnly ?? globalTools.fs?.workspaceOnly ?? false;
+                      const liveAllow: string[] = Array.isArray(agentTools.allow) ? agentTools.allow : (Array.isArray(globalTools.allow) ? globalTools.allow : []);
+                      const liveDeny: string[] = Array.isArray(agentTools.deny) ? agentTools.deny : (Array.isArray(globalTools.deny) ? globalTools.deny : []);
+                      const liveAlsoAllow: string[] = Array.isArray(agentTools.alsoAllow) ? agentTools.alsoAllow : (Array.isArray(globalTools.alsoAllow) ? globalTools.alsoAllow : []);
+                      const profile = draft.profile ?? liveProfile;
+                      const execHost = draft.execHost ?? liveExec.host;
+                      const execSecurity = draft.execSecurity ?? liveExec.security;
+                      const execAsk = draft.execAsk ?? liveExec.ask;
+                      const fsWsOnly = draft.fsWsOnly ?? liveFsWsOnly;
+                      const PROFILES = ['minimal', 'coding', 'messaging', 'full'];
+                      const PROFILE_LABELS: Record<string, string> = { minimal: a.toolProfileMinimal || 'Minimal', coding: a.toolProfileCoding || 'Coding', messaging: a.toolProfileMessaging || 'Messaging', full: a.toolProfileFull || 'Full' };
+                      const toolDirty = toolDraft !== null;
+                      const initDraft = () => toolDraft || { profile: liveProfile, allow: [...liveAllow], deny: [...liveDeny], alsoAllow: [...liveAlsoAllow], execHost: liveExec.host, execSecurity: liveExec.security, execAsk: liveExec.ask, fsWsOnly: liveFsWsOnly };
+
+                      const saveSecConfig = async () => {
+                        if (!toolDraft) return;
+                        setToolSaving(true);
+                        try {
+                          const list2: any[] = agentsCfg?.list || [];
+                          const updatedList = list2.map((e: any) => {
+                            if (e?.id !== selected.id) return e;
+                            const toolsPatch: Record<string, any> = { profile: toolDraft.profile };
+                            toolsPatch.allow = toolDraft.allow?.length > 0 ? toolDraft.allow : [];
+                            toolsPatch.deny = toolDraft.deny?.length > 0 ? toolDraft.deny : [];
+                            toolsPatch.alsoAllow = toolDraft.alsoAllow?.length > 0 ? toolDraft.alsoAllow : [];
+                            toolsPatch.exec = { host: toolDraft.execHost || undefined, security: toolDraft.execSecurity || undefined, ask: toolDraft.execAsk || undefined };
+                            toolsPatch.fs = { workspaceOnly: toolDraft.fsWsOnly || undefined };
+                            return { ...e, tools: toolsPatch };
+                          });
+                          const fresh = await gwApi.configSafePatch({ agents: { ...agentsCfg, list: updatedList } });
+                          setConfig(fresh);
+                          setToolDraft(null);
+                          toast('success', a.toolSaved || 'Saved');
+                        } catch (err: any) {
+                          toast('error', err?.message || a.toolSaveFailed || 'Failed to save');
+                        }
+                        setToolSaving(false);
+                      };
+
+                      return (
+                        <div className="rounded-xl border border-slate-200/60 dark:border-white/[0.06] bg-white dark:bg-white/[0.03] p-4">
+                          <div className="flex items-center gap-2 mb-4">
+                            <span className="material-symbols-outlined text-[18px] text-primary">security</span>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-[11px] font-bold text-slate-700 dark:text-white/70 uppercase">{a.secExecSecurity || 'Security'}</h4>
+                              <p className="text-[10px] text-slate-400 dark:text-white/30">{a.toolProfileDesc || 'Controls which tool categories are available'}</p>
+                            </div>
+                          </div>
+
+                          {/* Tool Profile */}
+                          <div className="mb-4">
+                            <p className="text-[9px] font-bold text-slate-400 dark:text-white/25 uppercase mb-2">{a.toolProfile || 'Tool Profile'}</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {PROFILES.map(p => (
+                                <button key={p} onClick={() => { const d = initDraft(); setToolDraft({ ...d, profile: p }); }}
+                                  disabled={toolSaving}
+                                  className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${
+                                    profile === p
+                                      ? 'bg-primary/10 text-primary border-primary/20'
+                                      : 'bg-slate-50 dark:bg-white/[0.02] text-slate-500 dark:text-white/40 border-slate-200/60 dark:border-white/[0.06] hover:border-primary/30 hover:text-primary'
+                                  }`}>
+                                  {PROFILE_LABELS[p] || p}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Exec & FS settings */}
+                          <div className="mb-1">
+                            <p className="text-[9px] font-bold text-slate-400 dark:text-white/25 uppercase mb-2">{a.secExecSecurity || 'Exec Security'}</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+                              <div>
+                                <label className="text-[9px] font-bold text-slate-400 dark:text-white/20 uppercase block mb-1">{a.toolExecHost || 'Host'}</label>
+                                <input value={execHost} onChange={e => { const d = initDraft(); setToolDraft({ ...d, execHost: e.target.value }); }}
+                                  placeholder="e.g. local"
+                                  className="w-full h-7 px-2 bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-md text-[10px] font-mono text-slate-600 dark:text-white/60 outline-none" />
+                              </div>
+                              <div>
+                                <label className="text-[9px] font-bold text-slate-400 dark:text-white/20 uppercase block mb-1">{a.toolExecSecurity || 'Security'}</label>
+                                <CustomSelect value={execSecurity}
+                                  onChange={v => { const d = initDraft(); setToolDraft({ ...d, execSecurity: v }); }}
+                                  options={[
+                                    { value: '', label: a.execSecDefault || 'Default' },
+                                    { value: 'prompt', label: a.execSecPrompt || 'Prompt' },
+                                    { value: 'sandbox', label: a.execSecSandbox || 'Sandbox' },
+                                    { value: 'none', label: a.execSecNone || 'None' },
+                                  ]}
+                                  className="w-full max-w-[140px] h-7 px-2 bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-md text-[10px] text-slate-600 dark:text-white/60" />
+                              </div>
+                              <label className="flex items-center gap-2.5 cursor-pointer select-none py-1">
+                                <button type="button" role="switch" aria-checked={execAsk} disabled={toolSaving}
+                                  onClick={() => { const d = initDraft(); setToolDraft({ ...d, execAsk: !execAsk }); }}
+                                  className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${execAsk ? 'bg-primary' : 'bg-slate-300 dark:bg-white/15'}`}>
+                                  <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm transform transition duration-200 ease-in-out ${execAsk ? 'translate-x-4' : 'translate-x-0'}`} />
+                                </button>
+                                <span className="text-[10px] font-bold text-slate-500 dark:text-white/40">{a.toolExecAsk || 'Ask'}</span>
+                              </label>
+                              <label className="flex items-center gap-2.5 cursor-pointer select-none py-1">
+                                <button type="button" role="switch" aria-checked={fsWsOnly} disabled={toolSaving}
+                                  onClick={() => { const d = initDraft(); setToolDraft({ ...d, fsWsOnly: !fsWsOnly }); }}
+                                  className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${fsWsOnly ? 'bg-primary' : 'bg-slate-300 dark:bg-white/15'}`}>
+                                  <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm transform transition duration-200 ease-in-out ${fsWsOnly ? 'translate-x-4' : 'translate-x-0'}`} />
+                                </button>
+                                <span className="text-[10px] font-bold text-slate-500 dark:text-white/40">{a.toolFsWorkspaceOnly || 'WS Only'}</span>
+                              </label>
+                            </div>
+                          </div>
+
+                          {/* Save / Reset */}
+                          {(toolDirty || toolSaving) && (
+                            <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-slate-200/40 dark:border-white/[0.06]">
+                              <button onClick={saveSecConfig} disabled={toolSaving || !toolDirty}
+                                className="h-6 px-3 rounded-md text-[10px] font-bold text-white bg-primary hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center gap-1">
+                                {toolSaving
+                                  ? <><span className="material-symbols-outlined text-[11px] animate-spin">progress_activity</span>{a.saving}</>
+                                  : <><span className="material-symbols-outlined text-[11px]">save</span>{a.save}</>}
+                              </button>
+                              {toolDirty && !toolSaving && (
+                                <button onClick={() => setToolDraft(null)}
+                                  className="h-6 px-2 rounded-md text-[10px] font-bold text-slate-500 dark:text-white/40 hover:text-slate-700 dark:hover:text-white/60 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
+                                >{a.reset}</button>
+                              )}
+                              {toolDirty && <span className="text-[9px] text-amber-500 font-bold">{a.unsaved}</span>}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                     {selected.identity?.theme && (
                       <div className="rounded-xl bg-white dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.06] p-3">
                         <p className="text-[11px] font-bold text-slate-400 dark:text-white/40 uppercase mb-1">{a.theme}</p>
                         <p className="text-[11px] text-slate-600 dark:text-white/50">{selected.identity.theme}</p>
                       </div>
                     )}
+
+                    {/* Subagents (per-agent task delegation, hidden if ≤1 agent) */}
+                    {agents.length >= 2 && (() => {
+                      const parsed = config?.parsed || config?.config || config || {};
+                      const cfg0 = parsed?.agents || {};
+                      const list: any[] = cfg0?.list || [];
+                      const entry = list.find((e: any) => e?.id === selected.id);
+                      const subCfg = entry?.subagents || {};
+                      const serverAllow: string[] = Array.isArray(subCfg.allowAgents) ? subCfg.allowAgents : [];
+                      const allowAgents = subDraft ?? serverAllow;
+                      const hasSubagents = allowAgents.length > 0;
+                      const otherAgents = agents.filter((ag: any) => ag.id !== selected.id && !allowAgents.includes(ag.id)).map((ag: any) => ag.id);
+                      const subDirty = subDraft !== null && JSON.stringify(subDraft) !== JSON.stringify(serverAllow);
+
+                      const saveSubAll = async () => {
+                        if (subDraft === null) return;
+                        setSubSaving(true);
+                        try {
+                          const updatedList = list.map((e: any) => {
+                            if (e?.id !== selected.id) return e;
+                            const sub = { ...(e.subagents || {}), allowAgents: subDraft.length > 0 ? subDraft : undefined };
+                            if (!sub.allowAgents && !sub.model && !sub.thinking) return { ...e, subagents: undefined };
+                            return { ...e, subagents: sub };
+                          });
+                          const fresh = await gwApi.configSafePatch({ agents: { ...cfg0, list: updatedList } });
+                          setConfig(fresh);
+                          setSubDraft(null);
+                          toast('success', a.subSaved || 'Saved');
+                        } catch (err: any) {
+                          toast('error', err?.message || a.subSaveFailed || 'Failed to save');
+                        }
+                        setSubSaving(false);
+                      };
+
+                      return (
+                        <div className={`rounded-xl border p-4 transition-colors ${hasSubagents ? 'bg-cyan-50/50 dark:bg-cyan-500/[0.03] border-cyan-200/60 dark:border-cyan-500/[0.12]' : 'bg-white dark:bg-white/[0.03] border-slate-200/60 dark:border-white/[0.06]'}`}>
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className={`material-symbols-outlined text-[18px] ${hasSubagents ? 'text-cyan-500' : 'text-slate-400 dark:text-white/30'}`}>account_tree</span>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-[11px] font-bold text-slate-700 dark:text-white/70 uppercase">{a.subTitle || 'Subagents'}</h4>
+                              <p className="text-[10px] text-slate-400 dark:text-white/30">{a.subDesc || 'Agents this agent can delegate tasks to via sessions_spawn'}</p>
+                            </div>
+                          </div>
+
+                          <p className="text-[10px] text-slate-400 dark:text-white/25 mb-3">
+                            {hasSubagents
+                              ? (a.subAllowHint || 'This agent can spawn the listed agents as subagents')
+                              : (a.subAllowEmpty || 'No subagent delegation configured — this agent cannot spawn other agents')}
+                          </p>
+
+                          {allowAgents.filter(id => id !== '*').length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mb-3">
+                              {allowAgents.filter(id => id !== '*').map(id => {
+                                const ag = agents.find((x: any) => x.id === id);
+                                return (
+                                  <div key={id} className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-colors ${
+                                    ag
+                                      ? 'bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-200/60 dark:border-cyan-500/20'
+                                      : 'bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-white/40 border border-slate-200/60 dark:border-white/10'
+                                  }`}>
+                                    <span className="material-symbols-outlined text-[11px]">smart_toy</span>
+                                    {resolveAgentLabel(id)}
+                                    <button
+                                      onClick={() => setSubDraft((subDraft ?? [...serverAllow]).filter(x => x !== id))}
+                                      disabled={subSaving}
+                                      className="p-0 ms-0.5 opacity-40 hover:opacity-100 transition-opacity"
+                                    >
+                                      <span className="material-symbols-outlined text-[10px]">close</span>
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-2">
+                            <CustomSelect
+                              value=""
+                              onChange={(v: string) => { if (!v || allowAgents.includes(v)) return; if (v === '*') { setSubDraft(['*']); } else { setSubDraft([...(subDraft ?? [...serverAllow]).filter(x => x !== '*'), v]); } }}
+                              options={[
+                                { value: '', label: a.subAddAgent || 'Add subagent…' },
+                                { value: '*', label: `* (${a.a2aAllWildcard || 'all agents'})` },
+                                ...otherAgents.map((id: string) => ({ value: id, label: resolveAgentLabel(id) }))
+                              ]}
+                              className="flex-1 h-8 px-2.5 bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-lg text-[11px] text-slate-600 dark:text-white/60"
+                              disabled={subSaving}
+                            />
+                          </div>
+
+                          {(subDirty || subSaving) && (
+                            <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-slate-200/40 dark:border-white/[0.06]">
+                              <button
+                                onClick={saveSubAll}
+                                disabled={subSaving || !subDirty}
+                                className="h-6 px-3 rounded-md text-[10px] font-bold text-white bg-cyan-500 hover:bg-cyan-600 disabled:opacity-50 transition-colors flex items-center gap-1"
+                              >
+                                {subSaving
+                                  ? <><span className="material-symbols-outlined text-[11px] animate-spin">progress_activity</span>{a.saving}</>
+                                  : <><span className="material-symbols-outlined text-[11px]">save</span>{a.save}</>}
+                              </button>
+                              {subDirty && !subSaving && (
+                                <button
+                                  onClick={() => setSubDraft(null)}
+                                  className="h-6 px-2 rounded-md text-[10px] font-bold text-slate-500 dark:text-white/40 hover:text-slate-700 dark:hover:text-white/60 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
+                                >{a.reset}</button>
+                              )}
+                              {subDirty && <span className="text-[9px] text-amber-500 font-bold">{a.unsaved}</span>}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })()}
@@ -806,7 +1307,7 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
                   <div className="w-full md:w-48 shrink-0 space-y-1">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[10px] font-bold theme-text-muted uppercase">{a.coreFiles}</span>
-                      <button onClick={() => selectedId && gwApi.agentFilesList(selectedId).then(setFilesList).catch((err: any) => { toast('error', err?.message || a.fetchFailed); })} className="text-[10px] text-primary hover:underline">{a.refresh}</button>
+                      <button onClick={() => { if (selectedId) { gwApi.agentFilesList(selectedId).then(setFilesList).catch((err: any) => { toast('error', err?.message || a.fetchFailed); }); workspaceMemoryApi.list(selectedId).then(r => setMemoryFiles(r?.files || [])).catch(() => setMemoryFiles([])); } }} className="text-[10px] text-primary hover:underline">{a.refresh}</button>
                     </div>
                     {(filesList?.files || []).length === 0 ? (
                       <p className="text-[10px] text-slate-400 dark:text-white/20 py-4 text-center">{a.noFiles}</p>
@@ -819,6 +1320,59 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
                         </p>
                       </button>
                     ))}
+
+                    {/* Memory Logs Section */}
+                    <div className="border-t border-slate-200/40 dark:border-white/[0.06] mt-3 pt-3">
+                      <button onClick={() => setMemoryExpanded(!memoryExpanded)}
+                        className="w-full flex items-center justify-between mb-2 group">
+                        <div className="flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-[13px] text-primary/70 transition-transform" style={{ transform: memoryExpanded ? 'rotate(0deg)' : 'rotate(-90deg)' }}>expand_more</span>
+                          <span className="text-[10px] font-bold theme-text-muted uppercase">{a.memoryLogs || 'Memory Logs'}</span>
+                          {memoryFiles.length > 0 && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold">{memoryFiles.length}</span>
+                          )}
+                        </div>
+                      </button>
+                      {memoryExpanded && (
+                        <>
+                          {memoryFiles.length === 0 ? (
+                            <p className="text-[10px] text-slate-400 dark:text-white/20 py-3 text-center">{a.noMemoryLogs || 'No daily memory logs yet'}</p>
+                          ) : (
+                            <>
+                              {memoryFiles.slice(0, memoryShowCount).map((mf: MemoryFileEntry) => {
+                                const key = 'memory/' + mf.name;
+                                const dateStr = mf.name.replace('.md', '');
+                                const today = new Date().toISOString().slice(0, 10);
+                                const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+                                const label = dateStr === today ? (a.memoryToday || 'Today') : dateStr === yesterday ? (a.memoryYesterday || 'Yesterday') : dateStr;
+                                return (
+                                  <button key={key} onClick={() => loadFile(key)}
+                                    className={`w-full text-start px-2.5 py-1.5 rounded-lg text-[10px] transition-all ${fileActive === key ? 'bg-primary/10 text-primary border border-primary/20' : 'hover:bg-slate-100 dark:hover:bg-white/[0.03] border border-transparent'}`}>
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="material-symbols-outlined text-[12px] text-slate-400 dark:text-white/30">calendar_today</span>
+                                      <span className="font-mono font-semibold truncate">{label}</span>
+                                    </div>
+                                    <p className="text-[9px] text-slate-400 dark:text-white/30 mt-0.5 ps-5">{fmtBytes(mf.size)}</p>
+                                  </button>
+                                );
+                              })}
+                              {memoryFiles.length > memoryShowCount && (
+                                <button onClick={() => setMemoryShowCount(prev => prev + 30)}
+                                  className="w-full text-center text-[10px] text-primary hover:underline py-1.5">
+                                  {a.showMore || 'Show More'} ({memoryFiles.length - memoryShowCount})
+                                </button>
+                              )}
+                              {memoryShowCount > 7 && memoryFiles.length <= memoryShowCount && (
+                                <button onClick={() => setMemoryShowCount(7)}
+                                  className="w-full text-center text-[10px] text-slate-400 hover:text-primary hover:underline py-1.5">
+                                  {a.showLess || 'Show Less'}
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                   <div className="flex-1 min-w-0">
                     {!fileActive ? (
@@ -826,7 +1380,14 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
                     ) : (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-mono font-bold theme-text-secondary">{fileActive}</span>
+                          <span className="text-[11px] font-mono font-bold theme-text-secondary">
+                            {fileActive?.startsWith('memory/') ? (
+                              <span className="flex items-center gap-1">
+                                <span className="material-symbols-outlined text-[13px] text-primary/60">calendar_today</span>
+                                {fileActive.slice('memory/'.length)}
+                              </span>
+                            ) : fileActive}
+                          </span>
                           <div className="flex gap-2">
                             {/* Template insert dropdown */}
                             {fileActive && fileTemplates.filter(t => t.targetFile === fileActive).length > 0 && (
@@ -865,6 +1426,15 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
                               className="text-[10px] px-3 py-1 rounded-lg bg-primary text-white font-bold disabled:opacity-30">{fileSaving ? a.saving : a.save}</button>
                           </div>
                         </div>
+                        {/* File path hint */}
+                        {filesList?.workspace && fileActive && !fileActive.startsWith('memory/') && (
+                          <div className="flex items-center gap-1.5 px-1 -mt-0.5">
+                            <span className="material-symbols-outlined text-[11px] text-slate-400 dark:text-white/25">folder_open</span>
+                            <span className="text-[9px] font-mono text-slate-400 dark:text-white/25 truncate select-all" title={filesList.workspace + '/' + fileActive}>
+                              {filesList.workspace}/{fileActive}
+                            </span>
+                          </div>
+                        )}
                         <textarea
                           value={fileDrafts[fileActive] ?? fileContents[fileActive] ?? ''}
                           onChange={e => setFileDrafts(prev => ({ ...prev, [fileActive!]: e.target.value }))}
@@ -880,34 +1450,454 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
               {/* Tools Panel */}
               {panel === 'tools' && (() => {
                 const cfg = resolveAgentConfig(selected.id);
-                const tools = cfg.tools || {};
-                const profile = tools.profile || 'full';
+                const globalTools = config?.parsed?.tools || config?.config?.tools || config?.tools || {};
+                const agentEntry = cfg._entry || {};
+                const agentTools = agentEntry.tools || {};
+                // Draft or live values (allow/deny/alsoAllow only — profile & exec are in Overview)
+                const draft = toolDraft || {};
+                const liveAllow: string[] = Array.isArray(agentTools.allow) ? agentTools.allow : (Array.isArray(globalTools.allow) ? globalTools.allow : []);
+                const liveDeny: string[] = Array.isArray(agentTools.deny) ? agentTools.deny : (Array.isArray(globalTools.deny) ? globalTools.deny : []);
+                const liveAlsoAllow: string[] = Array.isArray(agentTools.alsoAllow) ? agentTools.alsoAllow : (Array.isArray(globalTools.alsoAllow) ? globalTools.alsoAllow : []);
+                const allowList: string[] = draft.allow ?? liveAllow;
+                const denyList: string[] = draft.deny ?? liveDeny;
+                const alsoAllowList: string[] = draft.alsoAllow ?? liveAlsoAllow;
+                const toolDirty = toolDraft !== null;
+                const initToolDraft = () => {
+                  if (toolDraft) return toolDraft;
+                  const liveProfile = agentTools.profile || globalTools.profile || 'full';
+                  const liveExec = { host: agentTools.exec?.host ?? globalTools.exec?.host ?? '', security: agentTools.exec?.security ?? globalTools.exec?.security ?? '', ask: agentTools.exec?.ask ?? globalTools.exec?.ask ?? false };
+                  const liveFsWsOnly = agentTools.fs?.workspaceOnly ?? globalTools.fs?.workspaceOnly ?? false;
+                  return { profile: liveProfile, allow: [...liveAllow], deny: [...liveDeny], alsoAllow: [...liveAlsoAllow], execHost: liveExec.host, execSecurity: liveExec.security, execAsk: liveExec.ask, fsWsOnly: liveFsWsOnly };
+                };
+
+                const saveToolConfig = async () => {
+                  if (!toolDraft) return;
+                  setToolSaving(true);
+                  try {
+                    const parsed = config?.parsed || config?.config || config || {};
+                    const agentsCfg = parsed?.agents || {};
+                    const list: any[] = agentsCfg?.list || [];
+                    const updatedList = list.map((e: any) => {
+                      if (e?.id !== selected.id) return e;
+                      const toolsPatch: Record<string, any> = { profile: toolDraft.profile };
+                      toolsPatch.allow = toolDraft.allow?.length > 0 ? toolDraft.allow : [];
+                      toolsPatch.deny = toolDraft.deny?.length > 0 ? toolDraft.deny : [];
+                      toolsPatch.alsoAllow = toolDraft.alsoAllow?.length > 0 ? toolDraft.alsoAllow : [];
+                      toolsPatch.exec = { host: toolDraft.execHost || undefined, security: toolDraft.execSecurity || undefined, ask: toolDraft.execAsk || undefined };
+                      toolsPatch.fs = { workspaceOnly: toolDraft.fsWsOnly || undefined };
+                      return { ...e, tools: toolsPatch };
+                    });
+                    const fresh = await gwApi.configSafePatch({ agents: { ...agentsCfg, list: updatedList } });
+                    setConfig(fresh);
+                    setToolDraft(null);
+                    toast('success', a.toolSaved || 'Saved');
+                  } catch (err: any) {
+                    toast('error', err?.message || a.toolSaveFailed || 'Failed to save');
+                  }
+                  setToolSaving(false);
+                };
+
+                const ALL_KNOWN_TOOLS = TOOL_SECTIONS.flatMap(s => s.tools);
+
+                // Tri-state per tool: 'default' | 'allow' | 'deny' | 'extra'
+                type ToolState = 'default' | 'allow' | 'deny' | 'extra';
+                const getToolState = (tool: string): ToolState => {
+                  if (allowList.includes(tool)) return 'allow';
+                  if (denyList.includes(tool)) return 'deny';
+                  if (alsoAllowList.includes(tool)) return 'extra';
+                  return 'default';
+                };
+                const TOOL_STATE_CYCLE: ToolState[] = ['default', 'allow', 'extra', 'deny'];
+                const cycleToolState = (tool: string) => {
+                  const current = getToolState(tool);
+                  const nextIdx = (TOOL_STATE_CYCLE.indexOf(current) + 1) % TOOL_STATE_CYCLE.length;
+                  const next = TOOL_STATE_CYCLE[nextIdx];
+                  const d = initToolDraft();
+                  const newAllow = (d.allow || []).filter((t: string) => t !== tool);
+                  const newDeny = (d.deny || []).filter((t: string) => t !== tool);
+                  const newAlsoAllow = (d.alsoAllow || []).filter((t: string) => t !== tool);
+                  if (next === 'allow') newAllow.push(tool);
+                  else if (next === 'deny') newDeny.push(tool);
+                  else if (next === 'extra') newAlsoAllow.push(tool);
+                  setToolDraft({ ...d, allow: newAllow, deny: newDeny, alsoAllow: newAlsoAllow });
+                };
+                const TOOL_STATE_STYLE: Record<ToolState, { icon: string; color: string; label: string }> = {
+                  default: { icon: 'radio_button_unchecked', color: 'text-slate-400 dark:text-white/25', label: a.toolStateDefault || 'Default' },
+                  allow:   { icon: 'check_circle', color: 'text-emerald-500', label: a.toolStateAllow || 'Allow' },
+                  extra:   { icon: 'add_circle', color: 'text-blue-500', label: a.toolStateExtra || 'Extra' },
+                  deny:    { icon: 'block', color: 'text-red-500', label: a.toolStateDeny || 'Deny' },
+                };
+
+                // Collect custom tools across all three lists
+                const customTools = [...new Set([...allowList, ...denyList, ...alsoAllowList])].filter(t => !ALL_KNOWN_TOOLS.includes(t));
+
+                // Build tool info map from catalog data
+                const catalogGroups: Array<{ id: string; label: string; source: string; tools: Array<{ id: string; label: string; description: string; defaultProfiles: string[] }> }> = toolsCatalog?.groups || [];
+                const toolInfoMap: Record<string, { label: string; description: string; defaultProfiles: string[] }> = {};
+                catalogGroups.forEach(g => g.tools.forEach(t => { toolInfoMap[t.id] = t; }));
+                const profileColorFn = (pid: string) => {
+                  if (pid === 'full') return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300';
+                  if (pid === 'coding') return 'bg-blue-500/15 text-blue-700 dark:text-blue-300';
+                  if (pid === 'messaging') return 'bg-violet-500/15 text-violet-700 dark:text-violet-300';
+                  if (pid === 'minimal') return 'bg-slate-500/15 text-slate-700 dark:text-slate-300';
+                  return 'bg-primary/15 text-primary';
+                };
+
+                // i18n group label mapping
+                const groupLabelI18n: Record<string, string> = {
+                  Files: a.toolGrpFiles || 'Files',
+                  Runtime: a.toolGrpRuntime || 'Runtime',
+                  Web: a.toolGrpWeb || 'Web',
+                  Memory: a.toolGrpMemory || 'Memory',
+                  Sessions: a.toolGrpSessions || 'Sessions',
+                  UI: a.toolGrpUI || 'UI',
+                  Messaging: a.toolGrpMessaging || 'Messaging',
+                  Automation: a.toolGrpAutomation || 'Automation',
+                  Agents: a.toolGrpAgents || 'Agents',
+                  Media: a.toolGrpMedia || 'Media',
+                };
+                const getGroupLabel = (raw: string) => groupLabelI18n[raw] || raw;
+
+                // i18n profile label mapping
+                const getProfileLabel = (pid: string) => {
+                  if (pid === 'minimal') return a.toolProfileMinimal || 'Minimal';
+                  if (pid === 'coding') return a.toolProfileCoding || 'Coding';
+                  if (pid === 'messaging') return a.toolProfileMessaging || 'Messaging';
+                  if (pid === 'full') return a.toolProfileFull || 'Full';
+                  return pid;
+                };
+
+                // Use catalog groups if available, fall back to static TOOL_SECTIONS
+                const useCatalog = catalogGroups.length > 0;
+                const sourceGroups = useCatalog
+                  ? catalogGroups.map(g => ({ id: g.id, label: g.label, source: g.source as string, tools: g.tools.map(t => t.id) }))
+                  : TOOL_SECTIONS.map(s => ({ id: s.label, label: s.label, source: 'core', tools: s.tools }));
+
+                const allToolIds = sourceGroups.flatMap(g => g.tools);
+                const totalTools = allToolIds.length;
+                const overrideTotal = allToolIds.filter(t => getToolState(t) !== 'default').length;
+                const coreCount = sourceGroups.filter(g => g.source === 'core').reduce((s, g) => s + g.tools.length, 0);
+                const pluginCount = sourceGroups.filter(g => g.source === 'plugin').reduce((s, g) => s + g.tools.length, 0);
+
+                // Profile hierarchy: tools in a lower profile are also in all higher profiles
+                const PROFILE_HIERARCHY = ['minimal', 'coding', 'messaging', 'full'];
+                const profileIncludes = (toolProfiles: string[], filterProfile: string) => {
+                  const filterIdx = PROFILE_HIERARCHY.indexOf(filterProfile.toLowerCase());
+                  if (filterIdx < 0) return toolProfiles.some(p => p.toLowerCase() === filterProfile.toLowerCase());
+                  // Tool is included if any of its profiles is at or below the filter level
+                  return toolProfiles.some(p => {
+                    const pIdx = PROFILE_HIERARCHY.indexOf(p.toLowerCase());
+                    return pIdx >= 0 && pIdx <= filterIdx;
+                  });
+                };
+
+                const q = toolSearch.toLowerCase();
+                const filteredGroups = sourceGroups
+                  .filter(g => toolSourceFilter === 'all' || g.source === toolSourceFilter)
+                  .map(g => ({
+                    ...g,
+                    tools: g.tools.filter(t => {
+                      const info = toolInfoMap[t];
+                      // Profile filter — skip if no catalog info available
+                      if (toolProfileFilter !== 'all' && info?.defaultProfiles?.length) {
+                        if (!profileIncludes(info.defaultProfiles, toolProfileFilter)) return false;
+                      }
+                      // Search filter
+                      if (q && !(t.toLowerCase().includes(q) || info?.label?.toLowerCase().includes(q) || info?.description?.toLowerCase().includes(q))) return false;
+                      return true;
+                    }),
+                  }))
+                  .filter(g => g.tools.length > 0);
+
+                const toggleGroup = (id: string) => {
+                  setToolsExpanded(prev => {
+                    const next = new Set(prev);
+                    if (next.has(id)) next.delete(id);
+                    else next.add(id);
+                    return next;
+                  });
+                };
+
+                const loadCatalog = () => {
+                  setToolsCatalogLoading(true);
+                  gwApi.toolsCatalog({ includePlugins: true }).then((r: any) => {
+                    setToolsCatalog(r);
+                    setToolsExpanded(new Set((r?.groups || []).map((g: any) => g.id)));
+                  }).catch(() => {}).finally(() => setToolsCatalogLoading(false));
+                };
+
+                const stateCardBorder = (st: ToolState) =>
+                  st === 'allow' ? 'border-emerald-500/25 hover:border-emerald-500/50'
+                  : st === 'extra' ? 'border-blue-500/25 hover:border-blue-500/50'
+                  : st === 'deny' ? 'border-red-500/25 hover:border-red-500/50'
+                  : 'border-slate-200/60 dark:border-white/[0.06] hover:border-primary/30';
+
+                const stateCardBg = (st: ToolState) =>
+                  st === 'allow' ? 'bg-emerald-500/[0.04]'
+                  : st === 'extra' ? 'bg-blue-500/[0.04]'
+                  : st === 'deny' ? 'bg-red-500/[0.04]'
+                  : 'bg-slate-50 dark:bg-white/[0.02]';
+
                 return (
-                  <div className="space-y-4 max-w-5xl">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-[11px] font-bold theme-text-secondary uppercase">{a.toolAccess}</h3>
-                        <p className="text-[11px] text-slate-400 dark:text-white/35 mt-0.5">{a.profile}: <span className="font-mono text-primary">{profile}</span></p>
+                  <div className="space-y-3">
+                    {/* Header stats */}
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[16px] text-primary/70">build</span>
+                        <span className="text-[13px] font-bold text-slate-700 dark:text-white/80">{a.toolAccess}</span>
                       </div>
+                      <div className="flex items-center gap-2 text-[10px]">
+                        <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/[0.06] text-slate-600 dark:text-white/50 font-bold">
+                          {totalTools} {a.toolTotal || 'tools'}
+                        </span>
+                        {useCatalog && (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold">
+                            {coreCount} {a.toolSourceCore || 'core'}
+                          </span>
+                        )}
+                        {pluginCount > 0 && (
+                          <span className="px-2 py-0.5 rounded-full bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 font-bold">
+                            {pluginCount} {a.toolSourcePlugin || 'plugin'}
+                          </span>
+                        )}
+                        {overrideTotal > 0 && (
+                          <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 font-bold">
+                            {overrideTotal} {a.toolOverrideCount || 'overrides'}
+                          </span>
+                        )}
+                      </div>
+                      {(toolDirty || toolSaving) && (
+                        <div className="flex items-center gap-1.5 ms-auto">
+                          <button onClick={saveToolConfig} disabled={toolSaving || !toolDirty}
+                            className="h-7 px-3 rounded-lg text-[10px] font-bold text-white bg-primary hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center gap-1">
+                            {toolSaving
+                              ? <><span className="material-symbols-outlined text-[11px] animate-spin">progress_activity</span>{a.saving}</>
+                              : <><span className="material-symbols-outlined text-[11px]">save</span>{a.save}</>}
+                          </button>
+                          {toolDirty && !toolSaving && (
+                            <button onClick={() => setToolDraft(null)}
+                              className="h-7 px-2 rounded-lg text-[10px] font-bold text-slate-500 dark:text-white/40 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors">{a.reset}</button>
+                          )}
+                          {toolDirty && <span className="text-[9px] text-amber-500 font-bold">{a.unsaved}</span>}
+                        </div>
+                      )}
+                      {!toolDirty && !toolSaving && (
+                        <button onClick={loadCatalog} disabled={toolsCatalogLoading} className="ms-auto p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors disabled:opacity-40">
+                          <span className={`material-symbols-outlined text-[14px] text-slate-500 dark:text-white/40 ${toolsCatalogLoading ? 'animate-spin' : ''}`}>
+                            {toolsCatalogLoading ? 'progress_activity' : 'refresh'}
+                          </span>
+                        </button>
+                      )}
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {TOOL_SECTIONS.map(section => (
-                        <div key={section.label} className="rounded-xl bg-white dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.06] p-3">
-                          <p className="text-[10px] font-bold theme-text-muted uppercase mb-2">{section.label}</p>
-                          <div className="space-y-1">
-                            {section.tools.map(tool => {
-                              const denied = Array.isArray(tools.deny) && tools.deny.includes(tool);
-                              const allowed = !denied;
-                              return (
-                                <div key={tool} className="flex items-center justify-between py-1">
-                                  <span className="text-[10px] font-mono text-slate-600 dark:text-white/50">{tool}</span>
-                                  <div className={`w-2 h-2 rounded-full ${allowed ? 'bg-mac-green' : 'bg-slate-300 dark:bg-white/10'}`} />
+
+                    {/* Search + Filters */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="relative flex-1 min-w-[180px] max-w-xs">
+                        <span className="material-symbols-outlined text-[14px] text-slate-400 dark:text-white/30 absolute start-2.5 top-1/2 -translate-y-1/2">search</span>
+                        <input type="text" value={toolSearch} onChange={e => setToolSearch(e.target.value)}
+                          placeholder={a.toolSearchPlaceholder || 'Search tools...'}
+                          className="w-full h-8 ps-8 pe-3 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.03] text-[11px] text-slate-700 dark:text-white/80 placeholder:text-slate-400 dark:placeholder:text-white/25 focus:outline-none focus:ring-1 focus:ring-primary/40" />
+                      </div>
+                      {/* Source filter pills */}
+                      <div className="flex items-center gap-1">
+                        {(['all', ...(useCatalog ? ['core', 'plugin'] as const : [])] as const).map(f => (
+                          <button key={f} onClick={() => setToolSourceFilter(f as 'all' | 'core' | 'plugin')}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${toolSourceFilter === f ? 'bg-primary/15 text-primary ring-1 ring-primary/30' : 'bg-slate-100 dark:bg-white/[0.04] text-slate-500 dark:text-white/40 hover:bg-slate-200 dark:hover:bg-white/[0.06]'}`}>
+                            {f === 'all' ? (a.toolFilterAll || 'All') : f === 'core' ? (a.toolSourceCore || 'Core') : (a.toolSourcePlugin || 'Plugin')}
+                          </button>
+                        ))}
+                      </div>
+                      {/* Profile filter (from catalog) */}
+                      {toolsCatalog?.profiles?.length > 0 && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-slate-400 dark:text-white/30">{a.secToolProfile || 'Profile'}:</span>
+                          <button onClick={() => setToolProfileFilter('all')}
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${toolProfileFilter === 'all' ? 'bg-primary/15 text-primary ring-1 ring-primary/30' : 'text-slate-500 dark:text-white/40 hover:bg-slate-100 dark:hover:bg-white/[0.04]'}`}>
+                            {a.toolFilterAll || 'All'}
+                          </button>
+                          {toolsCatalog.profiles.map((p: any) => (
+                            <button key={p.id} onClick={() => setToolProfileFilter(toolProfileFilter === p.id ? 'all' : p.id)}
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${toolProfileFilter === p.id ? `${profileColorFn(p.id)} ring-1 ring-current/20` : 'text-slate-500 dark:text-white/40 hover:bg-slate-100 dark:hover:bg-white/[0.04]'}`}>
+                              {getProfileLabel(p.id)}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Tri-state legend + cycle hint */}
+                    <div className="flex flex-wrap items-center gap-3 px-1">
+                      {TOOL_STATE_CYCLE.map(st => (
+                        <span key={st} className="flex items-center gap-1">
+                          <span className={`material-symbols-outlined text-[12px] ${TOOL_STATE_STYLE[st].color}`}>{TOOL_STATE_STYLE[st].icon}</span>
+                          <span className="text-[9px] font-bold text-slate-400 dark:text-white/25">{TOOL_STATE_STYLE[st].label}</span>
+                        </span>
+                      ))}
+                      <span className="ms-auto flex items-center gap-1 text-[9px] text-slate-400 dark:text-white/25 italic">
+                        <span className="material-symbols-outlined text-[11px]">touch_app</span>
+                        {a.toolClickToToggle || 'Click card to cycle state'}
+                      </span>
+                    </div>
+
+                    {/* Tool groups */}
+                    {toolsCatalogLoading && !toolsCatalog ? (
+                      <div className="flex flex-col items-center justify-center py-16 gap-3">
+                        <span className="material-symbols-outlined text-[28px] text-primary/60 animate-spin">progress_activity</span>
+                        <p className="text-[11px] text-slate-400 dark:text-white/40">{a.loading || 'Loading...'}</p>
+                      </div>
+                    ) : filteredGroups.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 gap-2">
+                        <span className="material-symbols-outlined text-[24px] text-slate-300 dark:text-white/20">search_off</span>
+                        <p className="text-[11px] text-slate-400 dark:text-white/35">{a.toolNoResults || 'No tools match your search'}</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {filteredGroups.map(group => {
+                          const overrideCount = group.tools.filter(t => getToolState(t) !== 'default').length;
+                          const expanded = toolsExpanded.has(group.id);
+                          return (
+                            <div key={group.id} className="rounded-xl border border-slate-200/60 dark:border-white/[0.06] bg-white dark:bg-white/[0.02] overflow-hidden">
+                              {/* Group header — collapsible */}
+                              <button onClick={() => toggleGroup(group.id)}
+                                className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors text-start">
+                                <span className={`material-symbols-outlined text-[14px] transition-transform ${expanded ? 'rotate-90' : ''}`}>
+                                  chevron_right
+                                </span>
+                                <span className={`material-symbols-outlined text-[14px] ${group.source === 'core' ? 'text-emerald-500' : 'text-violet-500'}`}>
+                                  {group.source === 'core' ? 'verified' : 'extension'}
+                                </span>
+                                <span className="text-[12px] font-bold text-slate-700 dark:text-white/80 flex-1">{getGroupLabel(group.label)}</span>
+                                {overrideCount > 0 && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/10 text-amber-500">{overrideCount} {a.toolOverrideCount || 'overrides'}</span>
+                                )}
+                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${group.source === 'core' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400'}`}>
+                                  {group.source === 'core' ? (a.toolSourceCore || 'core') : (a.toolSourcePlugin || 'plugin')}
+                                </span>
+                                <span className="text-[10px] text-slate-400 dark:text-white/30">{group.tools.length}</span>
+                              </button>
+                              {/* Tool cards — collapsible */}
+                              {expanded && (
+                                <div className="border-t border-slate-100 dark:border-white/[0.04] p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                  {group.tools.map(toolId => {
+                                    const st = getToolState(toolId);
+                                    const style = TOOL_STATE_STYLE[st];
+                                    const info = toolInfoMap[toolId];
+                                    return (
+                                      <button key={toolId} onClick={() => cycleToolState(toolId)} disabled={toolSaving}
+                                        className={`rounded-xl ${stateCardBg(st)} border ${stateCardBorder(st)} p-3 transition-all cursor-pointer select-none text-start hover:shadow-sm flex flex-col`}>
+                                        <div className="flex items-center gap-2 mb-1.5">
+                                          <span className="material-symbols-outlined text-[14px] text-primary/60 shrink-0">handyman</span>
+                                          <span className="text-[11px] font-bold text-slate-700 dark:text-white/80 truncate">{info?.label || toolId}</span>
+                                          {info?.label && info.label !== toolId && (
+                                            <code className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-white/40 font-mono shrink-0">{toolId}</code>
+                                          )}
+                                          <span className={`material-symbols-outlined text-[16px] ${style.color} transition-colors shrink-0 ms-auto`}>{style.icon}</span>
+                                        </div>
+                                        {info?.description && (
+                                          <p className="text-[10px] text-slate-500 dark:text-white/40 leading-relaxed line-clamp-2 mb-2">{info.description}</p>
+                                        )}
+                                        <div className="flex items-center gap-1 mt-auto flex-wrap">
+                                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                            st === 'allow' ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                            : st === 'extra' ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                                            : st === 'deny' ? 'bg-red-500/15 text-red-600 dark:text-red-400'
+                                            : 'bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-white/40'
+                                          }`}>{style.label}</span>
+                                          {info?.defaultProfiles?.map(p => (
+                                            <span key={p} className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${profileColorFn(p)}`}>{p}</span>
+                                          ))}
+                                        </div>
+                                      </button>
+                                    );
+                                  })}
                                 </div>
-                              );
-                            })}
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Custom tools */}
+                    <div className="rounded-xl border border-slate-200/60 dark:border-white/[0.06] bg-white dark:bg-white/[0.02] overflow-hidden">
+                      <button onClick={() => toggleGroup('__custom__')}
+                        className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors text-start">
+                        <span className={`material-symbols-outlined text-[14px] transition-transform ${toolsExpanded.has('__custom__') ? 'rotate-90' : ''}`}>
+                          chevron_right
+                        </span>
+                        <span className="material-symbols-outlined text-[14px] text-violet-500">extension</span>
+                        <span className="text-[12px] font-bold text-slate-700 dark:text-white/80 flex-1">{a.toolCustom || 'Custom Tools'}</span>
+                        <span className="text-[10px] text-slate-400 dark:text-white/30">{customTools.length}</span>
+                      </button>
+                      {toolsExpanded.has('__custom__') && (
+                        <div className="border-t border-slate-100 dark:border-white/[0.04] p-3">
+                          {customTools.length > 0 && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mb-3">
+                              {customTools.map(tool => {
+                                const st = getToolState(tool);
+                                const style = TOOL_STATE_STYLE[st];
+                                return (
+                                  <div key={tool} className={`rounded-xl ${stateCardBg(st)} border ${stateCardBorder(st)} p-3 transition-all flex flex-col`}>
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                      <span className="material-symbols-outlined text-[14px] text-violet-500/60 shrink-0">extension</span>
+                                      <button onClick={() => cycleToolState(tool)} disabled={toolSaving}
+                                        className="text-[11px] font-bold text-slate-700 dark:text-white/80 truncate flex-1 text-start cursor-pointer">{tool}</button>
+                                      <button onClick={() => {
+                                        const d = initToolDraft();
+                                        setToolDraft({ ...d, allow: (d.allow || []).filter((t: string) => t !== tool), deny: (d.deny || []).filter((t: string) => t !== tool), alsoAllow: (d.alsoAllow || []).filter((t: string) => t !== tool) });
+                                      }} className="p-0.5 opacity-30 hover:opacity-100 transition-opacity shrink-0">
+                                        <span className="material-symbols-outlined text-[12px]">close</span>
+                                      </button>
+                                    </div>
+                                    <button onClick={() => cycleToolState(tool)} disabled={toolSaving} className="cursor-pointer mt-auto">
+                                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                        st === 'allow' ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                        : st === 'extra' ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                                        : st === 'deny' ? 'bg-red-500/15 text-red-600 dark:text-red-400'
+                                        : 'bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-white/40'
+                                      }`}>{style.label}</span>
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                          <div className="flex gap-2">
+                            <div className="relative flex-1">
+                              <span className="material-symbols-outlined text-[14px] text-slate-400 dark:text-white/25 absolute start-2.5 top-1/2 -translate-y-1/2">add</span>
+                              <input
+                                value={customToolInput}
+                                onChange={e => setCustomToolInput(e.target.value)}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter' && customToolInput.trim()) {
+                                    const tool = customToolInput.trim();
+                                    const d = initToolDraft();
+                                    if (![...(d.allow || []), ...(d.deny || []), ...(d.alsoAllow || [])].includes(tool)) {
+                                      setToolDraft({ ...d, alsoAllow: [...(d.alsoAllow || []), tool] });
+                                    }
+                                    setCustomToolInput('');
+                                  }
+                                }}
+                                placeholder={a.toolAddCustom || 'Custom tool name…'}
+                                className="w-full h-8 ps-8 pe-3 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.03] text-[11px] font-mono text-slate-600 dark:text-white/60 placeholder:text-slate-400 dark:placeholder:text-white/25 focus:outline-none focus:ring-1 focus:ring-primary/40" />
+                            </div>
+                            <button onClick={() => {
+                              if (customToolInput.trim()) {
+                                const tool = customToolInput.trim();
+                                const d = initToolDraft();
+                                if (![...(d.allow || []), ...(d.deny || []), ...(d.alsoAllow || [])].includes(tool)) {
+                                  setToolDraft({ ...d, alsoAllow: [...(d.alsoAllow || []), tool] });
+                                }
+                                setCustomToolInput('');
+                              }
+                            }}
+                              className="h-8 px-3 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 text-[10px] font-bold transition-colors flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[14px]">add</span>
+                              {a.toolAddItem || 'Add'}
+                            </button>
                           </div>
                         </div>
-                      ))}
+                      )}
                     </div>
                   </div>
                 );
@@ -1038,11 +2028,89 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
                     };
                   });
                 }
+
+                // Extract bindings + channel config from parsed config
+                const parsed = config?.parsed || config?.config || config || {};
+                const allBindings: any[] = Array.isArray(parsed.bindings) ? parsed.bindings : [];
+                const channelsCfg = parsed.channels || {};
+                const agentOpts = agents.map((ag: any) => ag.id);
+
+                const getChannelBindings = (chId: string) =>
+                  allBindings.filter((b: any) => b.match?.channel?.toLowerCase() === chId.toLowerCase());
+
+                const getChannelPeerBindings = (chId: string) =>
+                  allBindings.filter((b: any) =>
+                    b.match?.channel?.toLowerCase() === chId.toLowerCase() &&
+                    b.match?.peer?.id &&
+                    ['group', 'channel', 'direct'].includes(b.match?.peer?.kind?.toLowerCase() || '')
+                  );
+
+                const removePeerBinding = (chId: string, peerKind: string, peerId: string) => {
+                  const updated = allBindings.filter((b: any) => !(
+                    b.match?.channel?.toLowerCase() === chId.toLowerCase() &&
+                    b.match?.peer?.id?.toLowerCase() === peerId.toLowerCase() &&
+                    b.match?.peer?.kind?.toLowerCase() === peerKind.toLowerCase()
+                  ));
+                  saveBindings(updated);
+                };
+
+                const getChannelAccountIds = (chId: string, ch: any): string[] => {
+                  const cfg = channelsCfg[chId];
+                  if (cfg?.accounts && typeof cfg.accounts === 'object') return Object.keys(cfg.accounts);
+                  if (ch.accounts?.length > 0) return ch.accounts.map((acc: any) => acc.id || acc.accountId || 'default').filter(Boolean);
+                  return cfg?.enabled !== undefined ? ['default'] : [];
+                };
+
+                const getBoundAgent = (chId: string, accountId: string): string | null => {
+                  const bindings = getChannelBindings(chId);
+                  const exact = bindings.find((b: any) => b.match?.accountId?.toLowerCase() === accountId.toLowerCase());
+                  if (exact) return exact.agentId || null;
+                  const wild = bindings.find((b: any) => b.match?.accountId === '*');
+                  if (wild) return wild.agentId || null;
+                  return null;
+                };
+
+                const hasWildcardBinding = (chId: string): string | null => {
+                  const wild = getChannelBindings(chId).find((b: any) => b.match?.accountId === '*');
+                  return wild ? (wild.agentId || null) : null;
+                };
+
+                const saveBindings = async (newBindings: any[]) => {
+                  setBindingSaving(true);
+                  try {
+                    const fresh = await gwApi.configSafePatch({ bindings: newBindings });
+                    setConfig(fresh);
+                    toast('success', a.bindingSaved || 'Binding saved');
+                  } catch (err: any) {
+                    toast('error', err?.message || a.bindingSaveFailed || 'Failed to save binding');
+                  }
+                  setBindingSaving(false);
+                };
+
+                const setBinding = (chId: string, accountId: string, agentId: string | null) => {
+                  let updated = allBindings.filter((b: any) =>
+                    !(b.match?.channel?.toLowerCase() === chId.toLowerCase() && b.match?.accountId?.toLowerCase() === accountId.toLowerCase())
+                  );
+                  if (agentId) {
+                    updated.push({ agentId, match: { channel: chId, accountId } });
+                  }
+                  saveBindings(updated);
+                };
+
+                const refreshChannels = () => {
+                  setChannelsLoading(true);
+                  setExpandedChannel(null);
+                  Promise.all([
+                    gwApi.channels().then(setChannelsSnap),
+                    gwApi.configGet().then(setConfig),
+                  ]).catch((err: any) => { toast('error', err?.message || a.channelsFetchFailed); }).finally(() => setChannelsLoading(false));
+                };
+
                 return (
                   <div className="space-y-4 max-w-5xl">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-[11px] font-bold text-slate-600 dark:text-white/60 uppercase">{a.channels}</h3>
-                      <button onClick={() => { setChannelsLoading(true); gwApi.channels().then(setChannelsSnap).catch((err: any) => { toast('error', err?.message || a.channelsFetchFailed); }).finally(() => setChannelsLoading(false)); }}
+                      <h3 className="text-[11px] font-bold text-slate-600 dark:text-white/60 uppercase">{a.channels} &amp; {a.bindings || 'Bindings'}</h3>
+                      <button onClick={refreshChannels}
                         className="text-[10px] text-primary hover:underline">{a.refresh}</button>
                     </div>
                     {channelsLoading ? (
@@ -1055,14 +2123,239 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
                           const id = ch.id || ch.name || `ch-${i}`;
                           const label = ch.label || ch.name || id;
                           const isConn = ch.connected || ch.running || ch.status === 'connected';
+                          const isExpanded = expandedChannel === id;
+                          const accountIds = getChannelAccountIds(id, ch);
+                          const chBindings = getChannelBindings(id);
+                          const wildcardAgent = hasWildcardBinding(id);
+                          // Current agent's binding for this channel (C view highlight)
+                          const currentAgentBound = selectedId ? chBindings.some((b: any) =>
+                            b.agentId === selectedId && (b.match?.accountId === '*' || accountIds.some(aid => b.match?.accountId?.toLowerCase() === aid.toLowerCase()))
+                          ) : false;
+
                           return (
-                            <div key={id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.06]">
-                              <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${isConn ? 'bg-mac-green animate-pulse' : 'bg-slate-300 dark:bg-white/10'}`} />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-[11px] font-semibold text-slate-700 dark:text-white/60">{label}</p>
-                                <p className="text-[11px] text-slate-400 dark:text-white/35 font-mono">{id}</p>
+                            <div key={id} className={`rounded-xl border transition-all ${isExpanded
+                              ? 'border-primary/30 dark:border-primary/20 bg-white dark:bg-white/[0.03] shadow-sm'
+                              : currentAgentBound
+                                ? 'border-primary/20 dark:border-primary/10 bg-primary/[0.02] dark:bg-primary/[0.02]'
+                                : 'border-slate-200/60 dark:border-white/[0.06] bg-white dark:bg-white/[0.03]'
+                            }`}>
+                              {/* Collapsed header — always visible */}
+                              <div
+                                className="flex items-center gap-3 px-3 py-2.5 cursor-pointer select-none hover:bg-slate-50/50 dark:hover:bg-white/[0.02] rounded-xl transition-colors"
+                                onClick={() => setExpandedChannel(isExpanded ? null : id)}
+                              >
+                                <span className={`material-symbols-outlined text-[14px] text-slate-400 dark:text-white/30 transition-transform ${isExpanded ? 'rotate-90' : ''}`}>
+                                  chevron_right
+                                </span>
+                                <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${isConn ? 'bg-mac-green animate-pulse' : 'bg-slate-300 dark:bg-white/10'}`} />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-[11px] font-semibold text-slate-700 dark:text-white/60">{label}</p>
+                                    {currentAgentBound && (
+                                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-bold">{a.bindingThisAgent || 'This agent'}</span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                    <span className="text-[10px] text-slate-400 dark:text-white/30 font-mono">{id}</span>
+                                    {accountIds.length > 1 && <span className="text-[10px] text-slate-400/60 font-mono">· {(a.multiAccount || '{count} accounts').replace('{count}', String(accountIds.length))}</span>}
+                                    {accountIds.length === 1 && <span className="text-[10px] text-slate-400/60 font-mono">· {a.singleAccount || 'Single account'}</span>}
+                                    {(() => {
+                                      const chCfg = channelsCfg[id] || {};
+                                      const dmP = chCfg.dmPolicy || chCfg.dm_policy;
+                                      const grpP = chCfg.groupPolicy || chCfg.group_policy;
+                                      const af = chCfg.allowFrom || chCfg.allow_from;
+                                      const policyColor = (p: string) => p === 'open' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : p === 'allowlist' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' : p === 'pairing' ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400' : 'bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/40';
+                                      const policyLabel = (p: string) => p === 'open' ? (a.chPolicyOpen || 'Open') : p === 'allowlist' ? (a.chPolicyAllowlist || 'Allowlist') : p === 'pairing' ? (a.chPolicyPairing || 'Pairing') : p === 'disabled' ? (a.chPolicyDisabled || 'Disabled') : p;
+                                      return (
+                                        <>
+                                          {dmP && <span className={`text-[8px] px-1 py-0.5 rounded font-bold ${policyColor(dmP)}`}>{a.chDmPolicy || 'DM'}: {policyLabel(dmP)}</span>}
+                                          {grpP && <span className={`text-[8px] px-1 py-0.5 rounded font-bold ${policyColor(grpP)}`}>{a.chGroupPolicy || 'Group'}: {policyLabel(grpP)}</span>}
+                                          {af && <span className="text-[8px] px-1 py-0.5 rounded font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400">{a.chAllowFrom || 'Allow From'}: {Array.isArray(af) ? af.length : '✓'}</span>}
+                                        </>
+                                      );
+                                    })()}
+                                  </div>
+                                </div>
+                                <span className={`text-[10px] font-bold shrink-0 ${isConn ? 'text-mac-green' : 'text-slate-400'}`}>{isConn ? a.connected : a.disabled}</span>
                               </div>
-                              <span className={`text-[11px] font-bold ${isConn ? 'text-mac-green' : 'text-slate-400'}`}>{isConn ? a.connected : a.disabled}</span>
+
+                              {/* Expanded: account-level binding management */}
+                              {isExpanded && (
+                                <div className="px-3 pb-3 pt-1 border-t border-slate-200/40 dark:border-white/[0.04] space-y-1.5">
+                                  {/* Wildcard binding row */}
+                                  <div className="flex items-center gap-2 py-1.5 px-2 rounded-lg bg-slate-50/50 dark:bg-white/[0.02]">
+                                    <span className="material-symbols-outlined text-[13px] text-amber-500">asterisk</span>
+                                    <span className="text-[10px] font-bold text-slate-600 dark:text-white/50 flex-1">{a.bindingWildcard || 'All (*)'}</span>
+                                    <CustomSelect
+                                      value={wildcardAgent || ''}
+                                      disabled={bindingSaving}
+                                      onChange={v => setBinding(id, '*', v || null)}
+                                      placeholder={a.bindingNone || 'Unbound'}
+                                      options={[
+                                        { value: '', label: a.bindingNone || 'Unbound' },
+                                        ...agentOpts.map(aid => ({ value: aid, label: aid === selectedId ? `${aid} ◀` : aid }))
+                                      ]}
+                                      className="text-[10px] border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1 text-slate-600 dark:text-white/60 min-w-[120px] h-7"
+                                    />
+                                  </div>
+
+                                  {/* Per-account binding rows */}
+                                  {accountIds.length > 0 && accountIds.map(accountId => {
+                                    const boundAgent = getBoundAgent(id, accountId);
+                                    // Find exact binding (not wildcard)
+                                    const exactBinding = chBindings.find((b: any) => b.match?.accountId?.toLowerCase() === accountId.toLowerCase());
+                                    const exactAgent = exactBinding?.agentId || '';
+                                    const isCurrentAgent = exactAgent === selectedId || (!exactAgent && wildcardAgent === selectedId);
+                                    return (
+                                      <div key={accountId} className={`flex items-center gap-2 py-1.5 px-2 rounded-lg transition-colors ${
+                                        isCurrentAgent ? 'bg-primary/[0.04] dark:bg-primary/[0.04]' : 'hover:bg-slate-50/50 dark:hover:bg-white/[0.02]'
+                                      }`}>
+                                        <span className="material-symbols-outlined text-[13px] text-slate-400 dark:text-white/25">person</span>
+                                        <span className={`text-[10px] font-mono flex-1 truncate ${
+                                          isCurrentAgent ? 'font-bold text-primary' : 'text-slate-600 dark:text-white/50'
+                                        }`}>{accountId}</span>
+                                        <CustomSelect
+                                          value={exactAgent}
+                                          disabled={bindingSaving}
+                                          onChange={v => setBinding(id, accountId, v || null)}
+                                          placeholder={wildcardAgent ? `← ${wildcardAgent} (*)` : (a.bindingNone || 'Unbound')}
+                                          options={[
+                                            { value: '', label: wildcardAgent ? `← ${wildcardAgent} (*)` : (a.bindingNone || 'Unbound') },
+                                            ...agentOpts.map(aid => ({ value: aid, label: aid === selectedId ? `${aid} ◀` : aid }))
+                                          ]}
+                                          className="text-[10px] border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1 text-slate-600 dark:text-white/60 min-w-[120px] h-7"
+                                        />
+                                        {boundAgent && (
+                                          <span className={`text-[9px] px-1 py-0.5 rounded ${
+                                            boundAgent === selectedId ? 'bg-primary/10 text-primary' : 'bg-slate-100 dark:bg-white/[0.05] text-slate-500 dark:text-white/40'
+                                          } font-bold`}>
+                                            → {boundAgent}
+                                          </span>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+
+                                  {accountIds.length === 0 && (
+                                    <p className="text-[10px] text-slate-400 dark:text-white/20 py-2 text-center italic">{a.noAccounts || 'No accounts'}</p>
+                                  )}
+
+                                  {/* Peer-level bindings (read-only + delete) */}
+                                  {(() => {
+                                    const peerBindings = getChannelPeerBindings(id);
+                                    if (peerBindings.length === 0) return null;
+                                    return (
+                                      <>
+                                        <div className="border-t border-dashed border-slate-200/40 dark:border-white/[0.06] mt-2 pt-2">
+                                          <p className="text-[9px] font-bold text-slate-400 dark:text-white/25 uppercase tracking-wider mb-1.5 px-1">
+                                            {a.bindingPeerRules || 'Peer Rules'}
+                                          </p>
+                                          {peerBindings.map((b: any, bi: number) => {
+                                            const pk = b.match?.peer?.kind || 'group';
+                                            const pid = b.match?.peer?.id || '';
+                                            const agent = b.agentId || '';
+                                            const isThisAgent = agent === selectedId;
+                                            return (
+                                              <div key={`peer-${bi}`} className={`flex items-center gap-2 py-1.5 px-2 rounded-lg transition-colors ${
+                                                isThisAgent ? 'bg-primary/[0.04]' : 'hover:bg-slate-50/50 dark:hover:bg-white/[0.02]'
+                                              }`}>
+                                                <span className="material-symbols-outlined text-[13px] text-violet-400 dark:text-violet-400/70">
+                                                  {pk === 'group' ? 'group' : pk === 'direct' ? 'person' : 'tag'}
+                                                </span>
+                                                <span className="text-[10px] font-mono text-slate-500 dark:text-white/40 truncate flex-1" title={pid}>{pid}</span>
+                                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                                  isThisAgent ? 'bg-primary/10 text-primary' : 'bg-slate-100 dark:bg-white/[0.05] text-slate-500 dark:text-white/40'
+                                                }`}>{agent}</span>
+                                                <button
+                                                  onClick={() => removePeerBinding(id, pk, pid)}
+                                                  disabled={bindingSaving}
+                                                  className="p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-500/10 text-slate-300 hover:text-red-500 dark:text-white/15 dark:hover:text-red-400 transition-colors"
+                                                  title={a.bindingRemove || 'Remove'}
+                                                >
+                                                  <span className="material-symbols-outlined text-[12px]">close</span>
+                                                </button>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      </>
+                                    );
+                                  })()}
+
+                                  {/* Channel Policy Config (P3b) */}
+                                  {(() => {
+                                    const chCfg = channelsCfg[id] || {};
+                                    const dmP = chCfg.dmPolicy || chCfg.dm_policy || '';
+                                    const grpP = chCfg.groupPolicy || chCfg.group_policy || '';
+                                    const af: string[] = Array.isArray(chCfg.allowFrom || chCfg.allow_from) ? (chCfg.allowFrom || chCfg.allow_from) : [];
+                                    const POLICY_OPTS = [
+                                      { value: '', label: '—' },
+                                      { value: 'open', label: a.chPolicyOpen || 'Open' },
+                                      { value: 'allowlist', label: a.chPolicyAllowlist || 'Allowlist' },
+                                      { value: 'pairing', label: a.chPolicyPairing || 'Pairing' },
+                                      { value: 'disabled', label: a.chPolicyDisabled || 'Disabled' },
+                                    ];
+                                    const saveChPolicy = async (patch: Record<string, any>) => {
+                                      setBindingSaving(true);
+                                      try {
+                                        const parsed = config?.parsed || config?.config || config || {};
+                                        const chAll = { ...(parsed?.channels || {}) };
+                                        chAll[id] = { ...(chAll[id] || {}), ...patch };
+                                        const fresh = await gwApi.configSafePatch({ channels: chAll });
+                                        setConfig(fresh);
+                                        toast('success', a.bindingSaved || 'Saved');
+                                      } catch (err: any) { toast('error', err?.message || a.bindingSaveFailed || 'Failed'); }
+                                      setBindingSaving(false);
+                                    };
+                                    return (
+                                      <div className="border-t border-dashed border-slate-200/40 dark:border-white/[0.06] mt-2 pt-2">
+                                        <p className="text-[9px] font-bold text-slate-400 dark:text-white/25 uppercase tracking-wider mb-1.5 px-1">{a.chPolicyTitle || 'Channel Policies'}</p>
+                                        <div className="grid grid-cols-3 gap-2">
+                                          <div>
+                                            <label className="text-[9px] font-bold text-slate-400 dark:text-white/20 uppercase block mb-0.5">{a.chDmPolicy || 'DM Policy'}</label>
+                                            <CustomSelect value={dmP} disabled={bindingSaving} onChange={v => saveChPolicy({ dmPolicy: v || undefined })} options={POLICY_OPTS}
+                                              className="text-[10px] border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1 text-slate-600 dark:text-white/60 w-full h-7" />
+                                          </div>
+                                          <div>
+                                            <label className="text-[9px] font-bold text-slate-400 dark:text-white/20 uppercase block mb-0.5">{a.chGroupPolicy || 'Group Policy'}</label>
+                                            <CustomSelect value={grpP} disabled={bindingSaving} onChange={v => saveChPolicy({ groupPolicy: v || undefined })} options={POLICY_OPTS}
+                                              className="text-[10px] border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1 text-slate-600 dark:text-white/60 w-full h-7" />
+                                          </div>
+                                          <div>
+                                            <label className="text-[9px] font-bold text-slate-400 dark:text-white/20 uppercase block mb-0.5">{a.chAllowFrom || 'Allow From'} {af.length > 0 && <span className="text-[8px] text-amber-500">({af.length})</span>}</label>
+                                            <div className="flex gap-1">
+                                              <input id={`af-input-${id}`} placeholder={a.chAfPlaceholder || 'Group/User ID…'} disabled={bindingSaving}
+                                                className="flex-1 h-7 px-2 bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-lg text-[9px] font-mono text-slate-500 dark:text-white/40 outline-none focus:border-primary/30 min-w-0"
+                                                onKeyDown={e => { if (e.key === 'Enter') { const v = (e.target as HTMLInputElement).value.trim(); if (v && !af.includes(v)) { saveChPolicy({ allowFrom: [...af, v] }); (e.target as HTMLInputElement).value = ''; } } }} />
+                                              <button disabled={bindingSaving} onClick={() => { const el = document.getElementById(`af-input-${id}`) as HTMLInputElement; const v = el?.value?.trim(); if (v && !af.includes(v)) { saveChPolicy({ allowFrom: [...af, v] }); el.value = ''; } }}
+                                                className="h-7 px-1.5 bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-lg text-[9px] text-slate-400 dark:text-white/20 hover:text-primary transition-colors shrink-0">
+                                                <span className="material-symbols-outlined text-[10px]">add</span>
+                                              </button>
+                                            </div>
+                                            {af.length > 0 && (
+                                              <div className="flex flex-wrap gap-1 mt-1">
+                                                {af.map((item, idx) => (
+                                                  <span key={idx} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[8px] font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                                    {item}
+                                                    <button disabled={bindingSaving} onClick={() => saveChPolicy({ allowFrom: af.filter((_, i) => i !== idx) })} className="p-0 opacity-40 hover:opacity-100"><span className="material-symbols-outlined text-[8px]">close</span></button>
+                                                  </span>
+                                                ))}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })()}
+
+                                  {bindingSaving && (
+                                    <div className="flex items-center justify-center gap-1.5 py-1">
+                                      <span className="material-symbols-outlined text-[12px] text-primary animate-spin">progress_activity</span>
+                                      <span className="text-[10px] text-slate-400">{a.saving}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           );
                         })}
@@ -1340,10 +2633,22 @@ const Agents: React.FC<AgentsProps> = ({ language }) => {
                       const defaults = cfg0?.defaults;
                       const refEntry = list.find((en: any) => en?.workspace) || defaults;
                       const refWs = refEntry?.workspace || '';
+                      let wsBase = '';
                       if (refWs) {
                         const sep = refWs.includes('\\') ? '\\' : '/';
                         const lastSep = refWs.lastIndexOf(sep);
-                        const wsBase = lastSep > 0 ? refWs.slice(0, lastSep) : refWs;
+                        wsBase = lastSep > 0 ? refWs.slice(0, lastSep) : refWs;
+                      }
+                      if (!wsBase) {
+                        const cfgPath = config?.path || '';
+                        if (cfgPath) {
+                          const sep = cfgPath.includes('\\') ? '\\' : '/';
+                          const lastSep = cfgPath.lastIndexOf(sep);
+                          wsBase = lastSep > 0 ? cfgPath.slice(0, lastSep) : cfgPath;
+                        }
+                      }
+                      if (wsBase) {
+                        const sep = wsBase.includes('\\') ? '\\' : '/';
                         setCrudWorkspace(newName.trim() ? `${wsBase}${sep}workspace-${newName.trim()}` : '');
                       }
                     }

@@ -3,7 +3,7 @@
 import (
 	"os"
 
-	"HAClaw/internal/cli"
+	"HAClaw-OS/internal/cli"
 )
 
 func main() {

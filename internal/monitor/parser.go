@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"HAClaw/internal/constants"
-	"HAClaw/internal/i18n"
-	"HAClaw/internal/logger"
+	"HAClaw-OS/internal/constants"
+	"HAClaw-OS/internal/i18n"
+	"HAClaw-OS/internal/logger"
 )
 
 type RawEvent struct {

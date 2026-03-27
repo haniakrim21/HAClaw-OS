@@ -494,7 +494,7 @@ const UsageWizard: React.FC<UsageWizardProps> = ({ language, onOpenEditor, onOpe
   }, [editingFile, resolveI18n]);
 
   const openEditorSection = useCallback((section: string) => {
-    window.dispatchEvent(new CustomEvent('clawdeck:open-window', { detail: { id: 'editor', section } }));
+    window.dispatchEvent(new CustomEvent('haclaw:open-window', { detail: { id: 'editor', section } }));
   }, []);
 
   // Generate identity config from Q&A fields — IDENTITY.md + USER.md
@@ -853,7 +853,7 @@ const UsageWizard: React.FC<UsageWizardProps> = ({ language, onOpenEditor, onOpe
                   <span className="material-symbols-outlined text-[16px]">chat</span>{o?.completionGoChat}
                 </button>
               )}
-              <button onClick={() => window.dispatchEvent(new CustomEvent('clawdeck:open-window', { detail: { id: 'knowledge' } }))}
+              <button onClick={() => window.dispatchEvent(new CustomEvent('haclaw:open-window', { detail: { id: 'knowledge' } }))}
                 className="text-[11px] px-4 py-2 rounded-xl border border-mac-green/30 text-mac-green font-bold hover:bg-mac-green/5 transition-colors flex items-center gap-1">
                 <span className="material-symbols-outlined text-[14px]">lightbulb</span>{o?.completionGoTips}
               </button>

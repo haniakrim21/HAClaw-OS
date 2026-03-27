@@ -2,16 +2,16 @@ import React, { useState, useMemo } from 'react';
 import { SectionProps } from '../sectionTypes';
 import { ConfigSection, ConfigCard, TextField, PasswordField, NumberField, SelectField, SwitchField, ArrayField, KeyValueField, AddButton, EmptyState } from '../fields';
 import { getTranslation } from '../../../locales';
-import { getTooltip } from '../../../locales/tooltips';
+import { schemaTooltip } from '../schemaTooltip';
 
 const NODE_MANAGER_OPTIONS = [
   { value: 'npm', label: 'npm' }, { value: 'pnpm', label: 'pnpm' },
   { value: 'yarn', label: 'yarn' }, { value: 'bun', label: 'bun' },
 ];
 
-export const ExtensionsSection: React.FC<SectionProps> = ({ setField, getField, deleteField, language }) => {
+export const ExtensionsSection: React.FC<SectionProps> = ({ schema, setField, getField, deleteField, language }) => {
   const es = useMemo(() => (getTranslation(language) as any).es || {}, [language]);
-  const tip = (key: string) => getTooltip(key, language);
+  const tip = (key: string) => schemaTooltip(key, language, schema);
 
   // Skills
   const gs = (p: string[]) => getField(['skills', ...p]);

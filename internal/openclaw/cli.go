@@ -1,8 +1,8 @@
 package openclaw
 
 import (
-	"HAClaw/internal/executil"
-	"HAClaw/internal/i18n"
+	"HAClaw-OS/internal/executil"
+	"HAClaw-OS/internal/i18n"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -15,10 +15,24 @@ import (
 )
 
 func ResolveOpenClawCmd() string {
-	if _, err := exec.LookPath("openclaw"); err == nil {
-		return "openclaw"
+	// Fast path: check cache first
+	discoveryMu.RLock()
+	if discoveryDone {
+		p := discoveredPath
+		discoveryMu.RUnlock()
+		return p
 	}
-	return ""
+	discoveryMu.RUnlock()
+
+	// Full discovery scan
+	discoveryMu.Lock()
+	defer discoveryMu.Unlock()
+	if discoveryDone {
+		return discoveredPath
+	}
+	discoveredPath = discoverOpenClawBinary()
+	discoveryDone = true
+	return discoveredPath
 }
 
 func IsOpenClawInstalled() bool {
@@ -501,16 +515,14 @@ type BackupArchiveInfo struct {
 }
 
 // DefaultBackupDir returns the default directory for storing OpenClaw native backups.
+// The directory MUST be outside the OpenClaw state dir (~/.openclaw), because the
+// OpenClaw CLI refuses to write backup archives inside a source path.
 func DefaultBackupDir() string {
-	stateDir := ResolveStateDir()
-	if stateDir == "" {
-		home, _ := os.UserHomeDir()
-		if home == "" {
-			return ""
-		}
-		stateDir = filepath.Join(home, ".openclaw")
+	home, _ := os.UserHomeDir()
+	if home == "" {
+		return ""
 	}
-	dir := filepath.Join(stateDir, "backups")
+	dir := filepath.Join(home, "HAClaw-OS", "backups")
 	os.MkdirAll(dir, 0o700)
 	return dir
 }

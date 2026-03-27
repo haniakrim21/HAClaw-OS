@@ -2,13 +2,13 @@ import React, { useMemo } from 'react';
 import { SectionProps } from '../sectionTypes';
 import { ConfigSection, TextField, NumberField, SelectField, SwitchField, ArrayField, KeyValueField } from '../fields';
 import { getTranslation } from '../../../locales';
-import { getTooltip } from '../../../locales/tooltips';
+import { schemaTooltip } from '../schemaTooltip';
 
 // Options moved inside component
 
-export const ToolsSection: React.FC<SectionProps> = ({ setField, getField, language }) => {
+export const ToolsSection: React.FC<SectionProps> = ({ schema, setField, getField, language }) => {
   const es = useMemo(() => (getTranslation(language) as any).es || {}, [language]);
-  const tip = (key: string) => getTooltip(key, language);
+  const tip = (key: string) => schemaTooltip(key, language, schema);
   const g = (p: string[]) => getField(['tools', ...p]);
   const s = (p: string[], v: any) => setField(['tools', ...p], v);
 

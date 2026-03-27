@@ -12,7 +12,7 @@ import (
 type Component string
 
 const (
-	ComponentHAClaw Component = "haclaw"
+	ComponentHAClaw-OS Component = "haclawx"
 	ComponentOpenClaw  Component = "openclaw"
 )
 
@@ -42,7 +42,7 @@ type Status struct {
 // AllStatus is the combined status for both components.
 type AllStatus struct {
 	IsDocker  bool   `json:"is_docker"`
-	HAClaw Status `json:"haclaw"`
+	HAClaw-OS Status `json:"haclawx"`
 	OpenClaw  Status `json:"openclaw"`
 }
 

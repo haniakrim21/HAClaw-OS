@@ -2,13 +2,13 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { SectionProps } from '../sectionTypes';
 import { ConfigSection, TextField, SelectField, SwitchField, KeyValueField, NumberField, ArrayField } from '../fields';
 import { getTranslation } from '../../../locales';
-import { getTooltip } from '../../../locales/tooltips';
+import { schemaTooltip } from '../schemaTooltip';
 
 // Options moved inside component
 
-export const MiscSection: React.FC<SectionProps> = ({ setField, getField, deleteField, language }) => {
+export const MiscSection: React.FC<SectionProps> = ({ schema, setField, getField, deleteField, language }) => {
   const es = useMemo(() => (getTranslation(language) as any).es || {}, [language]);
-  const tip = (key: string) => getTooltip(key, language);
+  const tip = (key: string) => schemaTooltip(key, language, schema);
   const gg = (p: string[]) => getField(['gateway', ...p]);
   const gs = (p: string[], v: any) => setField(['gateway', ...p], v);
 

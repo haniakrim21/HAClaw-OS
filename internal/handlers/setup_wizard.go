@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"HAClaw/internal/database"
-	"HAClaw/internal/openclaw"
-	"HAClaw/internal/setup"
-	"HAClaw/internal/web"
+	"HAClaw-OS/internal/database"
+	"HAClaw-OS/internal/openclaw"
+	"HAClaw-OS/internal/setup"
+	"HAClaw-OS/internal/web"
 )
 
 // SetupWizardHandler handles the setup wizard API.
@@ -449,6 +449,9 @@ func (h *SetupWizardHandler) Uninstall(w http.ResponseWriter, r *http.Request) {
 			npmErr = nil // force remove succeeded, clear the npm error
 		}
 	}
+
+	// Invalidate discovery cache so subsequent checks reflect uninstall
+	openclaw.InvalidateDiscoveryCache()
 
 	// Also clean up .openclaw config directory
 	stateDir := openclaw.ResolveStateDir()

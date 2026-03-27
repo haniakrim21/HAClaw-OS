@@ -1,5 +1,5 @@
 // Package proclock provides a file-based process lock to prevent multiple
-// instances of HAClaw from running simultaneously.
+// instances of HAClaw-OS from running simultaneously.
 //
 // Inspired by openclaw's gateway-lock.ts, it writes a JSON lock file containing
 // the PID and startup timestamp. On subsequent launches, it checks whether the
@@ -19,7 +19,7 @@ import (
 
 const (
 	// LockFileName is the name of the lock file stored in the data directory.
-	LockFileName = "haclaw.lock"
+	LockFileName = "haclawx.lock"
 	// DefaultStaleMs is the maximum age of a lock file before it is considered stale.
 	DefaultStaleMs = 30_000
 )
@@ -38,7 +38,7 @@ type Lock struct {
 }
 
 // ErrAlreadyRunning is returned when another instance holds a valid lock.
-var ErrAlreadyRunning = errors.New("another HAClaw instance is already running")
+var ErrAlreadyRunning = errors.New("another HAClaw-OS instance is already running")
 
 // Acquire tries to acquire the process lock.
 // dataDir is the directory where the lock file is stored.

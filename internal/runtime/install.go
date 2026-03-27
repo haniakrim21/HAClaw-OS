@@ -10,26 +10,26 @@ import (
 	"path/filepath"
 	"time"
 
-	"HAClaw/internal/executil"
-	"HAClaw/internal/logger"
-	"HAClaw/internal/updater"
+	"HAClaw-OS/internal/executil"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/updater"
 )
 
-// InstallHAClaw downloads a HAClaw release binary into the runtime overlay.
+// InstallHAClaw-OS downloads a HAClaw-OS release binary into the runtime overlay.
 // The downloadURL should point to the linux-amd64 or linux-arm64 binary.
 // progressFn receives progress updates (can be nil).
-func (m *Manager) InstallHAClaw(ctx context.Context, downloadURL string, progressFn func(updater.ApplyProgress)) error {
+func (m *Manager) InstallHAClaw-OS(ctx context.Context, downloadURL string, progressFn func(updater.ApplyProgress)) error {
 	if err := m.EnsureDirs(); err != nil {
 		return err
 	}
 
-	dir := m.binaryDir(ComponentHAClaw)
-	binPath := filepath.Join(dir, "haclaw")
+	dir := m.binaryDir(ComponentHAClaw-OS)
+	binPath := filepath.Join(dir, "haclawx")
 	tmpPath := binPath + ".tmp"
 
 	// Read current manifest for prev_version
 	prevVersion := ""
-	if mf, _ := m.ReadManifest(ComponentHAClaw); mf != nil {
+	if mf, _ := m.ReadManifest(ComponentHAClaw-OS); mf != nil {
 		prevVersion = mf.Version
 	}
 
@@ -117,7 +117,7 @@ func (m *Manager) InstallHAClaw(ctx context.Context, downloadURL string, progres
 
 	// Write manifest
 	mf := &Manifest{
-		Component:   ComponentHAClaw,
+		Component:   ComponentHAClaw-OS,
 		Version:     newVersion,
 		InstalledAt: time.Now().UTC(),
 		Source:      "github-release",
@@ -134,7 +134,7 @@ func (m *Manager) InstallHAClaw(ctx context.Context, downloadURL string, progres
 		Str("version", newVersion).
 		Str("prev", prevVersion).
 		Str("path", binPath).
-		Msg("HAClaw runtime overlay installed")
+		Msg("HAClaw-OS runtime overlay installed")
 
 	return nil
 }
@@ -211,7 +211,7 @@ func detectBinaryVersion(binPath string) string {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Try "serve --version" first (HAClaw pattern)
+	// Try "serve --version" first (HAClaw-OS pattern)
 	vCmd := exec.CommandContext(ctx, binPath, "version")
 	executil.HideWindow(vCmd)
 	out, err := vCmd.CombinedOutput()
@@ -239,14 +239,14 @@ func detectBinaryVersion(binPath string) string {
 // parseVersionOutput extracts a version-like string from command output.
 func parseVersionOutput(s string) string {
 	s = trimAll(s)
-	// Common patterns: "v0.0.18", "0.0.18", "HAClaw v0.0.18"
+	// Common patterns: "v0.0.18", "0.0.18", "HAClaw-OS v0.0.18"
 	for _, line := range splitLines(s) {
 		line = trimAll(line)
 		if len(line) == 0 {
 			continue
 		}
 		// Remove known prefixes
-		for _, prefix := range []string{"haclaw ", "openclaw ", "version ", "v"} {
+		for _, prefix := range []string{"haclawx ", "openclaw ", "version ", "v"} {
 			if len(line) > len(prefix) && lower(line[:len(prefix)]) == prefix {
 				line = line[len(prefix):]
 			}

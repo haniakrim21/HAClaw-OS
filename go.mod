@@ -1,4 +1,4 @@
-module HAClaw
+module HAClaw-OS
 
 go 1.24.0
 

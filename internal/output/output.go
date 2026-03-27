@@ -1,7 +1,7 @@
 package output
 
 import (
-	"HAClaw/internal/i18n"
+	"HAClaw-OS/internal/i18n"
 	"fmt"
 	"os"
 	"strings"

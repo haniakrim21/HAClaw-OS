@@ -1,4 +1,4 @@
-﻿// HAClaw API 服务层 — 对应后端所有 REST API 端点
+﻿// HAClaw-OS API 服务层 — 对应后端所有 REST API 端点
 import { get, getCached, post, put, del, setToken, clearToken, ApiError } from './request';
 import { translateApiError } from './errorCodes';
 
@@ -57,11 +57,11 @@ export const selfUpdateApi = {
 };
 
 export const serviceApi = {
-  status: () => get<{ openclaw_installed: boolean; haclaw_installed: boolean; is_docker: boolean }>('/api/v1/service/status'),
+  status: () => get<{ openclaw_installed: boolean; haclawx_installed: boolean; is_docker: boolean }>('/api/v1/service/status'),
   installOpenClaw: () => post<{ message: string }>('/api/v1/service/openclaw/install', {}),
   uninstallOpenClaw: () => post<{ message: string }>('/api/v1/service/openclaw/uninstall', {}),
-  installHAClaw: () => post<{ message: string }>('/api/v1/service/haclaw/install', {}),
-  uninstallHAClaw: () => post<{ message: string }>('/api/v1/service/haclaw/uninstall', {}),
+  installHAClaw-OS: () => post<{ message: string }>('/api/v1/service/haclawx/install', {}),
+  uninstallHAClaw-OS: () => post<{ message: string }>('/api/v1/service/haclawx/uninstall', {}),
 };
 
 // ==================== Docker 运行时覆盖 ====================
@@ -77,7 +77,7 @@ export interface RuntimeComponentStatus {
 }
 export interface RuntimeStatus {
   is_docker: boolean;
-  haclaw: RuntimeComponentStatus;
+  haclawx: RuntimeComponentStatus;
   openclaw: RuntimeComponentStatus;
 }
 export const runtimeApi = {
@@ -927,7 +927,7 @@ export const gwApi = {
     if (params?.limit) qs.set('limit', String(params.limit));
     if (params?.key) qs.set('key', params.key);
     const q = qs.toString();
-    return get(`/api/v1/gw/sessions/usage${q ? '?' + q : ''}`);
+    return getCached(`/api/v1/gw/sessions/usage${q ? '?' + q : ''}`, 15_000);
   },
   usageCost: (params?: { startDate?: string; endDate?: string; days?: number }) => {
     const qs = new URLSearchParams();
@@ -935,7 +935,7 @@ export const gwApi = {
     if (params?.endDate) qs.set('endDate', params.endDate);
     if (params?.days) qs.set('days', String(params.days));
     const q = qs.toString();
-    return get(`/api/v1/gw/usage/cost${q ? '?' + q : ''}`);
+    return getCached(`/api/v1/gw/usage/cost${q ? '?' + q : ''}`, 15_000);
   },
   skillsConfig: () => get('/api/v1/gw/skills/config'),
   skillsConfigure: (data: any) => post('/api/v1/gw/skills/configure', data),
@@ -952,6 +952,13 @@ export const gwApi = {
     rpc('sessions.preview', { keys: [key], limit, maxChars: 500 }),
   sessionsHistory: (key: string) =>
     rpc('chat.history', { sessionKey: key }),
+  sessionsHistoryPaginated: (key: string, limit?: number, cursor?: string) => {
+    const qs = new URLSearchParams();
+    qs.set('key', key);
+    if (limit) qs.set('limit', String(limit));
+    if (cursor) qs.set('cursor', cursor);
+    return get<{ sessionKey: string; messages: any[]; hasMore: boolean; nextCursor?: string }>(`/api/v1/gw/sessions/history-paginated?${qs.toString()}`);
+  },
   sessionsReset: (key: string) =>
     rpc('sessions.reset', { key }),
   sessionsDelete: (key: string, deleteTranscript = false) =>
@@ -1010,7 +1017,60 @@ export const gwApi = {
     rpc('config.apply', { raw, baseHash }),
   configPatch: (raw: string, baseHash: string) =>
     rpc('config.patch', { raw, baseHash }),
+  /**
+   * Safe config patch: auto-fetches current hash, patches, and returns fresh config.
+   * Retries once on hash mismatch (e.g. after gateway restart).
+   * @param patch - config patch object (will be JSON.stringify'd)
+   * @returns fresh config from configGet after successful patch
+   */
+  configSafePatch: async (patch: Record<string, any>): Promise<any> => {
+    const fetchHash = async () => {
+      const res: any = await rpc('config.get');
+      return res?.hash || res?.baseHash || '';
+    };
+    const raw = JSON.stringify(patch);
+    let hash = await fetchHash();
+    try {
+      await rpc('config.patch', { raw, baseHash: hash });
+    } catch (err: any) {
+      const msg = err?.message || '';
+      const code = err?.code || err?.errorCode || '';
+      if (code === 'HASH_MISMATCH' || msg.includes('hash') || msg.includes('Hash')) {
+        hash = await fetchHash();
+        await rpc('config.patch', { raw, baseHash: hash });
+      } else {
+        throw err;
+      }
+    }
+    return rpc('config.get');
+  },
+  /**
+   * Safe config apply: auto-fetches current hash, applies full config, and returns result.
+   * Retries once on hash mismatch (e.g. after gateway restart).
+   * @param raw - full config JSON string
+   * @returns result from configApply
+   */
+  configSafeApply: async (raw: string): Promise<any> => {
+    const fetchHash = async () => {
+      const res: any = await rpc('config.get');
+      return res?.hash || res?.baseHash || '';
+    };
+    let hash = await fetchHash();
+    try {
+      return await rpc('config.apply', { raw, baseHash: hash });
+    } catch (err: any) {
+      const msg = err?.message || '';
+      const code = err?.code || err?.errorCode || '';
+      if (code === 'HASH_MISMATCH' || msg.includes('hash') || msg.includes('Hash')) {
+        hash = await fetchHash();
+        return await rpc('config.apply', { raw, baseHash: hash });
+      }
+      throw err;
+    }
+  },
   configSchema: () => rpc('config.schema'),
+  configSchemaLookup: (path: string) => rpc('config.schema.lookup', { path }),
+  secretsReload: () => rpc('secrets.reload'),
   // Agents
   agents: () => rpc<any[]>('agents.list'),
   agentIdentity: (agentId: string) =>
@@ -1081,6 +1141,8 @@ export const gwApi = {
     rpc('device.pair.approve', { requestId }),
   devicePairReject: (requestId: string) =>
     rpc('device.pair.reject', { requestId }),
+  devicePairRemove: (deviceId: string) =>
+    rpc('device.pair.remove', { deviceId }),
   deviceTokenRotate: (deviceId: string, role: string, scopes?: string[]) =>
     rpc('device.token.rotate', { deviceId, role, scopes }),
   deviceTokenRevoke: (deviceId: string, role: string) =>
@@ -1195,6 +1257,8 @@ export const clawHubApi = {
   search: (q: string) => get<any[]>(`/api/v1/clawhub/search?q=${encodeURIComponent(q)}`),
   detail: (slug: string) => get(`/api/v1/clawhub/skill?slug=${encodeURIComponent(slug)}`),
   install: (slug: string) => post('/api/v1/clawhub/install', { slug }),
+  installRecipe: (recipe: { recipeId: string; kind: string; package?: string; formula?: string; bins?: string[]; label?: string; skillKey?: string }) =>
+    post<{ success: boolean; recipeId: string; kind: string; output: string; verifiedBins: Record<string, boolean> }>('/api/v1/clawhub/install-recipe', recipe),
   uninstall: (slug: string) => post('/api/v1/clawhub/uninstall', { slug }),
   update: (slug: string) => post('/api/v1/clawhub/update', { slug }),
   updateAll: () => post('/api/v1/clawhub/update', { all: true }),
@@ -1255,6 +1319,21 @@ export const contextBudgetApi = {
     post<OptimizeResult>('/api/v1/maintenance/context/optimize', { fileName, agentId }),
   optimizeAll: (agentId?: string) => 
     post<{ results: OptimizeResult[]; totalSaved: number }>('/api/v1/maintenance/context/optimize-all', { agentId }),
+};
+
+// ==================== 工作区记忆日志 ====================
+export interface MemoryFileEntry {
+  name: string;
+  size: number;
+  modTime: string;
+}
+export const workspaceMemoryApi = {
+  list: (agentId?: string) =>
+    get<{ files: MemoryFileEntry[]; dir: string }>(`/api/v1/workspace/memory${agentId ? `?agent=${agentId}` : ''}`),
+  getFile: (name: string, agentId?: string) =>
+    get<{ name: string; content: string }>(`/api/v1/workspace/memory/file?name=${encodeURIComponent(name)}${agentId ? `&agent=${agentId}` : ''}`),
+  setFile: (name: string, content: string, agentId?: string) =>
+    put<{ name: string; size: number }>(`/api/v1/workspace/memory/file?name=${encodeURIComponent(name)}${agentId ? `&agent=${agentId}` : ''}`, { content }),
 };
 
 // ==================== 多 Agent 部署 ====================

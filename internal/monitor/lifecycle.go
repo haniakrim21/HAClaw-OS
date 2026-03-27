@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"HAClaw/internal/database"
-	"HAClaw/internal/logger"
-	"HAClaw/internal/web"
+	"HAClaw-OS/internal/database"
+	"HAClaw-OS/internal/logger"
+	"HAClaw-OS/internal/web"
 )
 
 // LifecycleRecorder records gateway process lifecycle events and sends notifications.

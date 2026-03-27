@@ -1,4 +1,4 @@
-// Package i18n provides internationalization support for HAClaw.
+// Package i18n provides internationalization support for HAClaw-OS.
 // It supports multiple languages with embedded locale files and provides
 // a simple T() function for translating messages.
 package i18n

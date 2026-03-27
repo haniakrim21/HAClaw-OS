@@ -9,8 +9,8 @@ import (
 	"sort"
 	"strings"
 
-	"HAClaw/internal/openclaw"
-	"HAClaw/internal/web"
+	"HAClaw-OS/internal/openclaw"
+	"HAClaw-OS/internal/web"
 )
 
 type OpenClawBackupHandler struct{}

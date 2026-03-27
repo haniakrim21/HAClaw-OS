@@ -9,7 +9,7 @@ import (
 	"strings"
 	"unicode"
 
-	"HAClaw/internal/openclaw"
+	"HAClaw-OS/internal/openclaw"
 )
 
 func defaultRegistry() []ResourceDefinition {

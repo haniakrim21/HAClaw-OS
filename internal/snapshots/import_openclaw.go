@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"HAClaw/internal/database"
+	"HAClaw-OS/internal/database"
 )
 
 // openclawManifest mirrors the manifest.json structure from `openclaw backup create`.
@@ -61,7 +61,7 @@ type OpenClawImportResult struct {
 }
 
 // ImportFromTarGz imports an OpenClaw `.tar.gz` backup archive, re-encrypts it
-// as a HAClaw snapshot using the provided password, and stores it.
+// as a HAClaw-OS snapshot using the provided password, and stores it.
 func (s *Service) ImportFromTarGz(data []byte, password, note string) (*OpenClawImportResult, error) {
 	if len(password) < 6 {
 		return nil, errors.New("password too short")
@@ -196,7 +196,7 @@ func parseTarGz(data []byte) (*openclawManifest, map[string][]byte, error) {
 	return manifest, files, nil
 }
 
-// convertOpenClawToResources maps OpenClaw backup assets to HAClaw resource content.
+// convertOpenClawToResources maps OpenClaw backup assets to HAClaw-OS resource content.
 func convertOpenClawToResources(m *openclawManifest, files map[string][]byte) []ResourceContent {
 	var resources []ResourceContent
 
@@ -313,7 +313,7 @@ func (s *Service) ExportAsOpenClawTarGz(snapshotID, password string) ([]byte, st
 		CreatedAt:      now.Format(time.RFC3339),
 		ArchiveRoot:    archiveRoot,
 		RuntimeVersion: manifest.AppVersion,
-		Platform:       "haclaw",
+		Platform:       "haclawx",
 	}
 	for _, res := range manifest.Resources {
 		ocManifest.Assets = append(ocManifest.Assets, struct {

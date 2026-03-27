@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"HAClaw/internal/i18n"
-	"HAClaw/internal/logger"
+	"HAClaw-OS/internal/i18n"
+	"HAClaw-OS/internal/logger"
 )
 
 type DeviceIdentity struct {
