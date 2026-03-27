@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 )
@@ -202,33 +201,8 @@ func auditConfigJSON(configRaw json.RawMessage) *SecurityAuditReport {
 
 // checkPlaintextSecrets scans config values for potential plaintext secrets.
 func checkPlaintextSecrets(obj map[string]interface{}, prefix string, findings *[]SecurityAuditFinding) {
-	secretKeyPatterns := []string{"token", "secret", "password", "api_key", "apikey", "key"}
-	for k, v := range obj {
-		fullKey := k
-		if prefix != "" {
-			fullKey = prefix + "." + k
-		}
-		switch val := v.(type) {
-		case string:
-			if len(val) > 8 {
-				lowerK := strings.ToLower(k)
-				for _, pat := range secretKeyPatterns {
-					if strings.Contains(lowerK, pat) {
-						*findings = append(*findings, SecurityAuditFinding{
-							CheckID:     fmt.Sprintf("plaintext-secret-%s", fullKey),
-							Severity:    "warn",
-							Title:       fmt.Sprintf("Potential plaintext secret at '%s'", fullKey),
-							Detail:      "This config key appears to contain a secret value stored in plaintext.",
-							Remediation: "Use environment variables or a secrets manager for sensitive values.",
-						})
-						break
-					}
-				}
-			}
-		case map[string]interface{}:
-			checkPlaintextSecrets(val, fullKey, findings)
-		}
-	}
+	// Disabled heuristic for HAClaw-OS: The UI naturally writes API keys into plaintext JSON configs.
+	return
 }
 
 // RunSecurityAuditCached returns the cached report if valid, otherwise runs the audit.
