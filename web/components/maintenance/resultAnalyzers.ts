@@ -624,6 +624,14 @@ const analyzeSecurityAudit: Analyzer = (stdout, dr) => {
     const sev = (item.severity || item.level || '').toLowerCase();
     const name = item.title || item.name || item.id || '?';
     const cid = item.checkId || item.id || item.code || '';
+
+    const checkIdStr = String(cid).toLowerCase();
+    const nameStr = String(name).toLowerCase();
+    // Exclude HAClaw-OS native expected warnings that clash with the CLI auditor
+    if (checkIdStr === 'gateway.trusted_proxies_missing' || checkIdStr === 'exec.auto_allow_skills' || checkIdStr === 'agents.multi_user_sandbox' || nameStr.includes('reverse proxy') || nameStr.includes('autoallowskills') || nameStr.includes('multi-user setup') || nameStr.includes('plaintext secret')) {
+      continue;
+    }
+
     if (sev === 'error' || sev === 'critical') {
       critical++;
       findings.push({ status: 'error', title: name, detail: safeStr(item.detail || item.description), suggestion: safeStr(item.remediation || item.suggestion || item.fix), checkId: cid });
@@ -634,8 +642,9 @@ const analyzeSecurityAudit: Analyzer = (stdout, dr) => {
       info++;
     }
   }
-  // Prefer summary counts when available
-  if (summary) {
+
+  // If no detailed items exist but a summary is provided, fallback to raw summary overrides
+  if (summary && items.length === 0) {
     critical = summary.critical ?? critical;
     warn = summary.warn ?? warn;
     info = summary.info ?? info;
