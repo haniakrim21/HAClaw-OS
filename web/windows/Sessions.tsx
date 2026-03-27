@@ -2214,7 +2214,12 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
   }, []);
 
   // Current session meta
-  const activeSession = sessions.find(s => s.key === sessionKey);
+  const activeSession = sessions.find(s => 
+    s.key === sessionKey || 
+    s.key === `agent:${sessionKey}:${sessionKey}` || 
+    s.key.endsWith(`:${sessionKey}`) ||
+    sessionKey === `agent:${s.key}:${s.key}`
+  );
   const activeLabel = activeSession?.label || sessionKey;
 
   // Override option constants
@@ -3391,7 +3396,9 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
         gwReady={gwReady}
         loadUsage={async (key) => {
           const cfg = await gwApi.configGet() as any;
-          const providers = cfg?.models?.providers || cfg?.parsed?.models?.providers || {};
+          const providers = Object.keys(cfg?.config?.models?.providers || {}).length ? cfg.config.models.providers 
+                          : Object.keys(cfg?.parsed?.models?.providers || {}).length ? cfg.parsed.models.providers 
+                          : cfg?.models?.providers || {};
           const provider = activeSession?.modelProvider || 'gemini';
           const modelId = activeSession?.model || 'gemini-2.5-pro';
           let costConfig = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
