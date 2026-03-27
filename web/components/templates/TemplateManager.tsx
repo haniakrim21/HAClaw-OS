@@ -64,8 +64,12 @@ const TemplateManager: React.FC<TemplateManagerProps> = ({ language, defaultAgen
     { id: 'search', icon: 'search', label: tm.search || 'Search' },
   ];
 
-  const handleApplyScenario = useCallback((scenario: ScenarioTemplate) => {
-    toast('success', `${tm.applied || 'Applied'}: ${scenario.metadata.name}`);
+  const handleApplyScenario = useCallback((scenario?: ScenarioTemplate) => {
+    if (scenario?.metadata?.name) {
+      toast('success', `${tm.applied || 'Applied'}: ${scenario.metadata.name}`);
+    } else {
+      toast('success', tm.applied || 'Applied successfully');
+    }
   }, [tm, toast]);
 
   const handleDeployMultiAgent = useCallback((template: MultiAgentTemplate) => {

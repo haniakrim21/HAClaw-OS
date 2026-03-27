@@ -39,6 +39,7 @@ const ScenarioLibraryV2: React.FC<ScenarioLibraryProps> = ({ language, defaultAg
   const [settingUp, setSettingUp] = useState<string | null>(null);
   const [applyRequest, setApplyRequest] = useState<FileApplyRequest | null>(null);
   const [pendingScenario, setPendingScenario] = useState<ScenarioTemplate | null>(null);
+  const [activeScenario, setActiveScenario] = useState<ScenarioTemplate | null>(null);
 
   // Load scenarios
   useEffect(() => {
@@ -204,6 +205,7 @@ const ScenarioLibraryV2: React.FC<ScenarioLibraryProps> = ({ language, defaultAg
         toast('error', 'No content to apply');
         return;
       }
+      setActiveScenario(scenario);
       setApplyRequest(req);
     },
     [defaultAgentId, toast, buildApplyRequest]
@@ -211,8 +213,9 @@ const ScenarioLibraryV2: React.FC<ScenarioLibraryProps> = ({ language, defaultAg
 
   const handleApplyDone = useCallback(() => {
     setApplyRequest(null);
-    onApplyScenario?.();
-  }, [onApplyScenario]);
+    onApplyScenario?.(activeScenario || undefined);
+    setActiveScenario(null);
+  }, [onApplyScenario, activeScenario]);
 
   if (loading) {
     return (
@@ -621,7 +624,10 @@ const ScenarioLibraryV2: React.FC<ScenarioLibraryProps> = ({ language, defaultAg
           locale={(t as any).agentPicker || {}}
           onSelect={(agentId) => {
             const req = buildApplyRequest(pendingScenario, agentId);
-            if (req) setApplyRequest(req);
+            if (req) {
+              setActiveScenario(pendingScenario);
+              setApplyRequest(req);
+            }
             setPendingScenario(null);
           }}
           onCancel={() => setPendingScenario(null)}
