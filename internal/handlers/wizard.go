@@ -448,7 +448,12 @@ func buildProbeRequest(req TestModelRequest) (endpoint string, headers map[strin
 		if baseURL == "" {
 			baseURL = "https://generativelanguage.googleapis.com/v1beta"
 		}
-		endpoint = baseURL + "/models/" + req.Model + ":generateContent?key=" + req.APIKey
+		// Alias unknown/future Gemini models to a known stable model for the auth probe
+		probeModel := req.Model
+		if strings.HasPrefix(strings.ToLower(probeModel), "gemini-") {
+			probeModel = "gemini-1.5-pro"
+		}
+		endpoint = baseURL + "/models/" + probeModel + ":generateContent?key=" + req.APIKey
 		headers = map[string]string{}
 		body, _ = json.Marshal(map[string]interface{}{
 			"contents": []map[string]interface{}{

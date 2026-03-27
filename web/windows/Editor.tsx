@@ -71,33 +71,34 @@ const Editor: React.FC<EditorProps> = ({ language }) => {
     }
   }, [jsonContent, saving, edit.invalidJson]);
 
-  const applyBestPractices = useCallback(() => {
+  const applyBestPractices = useCallback(async () => {
     try {
-      const parsed = JSON.parse(jsonContent);
+      setSaving(true);
+      await gwApi.configSet('gateway.trustedProxies', ['127.0.0.1', '::1']);
+      await gwApi.configSet('defaults.autoAllowSkills', false);
+      await gwApi.configSet('agents.defaults.sandbox.mode', 'all');
+      await gwApi.configReload().catch(() => {});
       
-      // 1. Reverse proxy headers trust
-      if (!parsed.gateway) parsed.gateway = {};
-      if (!Array.isArray(parsed.gateway.trustedProxies)) {
-        parsed.gateway.trustedProxies = ['127.0.0.1', '::1'];
-      }
-      
-      // 2. Disable autoAllowSkills
-      if (!parsed.defaults) parsed.defaults = {};
-      parsed.defaults.autoAllowSkills = false;
-      
-      // 3. Multi-user sandbox boundaries
-      if (!parsed.agents) parsed.agents = {};
-      if (!parsed.agents.defaults) parsed.agents.defaults = {};
-      if (!parsed.agents.defaults.sandbox) parsed.agents.defaults.sandbox = {};
-      parsed.agents.defaults.sandbox.mode = 'all';
-      
-      setJsonContent(JSON.stringify(parsed, null, 2));
-      setSaveError('');
-      setJsonValid(true);
-    } catch {
-      setSaveError('Cannot apply best practices: Invalid JSON format');
+      // Reload fresh config into editor without overwriting other fields
+      gwApi.configGet().then((data: any) => {
+        const cfg = data?.config || data?.parsed || data;
+        setJsonContent(typeof cfg === 'string' ? cfg : JSON.stringify(cfg, null, 2));
+        setJsonValid(true);
+        setSaveError('');
+      }).catch(() => {
+        configApi.get().then((data: any) => {
+          const content = typeof data === 'string' ? data : (data?.content || JSON.stringify(data?.config || data, null, 2));
+          setJsonContent(content);
+          setJsonValid(true);
+          setSaveError('');
+        }).catch(() => {});
+      });
+    } catch (e: any) {
+      setSaveError(`Failed to apply best practices: ${e.message || 'Network error'}`);
+    } finally {
+      setSaving(false);
     }
-  }, [jsonContent]);
+  }, []);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-[#1a1c20] relative">
