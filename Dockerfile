@@ -21,7 +21,7 @@ ARG BUILD_NUMBER=0
 RUN COMPAT=$(grep -o '"openclawCompat"[[:space:]]*:[[:space:]]*"[^"]*"' web/package.json | cut -d'"' -f4) && \
     CGO_ENABLED=0 GOOS=linux go build \
     -ldflags="-s -w -X HAClaw-OS/internal/version.Version=${VERSION} -X HAClaw-OS/internal/version.Build=${BUILD_NUMBER} -X 'HAClaw-OS/internal/version.OpenClawCompat=${COMPAT}'" \
-    -o /haclawx ./cmd/haclawx
+    -o /haclawx ./cmd/haclaw
 
 # Stage 3: Install OpenClaw with native modules (build tools needed)
 FROM ubuntu:22.04 AS openclaw-builder
