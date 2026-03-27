@@ -31,7 +31,7 @@ export const ServiceManagement: React.FC<ServiceManagementProps> = ({ s }) => {
         await gatewayApi.daemonInstall();
         toast(s.serviceInstalled || 'OpenClaw service installed', 'success');
       } else {
-        await serviceApi.installHAClaw-OS();
+        await serviceApi.installHAClawOS();
         toast(s.serviceInstalled || 'HAClaw-OS service installed', 'success');
       }
       await loadStatus();
@@ -49,7 +49,7 @@ export const ServiceManagement: React.FC<ServiceManagementProps> = ({ s }) => {
         await gatewayApi.daemonUninstall();
         toast(s.serviceUninstalled || 'OpenClaw service uninstalled', 'success');
       } else {
-        await serviceApi.uninstallHAClaw-OS();
+        await serviceApi.uninstallHAClawOS();
         toast(s.serviceUninstalled || 'HAClaw-OS service uninstalled', 'success');
       }
       await loadStatus();
