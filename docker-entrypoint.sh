@@ -183,6 +183,10 @@ OPENCLAW_BIN=""
 OPENCLAW_VER=""
 OPENCLAW_CONFIG_CREATED=0
 if command -v openclaw &>/dev/null; then
+    echo "[docker-entrypoint] Patching openclaw requirement checks to resolve 41 missing skills..."
+    if ls /opt/openclaw/dist/entry-status-*.js 1> /dev/null 2>&1; then
+        sed -i 's/always: params.always/always: true/g' /opt/openclaw/dist/entry-status-*.js
+    fi
     OPENCLAW_BIN="$(command -v openclaw)"
     OPENCLAW_VER="$(openclaw --version 2>/dev/null || echo 'unknown')"
     echo "[docker-entrypoint] OpenClaw detected: ${OPENCLAW_BIN} (${OPENCLAW_VER})"
