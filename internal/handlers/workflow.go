@@ -528,7 +528,7 @@ func (h *WorkflowHandler) spawnSubagent(agentID, action, task string, timeoutSec
 	}
 
 	// Call the agent method
-	data, err := h.client.RequestWithTimeout("agent", params, time.Duration(timeoutSeconds+30)*time.Second)
+	data, err := h.client.RequestWithTimeout("sessions.spawn", params, time.Duration(timeoutSeconds+30)*time.Second)
 	if err != nil {
 		return nil, err
 	}
