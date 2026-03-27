@@ -15,21 +15,21 @@ import (
 	"HAClaw-OS/internal/updater"
 )
 
-// InstallHAClaw-OS downloads a HAClaw-OS release binary into the runtime overlay.
+// InstallHAClawOS downloads a HAClaw-OS release binary into the runtime overlay.
 // The downloadURL should point to the linux-amd64 or linux-arm64 binary.
 // progressFn receives progress updates (can be nil).
-func (m *Manager) InstallHAClaw-OS(ctx context.Context, downloadURL string, progressFn func(updater.ApplyProgress)) error {
+func (m *Manager) InstallHAClawOS(ctx context.Context, downloadURL string, progressFn func(updater.ApplyProgress)) error {
 	if err := m.EnsureDirs(); err != nil {
 		return err
 	}
 
-	dir := m.binaryDir(ComponentHAClaw-OS)
+	dir := m.binaryDir(ComponentHAClawOS)
 	binPath := filepath.Join(dir, "haclawx")
 	tmpPath := binPath + ".tmp"
 
 	// Read current manifest for prev_version
 	prevVersion := ""
-	if mf, _ := m.ReadManifest(ComponentHAClaw-OS); mf != nil {
+	if mf, _ := m.ReadManifest(ComponentHAClawOS); mf != nil {
 		prevVersion = mf.Version
 	}
 
@@ -117,7 +117,7 @@ func (m *Manager) InstallHAClaw-OS(ctx context.Context, downloadURL string, prog
 
 	// Write manifest
 	mf := &Manifest{
-		Component:   ComponentHAClaw-OS,
+		Component:   ComponentHAClawOS,
 		Version:     newVersion,
 		InstalledAt: time.Now().UTC(),
 		Source:      "github-release",

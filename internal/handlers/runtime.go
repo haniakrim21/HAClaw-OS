@@ -41,7 +41,7 @@ func (h *RuntimeHandler) Status(w http.ResponseWriter, r *http.Request) {
 
 // UpdateHAClaw-OS downloads and installs a HAClaw-OS binary to the runtime overlay.
 // POST /api/v1/runtime/haclawx/update  { "downloadUrl": "..." }
-func (h *RuntimeHandler) UpdateHAClaw-OS(w http.ResponseWriter, r *http.Request) {
+func (h *RuntimeHandler) UpdateHAClawOS(w http.ResponseWriter, r *http.Request) {
 	if h.mgr == nil {
 		web.Fail(w, r, "RUNTIME_NOT_AVAILABLE", "runtime manager not initialized", http.StatusServiceUnavailable)
 		return
@@ -78,7 +78,7 @@ func (h *RuntimeHandler) UpdateHAClaw-OS(w http.ResponseWriter, r *http.Request)
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Minute)
 	defer cancel()
 
-	err := h.mgr.InstallHAClaw-OS(ctx, body.DownloadURL, sendSSE)
+	err := h.mgr.InstallHAClawOS(ctx, body.DownloadURL, sendSSE)
 	if err != nil {
 		h.auditRepo.Create(&database.AuditLog{
 			UserID: web.GetUserID(r), Username: web.GetUsername(r),
@@ -103,7 +103,7 @@ func (h *RuntimeHandler) UpdateHAClaw-OS(w http.ResponseWriter, r *http.Request)
 	// restartSelf() would re-exec os.Executable() (the old image binary),
 	// so we must use the overlay path explicitly.
 	overlayBin := ""
-	if mf, err := h.mgr.ReadManifest(runtime.ComponentHAClaw-OS); err == nil && mf != nil {
+	if mf, err := h.mgr.ReadManifest(runtime.ComponentHAClawOS); err == nil && mf != nil {
 		overlayBin = mf.BinaryPath
 	}
 
@@ -188,7 +188,7 @@ func (h *RuntimeHandler) Rollback(w http.ResponseWriter, r *http.Request) {
 	var comp runtime.Component
 	switch body.Component {
 	case "haclawx":
-		comp = runtime.ComponentHAClaw-OS
+		comp = runtime.ComponentHAClawOS
 	case "openclaw":
 		comp = runtime.ComponentOpenClaw
 	default:

@@ -279,7 +279,7 @@ func (h *DoctorHandler) Run(w http.ResponseWriter, r *http.Request) {
 	items = append(items, h.checkPort())
 	items = append(items, h.checkDisk())
 	items = append(items, h.checkOpenClawService())
-	items = append(items, h.checkHAClaw-OSService())
+	items = append(items, h.checkHAClawOSService())
 	items = append(items, h.gatewayDiagnoseChecks()...)
 	items = append(items, h.securityAuditChecks()...)
 
@@ -1124,7 +1124,7 @@ func (h *DoctorHandler) checkOpenClawService() CheckItem {
 	}
 }
 
-func (h *DoctorHandler) checkHAClaw-OSService() CheckItem {
+func (h *DoctorHandler) checkHAClawOSService() CheckItem {
 	if service.IsInstalled() {
 		return CheckItem{
 			ID:       "service.haclawx",
@@ -1157,7 +1157,7 @@ func (h *DoctorHandler) collectChecks() []CheckItem {
 		h.checkPort(),
 		h.checkDisk(),
 		h.checkOpenClawService(),
-		h.checkHAClaw-OSService(),
+		h.checkHAClawOSService(),
 	}
 	items = append(items, h.checkConfigValues()...)
 	items = append(items, h.gatewayDiagnoseChecks()...)

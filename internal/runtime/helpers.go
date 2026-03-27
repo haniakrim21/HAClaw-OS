@@ -24,10 +24,10 @@ func IsDocker() bool {
 	return false
 }
 
-// imageHAClaw-OSVersion returns the HAClaw-OS version baked into the Docker image.
+// imageHAClawOSVersion returns the HAClaw-OS version baked into the Docker image.
 // We read this from a stamp file written by the entrypoint at first boot.
 // Falls back to the compiled-in version constant.
-func imageHAClaw-OSVersion() string {
+func imageHAClawOSVersion() string {
 	data, err := os.ReadFile("/app/.image-version")
 	if err == nil {
 		v := strings.TrimSpace(string(data))
