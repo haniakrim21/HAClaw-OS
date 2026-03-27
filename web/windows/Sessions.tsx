@@ -3390,10 +3390,28 @@ const Sessions: React.FC<SessionsProps> = ({ language, pendingSessionKey, onSess
         sessionKey={sessionKey}
         gwReady={gwReady}
         loadUsage={async (key) => {
-          const res = await gwApi.sessionsUsage({ key, limit: 1 }) as any;
-          if (res?.sessions?.[0]?.usage) return res.sessions[0].usage;
-          if (res?.totalTokens !== undefined) return res;
-          return null;
+          const cfg = await gwApi.configGet() as any;
+          const providers = cfg?.models?.providers || cfg?.parsed?.models?.providers || {};
+          const provider = activeSession?.modelProvider || 'gemini';
+          const modelId = activeSession?.model || 'gemini-2.5-pro';
+          let costConfig = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
+          
+          if (providers[provider]?.models) {
+             const mc = providers[provider].models.find((m: any) => m.id === modelId || m.id === modelId.split('/').pop());
+             if (mc && mc.cost) costConfig = mc.cost;
+          }
+          
+          const sIn = activeSession?.inputTokens || 0;
+          const sOut = activeSession?.outputTokens || 0;
+          
+          return {
+             input: sIn,
+             output: sOut,
+             totalTokens: activeSession?.totalTokens || (sIn + sOut),
+             inputCost: sIn * (costConfig.input / 1000000),
+             outputCost: sOut * (costConfig.output / 1000000),
+             totalCost: (sIn * (costConfig.input / 1000000)) + (sOut * (costConfig.output / 1000000))
+          };
         }}
         loadTimeseries={async (key) => {
           return await gwApi.sessionsUsageTimeseries(key) as any;
