@@ -130,6 +130,14 @@ func (h *WizardHandler) TestModel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.Provider != "ollama" && isRedactedAPIKey(req.APIKey) {
+		web.OK(w, r, map[string]interface{}{
+			"status": "warning",
+			"message": "Cannot perform live test: API key is safely redacted on the remote gateway.",
+		})
+		return
+	}
+
 	if req.Model == "" {
 		web.Fail(w, r, "MODEL_NO_MODEL", "Model ID is required", http.StatusBadRequest)
 		return
@@ -216,6 +224,20 @@ func (h *WizardHandler) TestProviderSmart(w http.ResponseWriter, r *http.Request
 
 	if req.Provider != "ollama" && req.APIKey == "" {
 		web.Fail(w, r, "MODEL_NO_API_KEY", "Please enter an API Key and try again.", http.StatusBadRequest)
+		return
+	}
+
+	if req.Provider != "ollama" && isRedactedAPIKey(req.APIKey) {
+		apiType := req.APIType
+		if apiType == "" {
+			apiType = "openai-completions"
+		}
+		web.OK(w, r, SmartTestResult{
+			Status:  "warning",
+			Message: "Cannot perform live test: API key is safely redacted on the remote gateway.",
+			Model:   req.Model,
+			APIType: apiType,
+		})
 		return
 	}
 
@@ -346,6 +368,11 @@ func (h *WizardHandler) DiscoverModels(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if req.Provider != "ollama" && isRedactedAPIKey(req.APIKey) {
+		web.Fail(w, r, "MODEL_DISCOVER_FAILED", "Cannot discover models because the API key is redacted. Please re-enter the API key.", http.StatusBadRequest)
+		return
+	}
+
 	models, source, err := discoverModels(req)
 	if err != nil {
 		web.Fail(w, r, "MODEL_DISCOVER_FAILED", err.Error(), http.StatusBadGateway)
@@ -451,7 +478,7 @@ func buildProbeRequest(req TestModelRequest) (endpoint string, headers map[strin
 		// Alias unknown/future Gemini models to a known stable model for the auth probe
 		probeModel := req.Model
 		if strings.HasPrefix(strings.ToLower(probeModel), "gemini-") {
-			probeModel = "gemini-1.5-pro"
+			probeModel = "gemini-1.5-flash"
 		}
 		endpoint = baseURL + "/models/" + probeModel + ":generateContent?key=" + req.APIKey
 		headers = map[string]string{}
@@ -472,8 +499,15 @@ func buildProbeRequest(req TestModelRequest) (endpoint string, headers map[strin
 		if req.APIKey != "" {
 			headers["Authorization"] = "Bearer " + req.APIKey
 		}
+		probeModel := req.Model
+		if provider == "openai" {
+			low := strings.ToLower(probeModel)
+			if strings.HasPrefix(low, "gpt-") || strings.HasPrefix(low, "o1") || strings.HasPrefix(low, "o3") {
+				probeModel = "gpt-4o-mini"
+			}
+		}
 		body, _ = json.Marshal(map[string]interface{}{
-			"model":      req.Model,
+			"model":      probeModel,
 			"max_tokens": 4,
 			"messages":   []map[string]string{{"role": "user", "content": "Reply OK"}},
 		})

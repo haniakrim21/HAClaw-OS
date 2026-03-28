@@ -15,7 +15,7 @@ import PreferencesTab from './Settings/PreferencesTab';
 import type { Preferences } from '../utils/preferences';
 import { loadPreferences } from '../utils/preferences';
 
-type SettingsTab = 'account' | 'notify' | 'snapshot' | 'preferences' | 'audit' | 'update' | 'donate' | 'about';
+type SettingsTab = 'account' | 'notify' | 'snapshot' | 'preferences' | 'audit' | 'update';
 
 interface SettingsProps {
   language: Language;
@@ -41,7 +41,7 @@ const Settings: React.FC<SettingsProps> = ({ language, onLogout, pendingTab, onT
     onPrefsChange?.(next);
   }, [onPrefsChange]);
 
-  const VALID_TABS: SettingsTab[] = useMemo(() => ['account', 'notify', 'snapshot', 'preferences', 'audit', 'update', 'donate', 'about'], []);
+  const VALID_TABS: SettingsTab[] = useMemo(() => ['account', 'notify', 'snapshot', 'preferences', 'audit', 'update'], []);
   useEffect(() => {
     if (pendingTab && VALID_TABS.includes(pendingTab as SettingsTab)) {
       setActiveTab(pendingTab as SettingsTab);
@@ -111,8 +111,6 @@ const Settings: React.FC<SettingsProps> = ({ language, onLogout, pendingTab, onT
     { id: 'preferences', icon: 'tune', label: (t as any).pref?.title || 'Preferences', color: 'bg-violet-500' },
     { id: 'audit', icon: 'assignment', label: s.auditLog, color: 'bg-orange-500' },
     { id: 'update', icon: 'system_update', label: s.system || 'Software Update', color: 'bg-cyan-500' },
-    { id: 'donate', icon: 'favorite', label: s.donate, color: 'bg-pink-500' },
-    { id: 'about', icon: 'info', label: s.about, color: 'bg-purple-500' },
   ];
 
   const notifyChannelDefs: NotifyChannelDef[] = useMemo(() => [
@@ -695,221 +693,7 @@ const Settings: React.FC<SettingsProps> = ({ language, onLogout, pendingTab, onT
             <UpdateTab s={s} language={language} inputCls={inputCls} rowCls={rowCls} />
           )}
 
-          {/* 打赏支持 */}
-          {activeTab === 'donate' && (
-            <div className="space-y-6">
-              {/* 顶部爱心图标 */}
-              <div className="flex flex-col items-center pt-4 pb-2">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center shadow-lg shadow-pink-500/20 animate-pulse">
-                  <span className="material-symbols-outlined text-[32px] text-white">favorite</span>
-                </div>
-              </div>
 
-              {/* 诗意文案 */}
-              <div className="text-center px-6 space-y-1">
-                <p className="text-[14px] theme-text-secondary leading-relaxed">{s.donateLine1}</p>
-                <p className="text-[14px] theme-text-secondary leading-relaxed">{s.donateLine2}</p>
-                <p className="text-[14px] theme-text-secondary leading-relaxed">{s.donateLine3}</p>
-                <p className="text-[14px] font-medium text-pink-500 dark:text-pink-400 leading-relaxed">{s.donateLine4}</p>
-              </div>
-
-              {/* 国际支付方式 - Ko-fi */}
-              <div className={rowCls}>
-                <div className="px-4 py-4">
-                  <div className="flex flex-col items-center gap-3 p-4 rounded-xl bg-gradient-to-b from-[#FF5E5B]/5 to-[#FF5E5B]/10 dark:from-[#FF5E5B]/10 dark:to-[#FF5E5B]/20 border border-[#FF5E5B]/20 hover:border-[#FF5E5B]/40 transition-colors">
-                    <a href="https://ko-fi.com/T6T71UDKMB" target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-4 py-2 bg-[#FF5E5B] hover:bg-[#FF5E5B]/90 rounded-lg transition-colors">
-                      <svg className="w-6 h-6" viewBox="0 0 24 24" fill="white">
-                        <path d="M23.881 8.948c-.773-4.085-4.859-4.593-4.859-4.593H.723c-.604 0-.679.798-.679.798s-.082 7.324-.022 11.822c.164 2.424 2.586 2.672 2.586 2.672s8.267-.023 11.966-.049c2.438-.426 2.683-2.566 2.658-3.734 4.352.24 7.422-2.831 6.649-6.916zm-11.062 3.511c-1.246 1.453-4.011 3.976-4.011 3.976s-.121.119-.31.023c-.076-.057-.108-.09-.108-.09-.443-.441-3.368-3.049-4.034-3.954-.709-.965-1.041-2.7-.091-3.71.951-1.01 3.005-1.086 4.363.407 0 0 1.565-1.782 3.468-.963 1.904.82 1.832 3.011.723 4.311zm6.173.478c-.928.116-1.682.028-1.682.028V7.284h1.77s1.971.551 1.971 2.638c0 1.913-.985 2.667-2.059 3.015z"/>
-                      </svg>
-                      <span className="text-white font-bold text-sm">Support on Ko-fi</span>
-                    </a>
-                  </div>
-                </div>
-              </div>
-
-              {/* 国内支付方式 */}
-              <div className={rowCls}>
-                <div className="px-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* 微信支付 */}
-                    <div className="flex flex-col items-center gap-3 p-4 rounded-xl bg-gradient-to-b from-[#07C160]/5 to-[#07C160]/10 dark:from-[#07C160]/10 dark:to-[#07C160]/20 border border-[#07C160]/20 hover:border-[#07C160]/40 transition-colors">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-[#07C160] flex items-center justify-center">
-                          <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.837-7.062-6.122zm-2.18 2.768c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.36 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982z"/></svg>
-                        </div>
-                        <span className="text-[12px] font-bold text-[#07C160]">{s.donateWechat}</span>
-                      </div>
-                      <div className="w-32 h-32 bg-white rounded-xl flex items-center justify-center border-2 border-[#07C160]/30 shadow-sm overflow-hidden">
-                        <img src="/wechat.png" alt="WeChat Pay QR Code" className="w-full h-full object-cover" />
-                      </div>
-                    </div>
-                    {/* 支付宝 */}
-                    <div className="flex flex-col items-center gap-3 p-4 rounded-xl bg-gradient-to-b from-[#1677FF]/5 to-[#1677FF]/10 dark:from-[#1677FF]/10 dark:to-[#1677FF]/20 border border-[#1677FF]/20 hover:border-[#1677FF]/40 transition-colors">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-[#1677FF] flex items-center justify-center">
-                          <svg className="w-5 h-5 text-white" viewBox="0 0 1024 1024" fill="currentColor"><path d="M896 650.667l-247.04-83.072s18.987-28.416 39.253-84.139c20.267-55.722 23.168-86.314 23.168-86.314l-159.915-1.28V341.163l193.707-1.365V301.227h-193.707V213.333H456.533v87.894H275.883v38.613l180.693-1.28v58.581H311.637v30.592h298.326s-3.286 24.832-14.72 55.723a1254.485 1254.485 0 0 1-23.211 57.941s-140.075-49.024-213.888-49.024-163.584 29.653-172.288 115.712c-8.661 86.016 41.813 132.608 112.939 149.76 71.125 17.237 136.789-.171 193.962-28.16 57.174-27.947 113.28-91.477 113.28-91.477l287.915 139.818A142.08 142.08 0 0 1 753.792 896H270.208A142.08 142.08 0 0 1 128 754.048V270.208A142.08 142.08 0 0 1 269.952 128h483.84A142.08 142.08 0 0 1 896 269.952v380.715zM535.936 602.539s-89.856 113.493-195.755 113.493c-105.941 0-128.17-53.93-128.17-92.714 0-38.742 22.016-80.854 112.17-86.955 90.07-6.101 211.84 66.176 211.84 66.176h-.085z"/></svg>
-                        </div>
-                        <span className="text-[12px] font-bold text-[#1677FF]">{s.donateAlipay}</span>
-                      </div>
-                      <div className="w-32 h-32 bg-white rounded-xl flex items-center justify-center border-2 border-[#1677FF]/30 shadow-sm overflow-hidden">
-                        <img src="/alipay.png" alt="Alipay QR Code" className="w-full h-full object-cover" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 其他支持方式 */}
-              <div className={rowCls}>
-                <div className="px-4 py-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="material-symbols-outlined text-[16px] theme-text-muted">volunteer_activism</span>
-                    <h3 className="text-[13px] font-bold text-slate-700 dark:text-white/70">{s.donateOtherWays}</h3>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <SmartLink href="https://github.com/haniakrim21/HAClaw-OS"
-                      className="flex items-center gap-2 px-3 py-2.5 rounded-lg theme-field hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
-                      <span className="material-symbols-outlined text-[16px] text-amber-500">star</span>
-                      <span className="text-[11px] theme-text-secondary">{s.donateStarGithub}</span>
-                    </SmartLink>
-                    <SmartLink href="https://github.com/haniakrim21/HAClaw-OS/issues"
-                      className="flex items-center gap-2 px-3 py-2.5 rounded-lg theme-field hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
-                      <span className="material-symbols-outlined text-[16px] text-blue-500">bug_report</span>
-                      <span className="text-[11px] theme-text-secondary">{s.donateFeedback}</span>
-                    </SmartLink>
-                    <SmartLink href="https://github.com/haniakrim21/HAClaw-OS"
-                      className="flex items-center gap-2 px-3 py-2.5 rounded-lg theme-field hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
-                      <span className="material-symbols-outlined text-[16px] text-emerald-500">edit_document</span>
-                      <span className="text-[11px] theme-text-secondary">{s.donateDocs}</span>
-                    </SmartLink>
-                    <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg theme-field">
-                      <span className="material-symbols-outlined text-[16px] text-pink-500">share</span>
-                      <span className="text-[11px] theme-text-secondary">{s.donateShare}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 底部感谢语 */}
-              <div className="text-center px-4 pb-2">
-                <p className="text-[11px] text-slate-400 dark:text-white/35 italic">{s.donateThankYou} 🙏</p>
-              </div>
-            </div>
-          )}
-
-          {/* 关于 */}
-          {activeTab === 'about' && (
-            <div className="space-y-6">
-              {/* 顶部标识 */}
-              <div className="flex flex-col items-center pt-4 pb-2">
-                <div className="w-20 h-20 rounded-[22px] bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white shadow-xl shadow-primary/20 mb-4">
-                  <span className="text-[40px]" role="img">&#x1F980;</span>
-                </div>
-                <h3 className="text-[20px] font-bold text-slate-800 dark:text-white tracking-wide">HAClaw-OS</h3>
-                <p className="text-[12px] theme-text-muted mt-1 font-mono">
-                  v{__APP_VERSION__} · build {__BUILD_NUMBER__}
-                </p>
-              </div>
-
-              {/* Slogan */}
-              <div className="text-center px-4">
-                <p className="text-[16px] font-light theme-text-secondary tracking-widest">{s.aboutSlogan}</p>
-                {s.aboutSlogan !== 'Complexity within, simplicity without.' && (
-                  <p className="text-[11px] text-slate-400 dark:text-white/20 mt-1 italic">Complexity within, simplicity without.</p>
-                )}
-              </div>
-
-              {/* 简介 */}
-              <div className={rowCls}>
-                <div className="px-5 py-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="material-symbols-outlined text-[16px] text-primary/60">info</span>
-                    <h4 className="text-[13px] font-bold text-slate-700 dark:text-white/70">{s.about}</h4>
-                  </div>
-                  <p className="text-[12px] text-slate-600 dark:text-white/50 leading-relaxed whitespace-pre-line">{s.aboutIntro}</p>
-                </div>
-              </div>
-
-              {/* 开发者说明 */}
-              <div className={rowCls}>
-                <div className="px-5 py-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="material-symbols-outlined text-[16px] text-amber-500">emoji_objects</span>
-                    <h4 className="text-[13px] font-bold text-slate-700 dark:text-white/70">{s.noteTitle}</h4>
-                  </div>
-                  <p className="text-[12px] text-slate-500 dark:text-white/45 leading-relaxed">{s.aboutNote}</p>
-                </div>
-              </div>
-
-              {/* 技术栈 */}
-              <div className={rowCls}>
-                <div className="px-5 py-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="material-symbols-outlined text-[16px] text-amber-500/60">memory</span>
-                    <h4 className="text-[13px] font-bold text-slate-700 dark:text-white/70">{s.aboutTech}</h4>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {['Go', 'React', 'TailwindCSS', 'SQLite', 'WebSocket', 'SSE'].map(tech => (
-                      <span key={tech} className="px-3 py-1 rounded-full theme-field text-[11px] font-mono font-medium theme-text-muted">{tech}</span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* 相关链接 */}
-              <div className={rowCls}>
-                <div className="px-5 py-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="material-symbols-outlined text-[16px] text-blue-500/60">link</span>
-                    <h4 className="text-[13px] font-bold text-slate-700 dark:text-white/70">{s.aboutLinks}</h4>
-                  </div>
-                  <div className="space-y-2">
-                    <SmartLink href="https://github.com/openclaw/openclaw"
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors group">
-                      <span className="text-[20px]">🦞</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-bold text-slate-700 dark:text-white/70 group-hover:text-primary">OpenClaw</p>
-                        <p className="text-[10px] text-slate-400 dark:text-white/20 truncate">github.com/openclaw/openclaw</p>
-                      </div>
-                      <span className="material-symbols-outlined text-[14px] text-slate-300 dark:text-white/15 group-hover:text-primary">open_in_new</span>
-                    </SmartLink>
-                    <SmartLink href="https://github.com/haniakrim21/HAClaw-OS"
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors group">
-                      <span className="text-[20px]">🦀</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-bold text-slate-700 dark:text-white/70 group-hover:text-primary">HAClaw-OS</p>
-                        <p className="text-[10px] text-slate-400 dark:text-white/20 truncate">github.com/haniakrim21/HAClaw-OS</p>
-                      </div>
-                      <span className="material-symbols-outlined text-[14px] text-slate-300 dark:text-white/15 group-hover:text-primary">open_in_new</span>
-                    </SmartLink>
-                    <SmartLink href="https://x.com/haclawx"
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors group">
-                      <span className="text-[20px]">𝕏</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-bold text-slate-700 dark:text-white/70 group-hover:text-primary">X (Twitter)</p>
-                        <p className="text-[10px] text-slate-400 dark:text-white/20 truncate">x.com/haclawx</p>
-                      </div>
-                      <span className="material-symbols-outlined text-[14px] text-slate-300 dark:text-white/15 group-hover:text-primary">open_in_new</span>
-                    </SmartLink>
-                    <SmartLink href="https://haclawx.com"
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors group">
-                      <span className="text-[20px]">🌐</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-bold text-slate-700 dark:text-white/70 group-hover:text-primary">HAClaw-OS</p>
-                        <p className="text-[10px] text-slate-400 dark:text-white/20 truncate">haclawx.com</p>
-                      </div>
-                      <span className="material-symbols-outlined text-[14px] text-slate-300 dark:text-white/15 group-hover:text-primary">open_in_new</span>
-                    </SmartLink>
-                  </div>
-                </div>
-              </div>
-
-              <p className="text-center text-[10px] text-slate-300 dark:text-white/10 pb-2">
-                &copy; {new Date().getFullYear()} HAClaw-OS &middot; Made with &#x2764;&#xFE0F;
-              </p>
-            </div>
-          )}
 
         </div>
       </main>

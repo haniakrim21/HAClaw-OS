@@ -451,8 +451,6 @@ const Desktop: React.FC<DesktopProps> = ({
           <div className="flex items-center gap-1 group cursor-pointer relative me-2">
             <span className="text-[13px]" role="img">&#x1F980;</span>
             <span className="text-[11px] font-bold">HAClaw-OS</span>
-            <span className="text-[8px] font-bold uppercase tracking-wider px-1 py-[1px] rounded bg-amber-500/20 text-amber-600 dark:text-amber-400 leading-none">beta</span>
-            <span className="text-[11px] opacity-40 font-mono ms-0.5">v{__APP_VERSION__} b{__BUILD_NUMBER__}</span>
           </div>
 
         </div>
