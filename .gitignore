@@ -49,6 +49,9 @@ web/dist/
 # Binaries
 /HAClaw-OS
 /HAClaw-OS.exe
+/haclaw
+/haclaw-linux
+/haclawx
 haclawx-linux-amd64
 openclawmanager-*
 

@@ -327,6 +327,7 @@ func (h *GatewayProfileHandler) TestConnection(w http.ResponseWriter, r *http.Re
 	// Step 3: WebSocket connectivity test
 	wsOk := false
 	wsURL := fmt.Sprintf("ws://%s/", addr)
+
 	wsDialer := websocket.Dialer{HandshakeTimeout: 5 * time.Second}
 	wsConn, _, wsErr := wsDialer.Dial(wsURL, nil)
 	if wsErr == nil {

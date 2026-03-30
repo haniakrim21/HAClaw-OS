@@ -6,7 +6,14 @@ services:
     init: true
     restart: unless-stopped
     ports:
-      - "18700:18788"
+      - "127.0.0.1:18701:18788"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.haclawx.rule=Host(`haniakrim.dev`)"
+      - "traefik.http.routers.haclawx.entrypoints=websecure"
+      - "traefik.http.routers.haclawx.tls=true"
+      - "traefik.http.routers.haclawx.tls.certresolver=letsencrypt"
+      - "traefik.http.services.haclawx.loadbalancer.server.port=18788"
     volumes:
       - haclawx-data:/data/haclawx
       # Persist OpenClaw config, state, and logs across container updates
@@ -16,6 +23,10 @@ services:
       # Persist runtime overlay binaries (HAClaw-OS/OpenClaw updates) across container recreations
       # 持久化运行时覆盖二进制文件，容器重建后保留更新
       - haclawx-runtime:/data/runtime
+      # Persist the dashboard device identity to prevent pairing loss
+      - haclawx-dashboard-identity:/root/.openclaw
+      # Enable Docker out of Docker (DooD) sandboxing capability
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       OCD_CONFIG: /data/haclawx/HAClaw-OS.json
       OPENCLAW_HOME: /data/openclaw/home
@@ -66,3 +77,5 @@ volumes:
     name: openclaw-data
   haclawx-runtime:
     name: haclawx-runtime
+  haclawx-dashboard-identity:
+    name: haclawx-dashboard-identity

@@ -68,10 +68,17 @@ export const MessagesSection: React.FC<SectionProps> = ({ schema, setField, getF
             { value: 'openai', label: es.ttsProviderOpenAI },
             { value: 'edge', label: es.ttsProviderEdge }
           ]} />
-        <SwitchField label={es.autoTts} tooltip={tip('messages.tts.auto')} value={g(['tts', 'auto']) === true} onChange={v => s(['tts', 'auto'], v)} />
-        <TextField label={es.mode} tooltip={tip('messages.tts.mode')} value={g(['tts', 'mode']) || ''} onChange={v => s(['tts', 'mode'], v)} placeholder={es.phReplyInline} />
-        <PasswordField label={es.audioApiKey} value={g(['tts', 'apiKey']) || ''} onChange={v => s(['tts', 'apiKey'], v)} />
-        <TextField label={es.voiceId} value={g(['tts', 'voiceId']) || ''} onChange={v => s(['tts', 'voiceId'], v)} />
+        <SelectField label={es.autoTts} tooltip={tip('messages.tts.auto')} value={typeof g(['tts', 'auto']) === 'boolean' ? (g(['tts', 'auto']) ? 'always' : 'off') : (g(['tts', 'auto']) || 'off')} onChange={v => s(['tts', 'auto'], v)} options={[{value:'off',label:'Off'},{value:'always',label:'Always'},{value:'inbound',label:'Inbound'},{value:'tagged',label:'Tagged'}]} />
+        <SelectField label={es.mode} tooltip={tip('messages.tts.mode')} value={g(['tts', 'mode']) || 'final'} onChange={v => s(['tts', 'mode'], v)} options={[{value:'final',label:'Final'},{value:'all',label:'All'}]} />
+        {(() => {
+          const prv = g(['tts', 'provider']) || 'openai';
+          return (
+            <>
+              <PasswordField label={es.audioApiKey} value={g(['tts', 'providers', prv, 'apiKey']) || ''} onChange={v => s(['tts', 'providers', prv, 'apiKey'], v)} />
+              <TextField label={es.voiceId} value={g(['tts', 'providers', prv, 'voiceId']) || ''} onChange={v => s(['tts', 'providers', prv, 'voiceId'], v)} />
+            </>
+          );
+        })()}
       </ConfigSection>
 
       <ConfigSection title={es.messageTools} icon="send" iconColor="text-cyan-500" defaultOpen={false}>

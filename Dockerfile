@@ -61,7 +61,7 @@ RUN apt-get update && \
         > /etc/apt/sources.list.d/nodesource.list && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-        nodejs python3 make tzdata tini wget jq ripgrep procps lsof ffmpeg golang && \
+        nodejs python3 make tzdata tini wget jq ripgrep procps lsof ffmpeg golang docker.io && \
     rm -rf /var/lib/apt/lists/* && \
     # Install uv via official standalone installer (no pip needed)
     curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh

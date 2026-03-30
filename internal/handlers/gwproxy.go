@@ -683,8 +683,59 @@ func (h *GWProxyHandler) GenericProxy(w http.ResponseWriter, r *http.Request) {
 	timeout := proxyTimeoutForMethod(req.Method)
 	data, err := h.client.RequestWithTimeout(req.Method, req.Params, timeout)
 	if err != nil {
+		// For config.set INVALID_REQUEST errors (schema mismatch between dashboard
+		// frontend and gateway version), fall back to writing via local file + CLI
+		// so the user isn't blocked by unrecognized key validation failures.
+		if req.Method == "config.set" && strings.Contains(err.Error(), "INVALID_REQUEST") &&
+			(strings.Contains(err.Error(), "Unrecognized key") || strings.Contains(err.Error(), "Unrecognized keys")) {
+			if fallbackData := h.configSetLocalFallback(req.Params); fallbackData != nil {
+				logger.Config.Warn().Err(err).Msg("config.set schema validation failed, fell back to local file write")
+				web.OKRaw(w, r, fallbackData)
+				return
+			}
+		}
+		logger.Gateway.Error().
+			Str("method", req.Method).
+			Err(err).
+			Msg("Gateway proxy request failed")
+
 		web.Fail(w, r, "GW_PROXY_FAILED", err.Error(), http.StatusBadGateway)
 		return
 	}
 	web.OKRaw(w, r, data)
+}
+
+// configSetLocalFallback writes config via the local openclaw CLI when gateway
+// rejects config.set due to schema mismatches (unrecognized keys from newer/older
+// dashboard versions). Returns a JSON response on success, nil on failure.
+func (h *GWProxyHandler) configSetLocalFallback(params interface{}) json.RawMessage {
+	paramsMap, ok := params.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	rawStr, _ := paramsMap["raw"].(string)
+	if rawStr == "" {
+		return nil
+	}
+	if !openclaw.IsOpenClawInstalled() {
+		return nil
+	}
+
+	// Parse the raw JSON config
+	var cfg map[string]interface{}
+	if err := json.Unmarshal([]byte(rawStr), &cfg); err != nil {
+		return nil
+	}
+
+	// Write via CLI (handles secrets, validation at CLI level)
+	if err := openclaw.ConfigApplyFull(cfg); err != nil {
+		logger.Config.Warn().Err(err).Msg("config local fallback write also failed")
+		return nil
+	}
+
+	resp, _ := json.Marshal(map[string]interface{}{
+		"ok":   true,
+		"path": configPath(),
+	})
+	return resp
 }

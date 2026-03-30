@@ -452,8 +452,19 @@ func buildProbeRequest(req TestModelRequest) (endpoint string, headers map[strin
 	apiType := strings.ToLower(strings.TrimSpace(req.APIType))
 	baseURL := strings.TrimRight(req.BaseURL, "/")
 
+	probeModel := req.Model
+	if parts := strings.SplitN(probeModel, "/", 2); len(parts) == 2 {
+		prefix := strings.ToLower(parts[0])
+		if prefix == provider || prefix == apiType {
+			probeModel = parts[1]
+		}
+	}
+
+	isAnthropic := apiType == "anthropic-messages" || (apiType == "" && provider == "anthropic")
+	isGoogle := apiType == "google-generative-ai" || (apiType == "" && (provider == "google" || provider == "gemini"))
+
 	switch {
-	case provider == "anthropic" || apiType == "anthropic-messages":
+	case isAnthropic:
 		if baseURL == "" {
 			baseURL = "https://api.anthropic.com"
 		}
@@ -466,19 +477,18 @@ func buildProbeRequest(req TestModelRequest) (endpoint string, headers map[strin
 			headers["x-api-key"] = req.APIKey
 		}
 		body, _ = json.Marshal(map[string]interface{}{
-			"model":      req.Model,
+			"model":      probeModel,
 			"max_tokens": 4,
 			"messages":   []map[string]string{{"role": "user", "content": "Reply OK"}},
 		})
 
-	case provider == "google" || provider == "gemini" || apiType == "google-generative-ai":
+	case isGoogle:
 		if baseURL == "" {
 			baseURL = "https://generativelanguage.googleapis.com/v1beta"
 		}
 		// Alias unknown/future Gemini models to a known stable model for the auth probe
-		probeModel := req.Model
 		if strings.HasPrefix(strings.ToLower(probeModel), "gemini-") {
-			probeModel = "gemini-1.5-flash"
+			probeModel = "gemini-2.5-flash"
 		}
 		endpoint = baseURL + "/models/" + probeModel + ":generateContent?key=" + req.APIKey
 		headers = map[string]string{}
@@ -499,7 +509,6 @@ func buildProbeRequest(req TestModelRequest) (endpoint string, headers map[strin
 		if req.APIKey != "" {
 			headers["Authorization"] = "Bearer " + req.APIKey
 		}
-		probeModel := req.Model
 		if provider == "openai" {
 			low := strings.ToLower(probeModel)
 			if strings.HasPrefix(low, "gpt-") || strings.HasPrefix(low, "o1") || strings.HasPrefix(low, "o3") {
@@ -655,7 +664,8 @@ func discoverOllamaModelsFromEndpoint(baseURL string) ([]DiscoveredModel, error)
 	return dedupeModels(out), nil
 }
 
-func doJSONRequest(method, endpoint string, headers map[string]string, body []byte) (map[string]interface{}, error) {
+func doJSONRequest(method, endpoint string, headers map[string]string, body []byte) (map[string]interface{}, error) {	
+fmt.Printf("\nDEBUG_DO_JSON: %s %s\n", method, endpoint)
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
@@ -706,8 +716,11 @@ func (h *WizardHandler) probeProviderAuth(req TestModelRequest) (string, error) 
 	headers := map[string]string{}
 	endpoint := ""
 
+	isAnthropic := apiType == "anthropic-messages" || (apiType == "" && provider == "anthropic")
+	isGoogle := apiType == "google-generative-ai" || (apiType == "" && (provider == "google" || provider == "gemini"))
+
 	switch {
-	case provider == "anthropic" || apiType == "anthropic-messages":
+	case isAnthropic:
 		if baseURL == "" {
 			baseURL = "https://api.anthropic.com"
 		}
@@ -716,7 +729,7 @@ func (h *WizardHandler) probeProviderAuth(req TestModelRequest) (string, error) 
 			headers["x-api-key"] = apiKey
 			headers["anthropic-version"] = "2023-06-01"
 		}
-	case provider == "google" || provider == "gemini" || apiType == "google-generative-ai":
+	case isGoogle:
 		if baseURL == "" {
 			baseURL = "https://generativelanguage.googleapis.com/v1beta"
 		}

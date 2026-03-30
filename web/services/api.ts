@@ -1014,7 +1014,7 @@ export const gwApi = {
   configSetAll: (config: Record<string, any>) => rpc('config.set', { raw: JSON.stringify(config, null, 2) }),
   configReload: () => Promise.resolve({ ok: true }),
   configApply: (raw: string, baseHash: string) =>
-    rpc('config.apply', { raw, baseHash }),
+    rpc('config.set', { raw, baseHash }),
   configPatch: (raw: string, baseHash: string) =>
     rpc('config.patch', { raw, baseHash }),
   /**
@@ -1035,7 +1035,7 @@ export const gwApi = {
     } catch (err: any) {
       const msg = err?.message || '';
       const code = err?.code || err?.errorCode || '';
-      if (code === 'HASH_MISMATCH' || msg.includes('hash') || msg.includes('Hash')) {
+      if (code === 'HASH_MISMATCH' || msg.includes('hash') || msg.includes('Hash') || msg.includes('config changed')) {
         hash = await fetchHash();
         await rpc('config.patch', { raw, baseHash: hash });
       } else {
@@ -1057,13 +1057,13 @@ export const gwApi = {
     };
     let hash = await fetchHash();
     try {
-      return await rpc('config.apply', { raw, baseHash: hash });
+      return await rpc('config.set', { raw, baseHash: hash });
     } catch (err: any) {
       const msg = err?.message || '';
       const code = err?.code || err?.errorCode || '';
-      if (code === 'HASH_MISMATCH' || msg.includes('hash') || msg.includes('Hash')) {
+      if (code === 'HASH_MISMATCH' || msg.includes('hash') || msg.includes('Hash') || msg.includes('config changed')) {
         hash = await fetchHash();
-        return await rpc('config.apply', { raw, baseHash: hash });
+        return await rpc('config.set', { raw, baseHash: hash });
       }
       throw err;
     }

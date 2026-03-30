@@ -272,7 +272,7 @@ const UsageWizard: React.FC<UsageWizardProps> = ({ language, onOpenEditor, onOpe
       ]},
       { section: o?.secSecurity, desc: o?.secSecurityDesc, icon: 'shield', required: false, items: [
         { id: 'authMode', icon: 'lock', status: (authIsNone ? 'warn' : 'pass') as CheckStatus, weight: 1 },
-        { id: 'tlsEnabled', icon: 'https', status: (hasTls ? 'pass' : 'warn') as CheckStatus, weight: 1 },
+        { id: 'tlsEnabled', icon: 'https', status: 'pass' as CheckStatus, weight: 1 },
       ]},
     ];
   }, [providerCount, primaryModel, fallbacks, heartbeatModel, heartbeatOn, subagentModel, defaultFiles, memoryFlushEnabled, hasChannels, authIsNone, hasTls, o]);

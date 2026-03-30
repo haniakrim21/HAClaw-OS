@@ -149,9 +149,9 @@ export class GatewayWSClient {
         mode: 'webchat',
       },
       role: 'operator',
-      scopes: ['operator.admin'],
+      scopes: ['*'],
       caps: [],
-      auth: this.opts.token ? { token: this.opts.token } : undefined,
+      auth: this.opts.token ? { token: this.opts.token, password: this.opts.token } : undefined,
       userAgent: navigator.userAgent,
       locale: navigator.language,
     };

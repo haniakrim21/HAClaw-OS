@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { Language } from '../types';
 import { getTranslation } from '../locales';
 import { get, post } from '../services/request';
@@ -575,7 +575,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ language, onClose, onOpenEdit
                 </div>
 
                 {/* root 用户警告 */}
-                {scanResult.isRoot && (
+                {scanResult.isRoot && !scanResult.isDocker && (
                   <div className="p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl space-y-3">
                     <div className="flex items-center gap-2">
                       <span className="material-symbols-outlined text-red-500 text-lg">shield_person</span>

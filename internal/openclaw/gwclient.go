@@ -1,4 +1,4 @@
-﻿package openclaw
+package openclaw
 
 import (
 	"encoding/json"
@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -653,11 +655,13 @@ func (c *GWClient) dial() error {
 		Path:   "/",
 	}
 
+	headers := http.Header{}
+
 	dialer := websocket.Dialer{
 		HandshakeTimeout: 5 * time.Second,
 	}
 
-	conn, _, err := dialer.Dial(u.String(), nil)
+	conn, _, err := dialer.Dial(u.String(), headers)
 	if err != nil {
 		return fmt.Errorf(i18n.T(i18n.MsgErrWebsocketDialFailed), err)
 	}
@@ -802,7 +806,7 @@ func (c *GWClient) sendConnect(conn *websocket.Conn, nonce string) {
 			Mode:        "backend",
 		},
 		Role:   "operator",
-		Scopes: []string{"operator.admin"},
+		Scopes: []string{"operator.admin", "operator.read", "operator.write", "operator.pairing", "gateway.read", "system.read"},
 		Caps:   []string{},
 	}
 
@@ -820,55 +824,49 @@ func (c *GWClient) sendConnect(conn *websocket.Conn, nonce string) {
 			logger.Log.Warn().Str("configPath", configPath).Msg(i18n.T(i18n.MsgLogGwclientTokenReadFail))
 		}
 	}
+	var signToken string
 	if token != "" {
-		params.Auth = &ConnectAuth{
-			Token: token,
+		if len(token) == 48 {
+			params.Auth = &ConnectAuth{Token: token}
+			signToken = token
+		} else {
+			params.Auth = &ConnectAuth{Password: token}
+			signToken = ""
 		}
-	} else {
-		logger.Log.Warn().Msg(i18n.T(i18n.MsgLogGwclientNoAuth))
 	}
 
-	identity, err := LoadOrCreateDeviceIdentity("")
-	if err != nil {
-		logger.Log.Error().Err(err).Msg(i18n.T(i18n.MsgLogDeviceIdentityLoadFail))
-	} else {
-		signedAt := time.Now().UnixMilli()
-		scopesStr := ""
-		if len(params.Scopes) > 0 {
-			scopesStr = strings.Join(params.Scopes, ",")
-		}
-
-		payloadParts := []string{
-			"v2",
-			identity.DeviceID,
-			params.Client.ID,
-			params.Client.Mode,
-			params.Role,
-			scopesStr,
-			fmt.Sprintf("%d", signedAt),
-			token,
-			nonce,
-		}
-		payload := strings.Join(payloadParts, "|")
-
-		signature, err := SignDevicePayload(identity.PrivateKeyPem, payload)
-		if err != nil {
-			logger.Log.Error().Err(err).Msg(i18n.T(i18n.MsgLogDevicePayloadSignFail))
+	// Load or generate Device Identity to sign the payload logic
+	if signToken != "" {
+		identityPath := "" // Default is ~/.openclaw/identity/device.json, overridden internally
+		if os.Getenv("HACLAW_DATA_DIR") != "" {
+			identityPath = filepath.Join(os.Getenv("HACLAW_DATA_DIR"), "device.json")
+		} else if os.Getenv("OPENCLAW_STATE_DIR") != "" {
+			identityPath = filepath.Join(os.Getenv("OPENCLAW_STATE_DIR"), "haclaw_device.json")
 		} else {
-			publicKeyBase64URL, err := PublicKeyRawBase64URLFromPem(identity.PublicKeyPem)
-			if err != nil {
-				logger.Log.Error().Err(err).Msg(i18n.T(i18n.MsgLogPublicKeyEncodeFail))
-			} else {
+			identityPath = "/data/haclawx/device.json"
+		}
+
+		identity, err := LoadOrCreateDeviceIdentity(identityPath)
+		if err != nil {
+			logger.Log.Warn().Err(err).Msg("failed to load/create device identity for gateway connection")
+		} else if identity != nil {
+			signedAtMs := time.Now().UnixMilli()
+			scopesStr := strings.Join(params.Scopes, ",")
+			payload := fmt.Sprintf("v2|%s|%s|%s|%s|%s|%d|%s|%s",
+				identity.DeviceID, params.Client.ID, params.Client.Mode, params.Role, scopesStr, signedAtMs, signToken, nonce)
+
+			sig, sigErr := SignDevicePayload(identity.PrivateKeyPem, payload)
+			if sigErr == nil {
+				pubKey, _ := PublicKeyRawBase64URLFromPem(identity.PublicKeyPem)
 				params.Device = &ConnectDevice{
 					ID:        identity.DeviceID,
-					PublicKey: publicKeyBase64URL,
-					Signature: signature,
-					SignedAt:  signedAt,
+					PublicKey: pubKey,
+					Signature: sig,
+					SignedAt:  signedAtMs,
 					Nonce:     nonce,
 				}
-				logger.Log.Debug().
-					Str("deviceId", identity.DeviceID).
-					Msg(i18n.T(i18n.MsgLogDeviceIdentityAdded))
+			} else {
+				logger.Log.Warn().Err(sigErr).Msg("failed to sign gateway connection payload")
 			}
 		}
 	}
@@ -899,6 +897,8 @@ func (c *GWClient) sendConnect(conn *websocket.Conn, nonce string) {
 		return
 	}
 
+	fmt.Printf("DEBUG: SENDING CONNECT MESSAGE: %s\n", string(data))
+
 	if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
 		logger.Log.Error().Err(err).Msg(i18n.T(i18n.MsgLogConnectSendFail))
 		return
@@ -915,6 +915,7 @@ func (c *GWClient) sendConnect(conn *websocket.Conn, nonce string) {
 			// Parse snapshot.uptimeMs and policy.tickIntervalMs from hello-ok payload
 			if resp.Payload != nil {
 				var helloOk struct {
+					Token    string `json:"token"`
 					Snapshot struct {
 						UptimeMs int64 `json:"uptimeMs"`
 					} `json:"snapshot"`
@@ -929,6 +930,10 @@ func (c *GWClient) sendConnect(conn *websocket.Conn, nonce string) {
 					}
 					if helloOk.Policy.TickIntervalMs > 0 {
 						c.tickInterval = time.Duration(helloOk.Policy.TickIntervalMs) * time.Millisecond
+					}
+					if helloOk.Token != "" && len(helloOk.Token) == 48 {
+						c.cfg.Token = helloOk.Token
+						logger.Log.Info().Int("tokenLen", len(helloOk.Token)).Msg("Received new pairing token from Gateway!")
 					}
 				}
 			}
