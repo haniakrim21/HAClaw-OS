@@ -9,7 +9,7 @@ import { CreateFileModal } from './CreateFileModal'
 const CATEGORY_META: Record<FileCategory, { label: string; color: string; bg: string; description: string }> = {
   'agent-core':    { label: 'Agent Core',    color: 'var(--neon)',  bg: 'rgba(167, 139, 250, 0.12)', description: 'Identity, soul, tools — who the agent is' },
   'agent-rules':   { label: 'Agent Rules',   color: 'var(--green)', bg: 'rgba(110, 231, 183, 0.12)', description: 'Behavior rules loaded into agent system prompt' },
-  'clawdos-rules': { label: 'ClawdOS Rules', color: 'var(--cyan)',  bg: 'rgba(0, 188, 212, 0.12)',   description: 'Developer guide for this codebase (RULES/)' },
+  'clawdos-rules': { label: 'HAClaw OS Rules', color: 'var(--cyan)',  bg: 'rgba(0, 188, 212, 0.12)',   description: 'Developer guide for this codebase (RULES/)' },
   'skills':        { label: 'Skills',        color: 'var(--warm)',  bg: 'rgba(255, 171, 64, 0.12)',   description: 'Installed workspace skill definitions' },
   'memory':        { label: 'Memory',        color: 'var(--fg)',    bg: 'rgba(255, 255, 255, 0.06)',  description: 'Persistent agent memory and context' },
   'config':        { label: 'Config',        color: 'var(--muted)', bg: 'rgba(128, 128, 128, 0.12)',  description: 'Agent configuration files' },

@@ -77,9 +77,10 @@ export async function setupNewsTopics(userTopics: string) {
       headers: {
         Authorization: `Bearer ${gatewayToken}`,
         'Content-Type': 'application/json',
+        'x-openclaw-scopes': 'operator.read,operator.write',
       },
       body: JSON.stringify({
-        model: 'clawdbot',
+        model: 'openclaw',
         stream: false,
         messages: [
           { role: 'system', content: SETUP_SYSTEM_PROMPT },

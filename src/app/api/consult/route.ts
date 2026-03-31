@@ -46,10 +46,10 @@ export async function POST(req: Request) {
   const rules = readOptional('CODING_AGENT_RULES.md')
 
   const system = [
-    'You are the Clawdbot project inspector for the ClawdOS repository.',
+    'You are the Clawdbot project inspector for the HAClaw OS repository.',
     'Your job is to answer whether something already exists, where it lives in the codebase, and the safest correct integration path.',
     'Be concise and actionable. Prefer bullet points.',
-    'Respect security rules: do not suggest direct Claude/Anthropic API calls from ClawdOS; do not suggest Telegram webhook/bot in ClawdOS; do not suggest DOM selector click actions from model output; never leak tokens.',
+    'Respect security rules: do not suggest direct Claude/Anthropic API calls from HAClaw OS; do not suggest Telegram webhook/bot in HAClaw OS; do not suggest DOM selector click actions from model output; never leak tokens.',
     '',
     '=== AGENT_MANIFEST.md ===',
     manifest || '(missing)',
@@ -69,9 +69,10 @@ export async function POST(req: Request) {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
       'x-clawdbot-agent-id': 'main',
+      'x-openclaw-scopes': 'operator.read,operator.write',
     },
     body: JSON.stringify({
-      model: 'clawdbot',
+      model: 'openclaw',
       stream: false,
       user: `clawdos-consult:${session.userId || 'token'}`,
       messages: [

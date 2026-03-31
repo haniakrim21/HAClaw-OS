@@ -7,7 +7,7 @@ import { createAgentFile } from './actions'
 const CATEGORY_META: Record<string, { label: string; color: string; description: string }> = {
   'agent-core':    { label: 'Agent Core',    color: 'var(--neon)',  description: 'Identity, soul, tools — who the agent is' },
   'agent-rules':   { label: 'Agent Rules',   color: 'var(--green)', description: 'Behavior rules loaded into agent system prompt' },
-  'clawdos-rules': { label: 'ClawdOS Rules', color: 'var(--cyan)',  description: 'Developer guide for this codebase (RULES/)' },
+  'clawdos-rules': { label: 'HAClaw OS Rules', color: 'var(--cyan)',  description: 'Developer guide for this codebase (RULES/)' },
   'memory':        { label: 'Memory',        color: 'var(--fg)',    description: 'Persistent agent memory and context' },
   'config':        { label: 'Config',        color: 'var(--muted)', description: 'Agent configuration files' },
 }

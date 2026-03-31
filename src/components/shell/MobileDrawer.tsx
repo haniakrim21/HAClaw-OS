@@ -114,7 +114,7 @@ export function MobileDrawer() {
               textShadow: '0 0 20px var(--neon-glow)',
             }}
           >
-            ClawdOS
+            HAClaw OS
           </span>
           <button
             type="button"

@@ -39,9 +39,10 @@ export async function POST(req: Request) {
       'Content-Type': 'application/json',
       // Pin the agent used by the gateway.
       'x-clawdbot-agent-id': 'main',
+      'x-openclaw-scopes': 'operator.read,operator.write',
     },
     body: JSON.stringify({
-      model: 'clawdbot',
+      model: 'openclaw',
       stream,
       // Stable session key derivation inside the gateway.
       user: `clawdos:${session.userId}${workspaceId ? `:ws:${workspaceId}` : ''}`,

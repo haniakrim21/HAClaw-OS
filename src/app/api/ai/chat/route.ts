@@ -76,15 +76,15 @@ export async function POST(request: Request) {
   ])
 
   const system = [
-    'You are Clawdbot running inside ClawdOS WebUI.',
+    'You are Clawdbot running inside HAClaw OS WebUI.',
     'Reply like Telegram/TUI: direct, helpful, no boilerplate.',
-    `ClawdOS page: ${currentPage}`,
-    `ClawdOS workspace: ${workspaceName ?? workspaceId ?? 'unknown'}`,
+    `HAClaw OS page: ${currentPage}`,
+    `HAClaw OS workspace: ${workspaceName ?? workspaceId ?? 'unknown'}`,
     telegramUserId
       ? `Telegram DM target for this user is fixed: ${telegramUserId}. If asked to send a Telegram message, send only to that id.`
       : 'No Telegram user id is linked. If asked to send to Telegram, ask the user to link Telegram in Settings first.',
     '',
-    'You can control ClawdOS by embedding action commands in your response.',
+    'You can control HAClaw OS by embedding action commands in your response.',
     'Format: <clawdos>{"actions":[...]}</clawdos>',
     '',
     'Available actions:',
@@ -193,9 +193,10 @@ export async function POST(request: Request) {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
             'x-clawdbot-agent-id': 'main',
+            'x-openclaw-scopes': 'operator.read,operator.write',
           },
           body: JSON.stringify({
-            model: 'clawdbot',
+            model: 'openclaw',
             stream,
             user: `clawdos:${session.userId}${workspaceId ? `:ws:${workspaceId}` : ''}`,
             messages: [

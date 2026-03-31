@@ -168,7 +168,7 @@ export function AIPanel({ isOpen, onClose, onWidthChange }: AIPanelProps) {
         <form onSubmit={handleSubmit} className="p-3 border-t border-t-[var(--border)]" >
           <div className="flex items-center gap-2 rounded-xl px-3 py-2 transition-colors bg-[var(--card)] border border-[var(--border)] focus-within:border-[var(--neon)] focus-within:shadow-[0_0_0_1px_var(--neon-dim),0_0_12px_var(--neon-dim)]">
             <input ref={inputRef} type="text" value={input} onChange={(e) => setInput(e.target.value)}
-              placeholder={workspaceId ? 'Ask Clawdbot...' : 'Select a workspace first'}
+              placeholder={workspaceId ? 'Ask HAClaw...' : 'Select a workspace first'}
               disabled={!workspaceId}
               className="flex-1 bg-transparent text-sm outline-none placeholder-[var(--muted)] disabled:opacity-50 disabled:cursor-not-allowed text-[var(--fg)]"
             />

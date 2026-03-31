@@ -94,7 +94,7 @@ export function ProcessesWidget({ initialProcesses, workspaceId }: ProcessesWidg
                 }}
                 className="px-3 py-1.5 rounded-lg border border-[var(--neon-dim)] text-xs font-medium text-[var(--neon)] hover:bg-[var(--neon-dim)] transition-colors"
               >
-                Ask Clawd
+                Ask HAClaw
               </button>
             </div>
           ) : (

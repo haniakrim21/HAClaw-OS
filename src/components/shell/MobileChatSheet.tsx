@@ -264,7 +264,7 @@ export function MobileChatSheet() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={workspaceId ? 'Ask Clawdbot...' : 'Select a workspace first'}
+                placeholder={workspaceId ? 'Ask HAClaw...' : 'Select a workspace first'}
                 disabled={!workspaceId}
                 className="flex-1 bg-transparent text-sm outline-none placeholder-[var(--muted)] disabled:opacity-50 text-[var(--fg)]"
               />

@@ -28,7 +28,7 @@ async function startLink(formData: FormData) {
 
   log.info('Enqueueing Telegram message')
   try {
-    await enqueueTelegram(telegramUserId, `ClawdOS link code: ${ch.code} (valid 10 min)`)
+    await enqueueTelegram(telegramUserId, `HAClaw OS link code: ${ch.code} (valid 10 min)`)
     log.info('Message enqueued successfully')
   } catch (error) {
     log.error('Failed to enqueue message', { error: error instanceof Error ? error.message : String(error) })

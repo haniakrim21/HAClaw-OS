@@ -42,7 +42,7 @@ export async function fetchSource(
 
   try {
     const response = await fetch(source.url, {
-      headers: { 'User-Agent': 'ClawdOS/1.0 (RSS Reader)' },
+      headers: { 'User-Agent': 'HAClaw-OS/1.0 (RSS Reader)' },
       signal: AbortSignal.timeout(10_000),
     })
 
@@ -125,7 +125,7 @@ export async function refreshStaleSources(
         }
 
         const response = await fetch(source.url, {
-          headers: { 'User-Agent': 'ClawdOS/1.0 (RSS Reader)' },
+          headers: { 'User-Agent': 'HAClaw-OS/1.0 (RSS Reader)' },
           signal: AbortSignal.timeout(10_000),
         })
         if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`)

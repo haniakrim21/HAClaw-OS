@@ -159,7 +159,7 @@ function MobileHeaderRow() {
           textShadow: '0 0 20px var(--neon-glow)',
         }}
       >
-        ClawdOS
+        HAClaw OS
       </span>
 
       {/* Spacer to keep brand centered */}

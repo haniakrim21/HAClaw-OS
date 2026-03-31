@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: clawdos
       POSTGRES_USER: clawdos
-      POSTGRES_PASSWORD: clawdos
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-clawdos}
     ports:
       - "5432:5432"
     volumes:
@@ -16,5 +16,64 @@ services:
       timeout: 3s
       retries: 20
 
+  openclaw:
+    image: ghcr.io/openclaw/openclaw:latest
+    container_name: clawdos-openclaw
+    environment:
+      HOME: /home/node
+      TERM: xterm-256color
+      OPENCLAW_GATEWAY_TOKEN: ${CLAWDBOT_TOKEN:-}
+      TZ: ${TZ:-UTC}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GOOGLE_GENERATIVE_AI_API_KEY: ${GOOGLE_GENERATIVE_AI_API_KEY:-}
+    volumes:
+      - openclaw_data:/home/node/.openclaw
+      - ./openclaw.docker.json:/tmp/openclaw-seed.json:ro
+    ports:
+      - "18789:18789"
+    init: true
+    restart: unless-stopped
+    user: root
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        chown -R 1000:1000 /home/node/.openclaw
+        if [ ! -f /home/node/.openclaw/openclaw.json ]; then
+          cp /tmp/openclaw-seed.json /home/node/.openclaw/openclaw.json
+          chown 1000:1000 /home/node/.openclaw/openclaw.json
+        fi
+        exec su -s /bin/sh node -c "HOME=/home/node OPENCLAW_GATEWAY_TOKEN=$$OPENCLAW_GATEWAY_TOKEN ANTHROPIC_API_KEY=$$ANTHROPIC_API_KEY OPENAI_API_KEY=$$OPENAI_API_KEY GOOGLE_GENERATIVE_AI_API_KEY=$$GOOGLE_GENERATIVE_AI_API_KEY TZ=$$TZ node dist/index.js gateway --bind lan --port 18789"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:18789/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  app:
+    build: .
+    container_name: clawdos-app
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: postgres://clawdos:${POSTGRES_PASSWORD:-clawdos}@db:5432/clawdos
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      SESSION_PASSWORD: ${SESSION_PASSWORD:-}
+      CLAWDBOT_URL: http://openclaw:18789
+      CLAWDBOT_TOKEN: ${CLAWDBOT_TOKEN:-}
+      CLAWDOS_CONSULT_TOKEN: ${CLAWDOS_CONSULT_TOKEN:-}
+      ACCESS_TOKEN: ${ACCESS_TOKEN:-}
+      CLAWDOS_USER: ${CLAWDOS_USER:-admin}
+      CLAWDOS_PASSWORD: ${CLAWDOS_PASSWORD:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      openclaw:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   clawdos_pgdata:
+  openclaw_data:

@@ -79,11 +79,12 @@ export function UserMenu({
           const buttonRect = userButtonRef.current?.getBoundingClientRect()
           if (!buttonRect) return null
 
+          const sidebarRect = userButtonRef.current?.closest('nav')?.getBoundingClientRect()
           const dropdownStyle: React.CSSProperties = exp
             ? {
                 position: 'fixed',
-                left: `${buttonRect.left - 8}px`,
-                right: `calc(100vw - ${buttonRect.right + 8}px)`,
+                left: `${(sidebarRect?.left ?? buttonRect.left) + 8}px`,
+                width: `${(sidebarRect?.width ?? 200) - 16}px`,
                 bottom: `calc(100vh - ${buttonRect.top}px + 4px)`,
                 background: 'rgba(6,6,10,0.97)',
               }

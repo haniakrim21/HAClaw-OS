@@ -11,7 +11,7 @@ const MarkdownFileEditor = dynamic(
 const CATEGORY_META: Record<FileCategory, { label: string; color: string; bg: string }> = {
   'agent-core':    { label: 'Agent Core',    color: 'var(--neon)',  bg: 'rgba(167, 139, 250, 0.12)' },
   'agent-rules':   { label: 'Agent Rules',   color: 'var(--green)', bg: 'rgba(110, 231, 183, 0.12)' },
-  'clawdos-rules': { label: 'ClawdOS Rules', color: 'var(--cyan)',  bg: 'rgba(0, 188, 212, 0.12)' },
+  'clawdos-rules': { label: 'HAClaw OS Rules', color: 'var(--cyan)',  bg: 'rgba(0, 188, 212, 0.12)' },
   'skills':        { label: 'Skills',        color: 'var(--warm)',  bg: 'rgba(255, 171, 64, 0.12)' },
   'memory':        { label: 'Memory',        color: 'var(--fg)',    bg: 'rgba(255, 255, 255, 0.06)' },
   'config':        { label: 'Config',        color: 'var(--muted)', bg: 'rgba(128, 128, 128, 0.12)' },

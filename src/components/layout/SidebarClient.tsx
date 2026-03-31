@@ -137,7 +137,7 @@ export default function SidebarClient({ username }: { username?: string }) {
       <div className={`flex items-center w-full mb-7 min-h-8 ${exp ? 'px-3 gap-2' : 'justify-center'}`}>
         <button type="button" onClick={toggleRail} className="shrink-0 flex items-center bg-transparent border-none p-0 cursor-pointer" title={exp ? 'Collapse sidebar' : 'Expand sidebar'}>
           <span className="font-bold whitespace-nowrap" style={{ fontFamily: 'var(--font-space-mono, monospace)', fontSize: '16px', color: 'var(--neon)', letterSpacing: '0.5px', textShadow: '0 0 20px var(--neon-glow)' }}>
-            {exp ? 'ClawdOS' : 'C'}
+            {exp ? 'HAClaw OS' : 'H'}
           </span>
         </button>
         {exp && (
