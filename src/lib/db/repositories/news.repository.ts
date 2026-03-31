@@ -23,7 +23,7 @@ export async function findNewsByWorkspace(
 
   const { limit = 30, cursor, cursorId, tabId, search, sourceId } = opts
   const values: unknown[] = [workspaceId]
-  const conditions: string[] = ['ni.workspace_id = $1']
+  const conditions: string[] = ['ni.workspace_id = $1', 'ni.image_url IS NOT NULL']
   let paramIdx = 2
 
   // Cursor-based pagination
@@ -168,7 +168,8 @@ export async function batchUpsertNewsItems(
     `INSERT INTO content.news_item
        (workspace_id, source_id, title, url, summary, image_url, published_at, guid, topic, created_by)
      VALUES ${rows.join(', ')}
-     ON CONFLICT (source_id, guid) WHERE guid IS NOT NULL DO NOTHING`,
+     ON CONFLICT (source_id, guid) WHERE guid IS NOT NULL
+     DO UPDATE SET image_url = COALESCE(content.news_item.image_url, EXCLUDED.image_url)`,
     values
   )
 

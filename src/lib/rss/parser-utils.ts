@@ -116,5 +116,24 @@ export function extractImage(item: XmlNode): string | null {
     }
   }
 
+  // Extract first <img src="..."> from HTML content fields
+  const htmlFields = [
+    item['content:encoded'],
+    item.content,
+    item.description,
+    item.summary,
+  ]
+  for (const field of htmlFields) {
+    const html = typeof field === 'string' ? field
+      : (field && typeof field === 'object' && '#text' in (field as Record<string, unknown>))
+        ? String((field as Record<string, unknown>)['#text'])
+        : null
+    if (!html) continue
+    const match = html.match(/<img[^>]+src=["']([^"']+)["']/i)
+    if (match?.[1] && /^https?:\/\//.test(match[1])) {
+      return match[1]
+    }
+  }
+
   return null
 }

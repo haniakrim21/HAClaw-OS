@@ -2,6 +2,7 @@ import type { PoolClient } from 'pg'
 import type { NewsSource } from '@/types/news'
 import { parseFeed, type ParsedFeed } from './parser'
 import { batchUpsertNewsItems, cleanupOldItems } from '@/lib/db/repositories/news.repository'
+import { backfillOgImages } from './og-image'
 import {
   markSourceFetched,
   incrementSourceError,
@@ -199,6 +200,11 @@ export async function refreshStaleSources(
       results.push({ sourceId: data.source.id, sourceTitle: data.source.title, newItems: 0, error: msg })
     }
   }
+
+  // Phase 3: Backfill og:image for items still missing images (non-blocking)
+  backfillOgImages(client, workspaceId, 50).catch((err) => {
+    log.warn('og:image backfill failed', { error: err instanceof Error ? err.message : String(err) })
+  })
 
   return results
 }
