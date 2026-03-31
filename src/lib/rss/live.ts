@@ -65,10 +65,13 @@ export async function fetchLiveFeeds(sources: NewsSource[]): Promise<NewsItem[]>
     return db - da
   })
 
-  // Cache result
-  feedCache = { key: cacheKey, items: allItems, ts: Date.now() }
+  // Filter out items without images
+  const withImages = allItems.filter((item) => item.imageUrl)
 
-  return allItems
+  // Cache result
+  feedCache = { key: cacheKey, items: withImages, ts: Date.now() }
+
+  return withImages
 }
 
 /** Invalidate cache (called on manual refresh) */
